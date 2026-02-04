@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs"
+import { normalizeRepoKey } from "./path-utils"
 
 export type ManualTagsMap = Map<string, string[]>
 
@@ -13,13 +14,16 @@ export async function readManualTags(
       if (!line.trim()) {
         continue
       }
-      const [path, rawTags] = line.split("\t")
-      if (!path || !rawTags) {
+      const [rawPath, rawTags] = line.split("\t")
+      if (!rawPath || !rawTags) {
         continue
       }
       const tags = parseTagList(rawTags)
       if (tags.length > 0) {
-        map.set(path.trim(), tags)
+        const normalized = normalizeRepoKey(rawPath)
+        if (normalized) {
+          map.set(normalized, tags)
+        }
       }
     }
   } catch {

@@ -9,6 +9,7 @@ import { readLru, sortByLru } from "./lru"
 import { getConfigPaths } from "../config/config"
 import { logger } from "./logger"
 import { resolveTagExtensions } from "./plugins"
+import { normalizeRepoKey } from "./path-utils"
 
 const defaultTtlMs = 12 * 60 * 60 * 1000
 
@@ -43,7 +44,7 @@ export async function buildCache(
       const originUrl = await readOriginUrl(repo.path)
       const { host, ownerRepo } = parseOriginInfo(originUrl)
       const remoteTag = getRemoteTag(host)
-      const manual = manualTags.get(repo.path)
+      const manual = manualTags.get(normalizeRepoKey(repo.path))
       const dirty = await isDirty(repo.path)
       const baseTags = buildTags({
         remoteTag,
@@ -127,7 +128,9 @@ export async function loadCache(
       return null
     }
     const repos = Array.isArray(data.repos) ? data.repos : []
-    const existing = await filterExistingRepos(repos)
+    const existing = await filterExistingRepos(
+      repos.map((repo) => ({ ...repo, path: path.resolve(repo.path) }))
+    )
     const sorted = await applyLruIfNeeded(existing.repos, normalized.lruFile)
     const metadata = buildCacheMetadataFromCache(
       { ...data, repos: existing.repos } as CacheData,

@@ -113,6 +113,13 @@ Tag 由多部分组成：
 
 `lru.txt` 记录最近访问路径，用于调整展示顺序，默认最多 300 条。
 
+## 跨平台兼容
+
+- 路径分隔符自动归一化，`repo_tags.tsv` 与 `lru.txt` 可使用 `/` 或 `\`
+- Windows 请确保 `git` 可执行文件在 PATH 中，建议安装 Git for Windows 或使用 WSL
+- WSL 环境下使用 Linux 路径作为 scanRoots，避免混用 Windows 盘符路径
+- 终端渲染建议使用现代终端（Windows Terminal / PowerShell 7 / iTerm2 等）
+
 ## UI 体验
 
 - 顶部状态栏显示缓存 / 扫描状态、仓库数量、当前过滤词
