@@ -122,17 +122,57 @@ Tag 由多部分组成：
 
 ## 扩展性
 
-预留 Action 类型：
+插件系统支持 action / tag / preview 扩展，必须显式注册，插件失败不会影响主流程。
 
 ```ts
-type Action = {
-  id: string
-  label: string
-  run(repo: RepoInfo): Promise<void>
+import {
+  registerPlugins,
+  registerBuiltInPlugins,
+  type PluginModule
+} from "local-repo-picker"
+
+registerBuiltInPlugins()
+
+const myPlugin: PluginModule = {
+  id: "acme.demo",
+  label: "Demo",
+  actions: [
+    {
+      id: "print-path",
+      label: "打印路径",
+      run: async (repo) => {
+        console.log(repo.path)
+      }
+    }
+  ],
+  tags: [
+    {
+      id: "custom-tag",
+      label: "自定义标签",
+      apply: async ({ repoPath }) => {
+        return repoPath.includes("demo") ? ["[demo]"] : []
+      }
+    }
+  ],
+  previews: [
+    {
+      id: "custom-preview",
+      label: "预览扩展",
+      render: async ({ repo }) => {
+        return { title: "EXTRA", lines: [repo.ownerRepo] }
+      }
+    }
+  ]
 }
+
+registerPlugins([myPlugin])
 ```
 
-未来可用于扩展打开 VSCode、iTerm、终端执行等行为。
+内置插件示例：
+
+- Node 项目标记 `[node]`
+- Node 预览扩展（name / scripts 数量）
+- 打印路径 action
 
 ## 安全与威胁模型
 

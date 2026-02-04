@@ -1,8 +1,9 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import { useEffect, useRef, useState } from "react"
-import type { RepoInfo } from "../core/types"
+import type { RepoInfo, RepoPreview } from "../core/types"
 import { checkGitAvailable, isDirty, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "../core/git"
+import { resolvePreviewExtensions } from "../core/plugins"
 
 type RepoPreviewResult = {
   data: RepoPreview
@@ -12,16 +13,7 @@ type RepoPreviewResult = {
 const cache = new Map<string, RepoPreviewResult>()
 const inFlight = new Map<string, Promise<RepoPreviewResult>>()
 
-export type RepoPreview = {
-  path: string
-  origin: string
-  branch: string
-  status: "dirty" | "clean"
-  sync: string
-  recentCommits: string[]
-  readme: string[]
-  readmeStatus: "ok" | "missing" | "unavailable"
-}
+export type { RepoPreview } from "../core/types"
 
 export type PreviewState = {
   loading: boolean
@@ -50,7 +42,7 @@ export function useRepoPreview(repo: RepoInfo | null): PreviewState {
     }
     setState({ loading: true, data: null })
     const timer = setTimeout(() => {
-      const pending = inFlight.get(repoPath) ?? fetchPreview(repoPath)
+      const pending = inFlight.get(repoPath) ?? fetchPreview(repo)
       inFlight.set(repoPath, pending)
       pending.then((result) => {
         cache.set(repoPath, result)
@@ -68,7 +60,8 @@ export function useRepoPreview(repo: RepoInfo | null): PreviewState {
   return state
 }
 
-async function fetchPreview(repoPath: string): Promise<RepoPreviewResult> {
+async function fetchPreview(repo: RepoInfo): Promise<RepoPreviewResult> {
+  const repoPath = repo.path
   const accessible = await fs.access(repoPath).then(() => true, () => false)
   if (!accessible) {
     return {
@@ -80,7 +73,8 @@ async function fetchPreview(repoPath: string): Promise<RepoPreviewResult> {
         sync: "-",
         recentCommits: [],
         readme: [],
-        readmeStatus: "unavailable"
+        readmeStatus: "unavailable",
+        extensions: []
       },
       error: "Repository not accessible"
     }
@@ -97,7 +91,8 @@ async function fetchPreview(repoPath: string): Promise<RepoPreviewResult> {
         sync: "-",
         recentCommits: [],
         readme: readme.lines,
-        readmeStatus: readme.status
+        readmeStatus: readme.status,
+        extensions: []
       },
       error: "Repository not accessible"
     }
@@ -114,7 +109,8 @@ async function fetchPreview(repoPath: string): Promise<RepoPreviewResult> {
         sync: "-",
         recentCommits: [],
         readme: readme.lines,
-        readmeStatus: readme.status
+        readmeStatus: readme.status,
+        extensions: []
       },
       error: "Git not available"
     }
@@ -133,17 +129,20 @@ async function fetchPreview(repoPath: string): Promise<RepoPreviewResult> {
     sync.errorKind,
     recentCommits.errorKind
   ])
+  const basePreview: RepoPreview = {
+    path: repoPath,
+    origin: origin.value,
+    branch: branch.value,
+    status,
+    sync: sync.value,
+    recentCommits: recentCommits.value,
+    readme: readme.lines,
+    readmeStatus: readme.status,
+    extensions: []
+  }
+  const extensions = await resolvePreviewExtensions({ repo, preview: basePreview })
   return {
-    data: {
-      path: repoPath,
-      origin: origin.value,
-      branch: branch.value,
-      status,
-      sync: sync.value,
-      recentCommits: recentCommits.value,
-      readme: readme.lines,
-      readmeStatus: readme.status
-    },
+    data: { ...basePreview, extensions },
     error
   }
 }

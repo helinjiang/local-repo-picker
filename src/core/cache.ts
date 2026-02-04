@@ -3,11 +3,12 @@ import { promises as fs } from "node:fs"
 import pLimit from "p-limit"
 import type { CacheData, CacheMetadata, RepoInfo, ScanOptions } from "./types"
 import { scanRepos } from "./scan"
-import { readManualTags, buildTags, getRemoteTag } from "./tags"
+import { readManualTags, buildTags, getRemoteTag, uniqueTags } from "./tags"
 import { isDirty, parseOriginInfo, readOriginUrl } from "./git"
 import { readLru, sortByLru } from "./lru"
 import { getConfigPaths } from "../config/config"
 import { logger } from "./logger"
+import { resolveTagExtensions } from "./plugins"
 
 const defaultTtlMs = 12 * 60 * 60 * 1000
 
@@ -44,18 +45,32 @@ export async function buildCache(
       const remoteTag = getRemoteTag(host)
       const manual = manualTags.get(repo.path)
       const dirty = await isDirty(repo.path)
-      const tags = buildTags({
+      const baseTags = buildTags({
         remoteTag,
         autoTag: repo.autoTag,
         manualTags: manual,
         dirty
       })
-      return {
+      const baseRepo = {
         path: repo.path,
         ownerRepo: ownerRepo || path.basename(repo.path),
         originUrl: originUrl ?? undefined,
-        tags,
+        tags: baseTags,
         lastScannedAt: Date.now()
+      } satisfies RepoInfo
+      const extraTags = await resolveTagExtensions({
+        repoPath: baseRepo.path,
+        scanRoot: repo.scanRoot,
+        originUrl: baseRepo.originUrl,
+        ownerRepo: baseRepo.ownerRepo,
+        autoTag: repo.autoTag,
+        manualTags: manual,
+        dirty,
+        baseTags
+      })
+      return {
+        ...baseRepo,
+        tags: uniqueTags([...baseTags, ...extraTags])
       } satisfies RepoInfo
     })
   )

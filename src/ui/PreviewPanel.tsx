@@ -47,6 +47,17 @@ export function PreviewPanel({ repo }: PreviewPanelProps) {
     } else {
       lines.push("无 README")
     }
+    if (data?.extensions?.length) {
+      lines.push("")
+      for (const section of data.extensions) {
+        lines.push(`${section.title}:`)
+        if (section.lines.length > 0) {
+          lines.push(...section.lines)
+        } else {
+          lines.push("-")
+        }
+      }
+    }
     return lines
   }, [repo, loading, data, error])
 

@@ -6,6 +6,23 @@ export type RepoInfo = {
   lastScannedAt: number
 }
 
+export type PreviewSection = {
+  title: string
+  lines: string[]
+}
+
+export type RepoPreview = {
+  path: string
+  origin: string
+  branch: string
+  status: "dirty" | "clean"
+  sync: string
+  recentCommits: string[]
+  readme: string[]
+  readmeStatus: "ok" | "missing" | "unavailable"
+  extensions: PreviewSection[]
+}
+
 export type ScanOptions = {
   scanRoots: string[]
   maxDepth?: number
@@ -55,4 +72,40 @@ export type Action = {
   id: string
   label: string
   run: (repo: RepoInfo) => Promise<void>
+}
+
+export type TagPluginInput = {
+  repoPath: string
+  scanRoot: string
+  originUrl?: string
+  ownerRepo: string
+  autoTag?: string
+  manualTags?: string[]
+  dirty: boolean
+  baseTags: string[]
+}
+
+export type TagPlugin = {
+  id: string
+  label: string
+  apply: (input: TagPluginInput) => Promise<string[] | null> | string[] | null
+}
+
+export type PreviewPluginInput = {
+  repo: RepoInfo
+  preview: RepoPreview
+}
+
+export type PreviewPlugin = {
+  id: string
+  label: string
+  render: (input: PreviewPluginInput) => Promise<PreviewSection | null> | PreviewSection | null
+}
+
+export type PluginModule = {
+  id: string
+  label: string
+  actions?: Action[]
+  tags?: TagPlugin[]
+  previews?: PreviewPlugin[]
 }
