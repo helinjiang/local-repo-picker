@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react"
 import { Box, Text, useApp, useInput, useStdout } from "ink"
 import type { Key } from "ink"
 import type { RepoInfo } from "../core/types.js"
+import { PreviewPanel } from "./PreviewPanel.js"
 
 type RepoPickerProps = {
   repos: RepoInfo[]
@@ -34,6 +35,7 @@ export function RepoPicker({ repos, onSelect, onCancel, initialQuery = "" }: Rep
     Math.max(0, filtered.length - maxVisible)
   )
   const visible = filtered.slice(start, start + maxVisible)
+  const selectedRepo = filtered[clampedIndex] ?? null
 
   useInput((input: string, key: Key) => {
     if (key.upArrow) {
@@ -94,12 +96,10 @@ export function RepoPicker({ repos, onSelect, onCancel, initialQuery = "" }: Rep
             )}
           </Box>
         </Box>
-        <Box width="60%" borderStyle="round" paddingX={1} flexDirection="column" justifyContent="center">
-          <Text dimColor>右侧预览区域</Text>
-        </Box>
+        <PreviewPanel repo={selectedRepo} />
       </Box>
       <Box borderStyle="round" paddingX={1} marginTop={1}>
-        <Text>↑/↓ 选择  Enter 确认  Esc/q 退出</Text>
+        <Text>↑/↓ 选择  Enter 确认  Esc/q 退出  PgUp/PgDn 或 Ctrl+U/Ctrl+D 预览滚动</Text>
       </Box>
     </Box>
   )
