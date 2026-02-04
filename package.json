@@ -11,7 +11,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "demo:cache": "npm run build && node demo/cache.mjs",
+    "demo:tui": "npm run build && node demo/tui.mjs"
   },
   "dependencies": {
     "ink": "^5.1.0",
