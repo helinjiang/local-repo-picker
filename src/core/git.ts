@@ -2,8 +2,18 @@ import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 import { promises as fs } from "node:fs"
 import path from "node:path"
+import pLimit from "p-limit"
+import { isDebugEnabled, logger } from "./logger.js"
 
 const execFileAsync = promisify(execFile)
+const gitLimit = pLimit(6)
+let gitAvailableCache: boolean | null = null
+
+export type GitErrorKind = "not_found" | "not_repo" | "unknown"
+
+export type GitResult =
+  | { ok: true; stdout: string }
+  | { ok: false; kind: GitErrorKind; message: string }
 
 export async function resolveGitDir(repoPath: string): Promise<string | null> {
   const dotGitPath = path.join(repoPath, ".git")
@@ -28,6 +38,39 @@ export async function resolveGitDir(repoPath: string): Promise<string | null> {
     return null
   }
   return null
+}
+
+export async function runGit(
+  args: string[],
+  options: { cwd?: string; timeoutMs?: number } = {}
+): Promise<GitResult> {
+  const gitArgs = options.cwd ? ["-C", options.cwd, ...args] : args
+  const start = Date.now()
+  try {
+    const { stdout } = await gitLimit(() =>
+      execFileAsync("git", gitArgs, { timeout: options.timeoutMs })
+    )
+    if (isDebugEnabled()) {
+      logger.debug(`git ${gitArgs.join(" ")} ${Date.now() - start}ms`)
+    }
+    return { ok: true, stdout }
+  } catch (error) {
+    const kind = parseGitError(error)
+    const message = getGitErrorMessage(kind, error)
+    if (isDebugEnabled()) {
+      logger.debug(`git ${gitArgs.join(" ")} failed ${Date.now() - start}ms ${message}`)
+    }
+    return { ok: false, kind, message }
+  }
+}
+
+export async function checkGitAvailable(): Promise<boolean> {
+  if (gitAvailableCache !== null) {
+    return gitAvailableCache
+  }
+  const result = await runGit(["--version"])
+  gitAvailableCache = result.ok
+  return gitAvailableCache
 }
 
 export async function readOriginUrl(repoPath: string): Promise<string | null> {
@@ -96,15 +139,32 @@ export function parseOriginInfo(originUrl: string | null): {
 }
 
 export async function isDirty(repoPath: string): Promise<boolean> {
-  try {
-    const { stdout } = await execFileAsync("git", [
-      "-C",
-      repoPath,
-      "status",
-      "--porcelain"
-    ])
-    return stdout.trim().length > 0
-  } catch {
+  const result = await runGit(["status", "--porcelain"], { cwd: repoPath })
+  if (!result.ok) {
     return false
   }
+  return result.stdout.trim().length > 0
+}
+
+function parseGitError(error: unknown): GitErrorKind {
+  const err = error as NodeJS.ErrnoException & { stderr?: string; stdout?: string }
+  if (err?.code === "ENOENT") {
+    return "not_found"
+  }
+  const message = `${err?.stderr ?? ""}\n${err?.message ?? ""}`.toLowerCase()
+  if (message.includes("not a git repository")) {
+    return "not_repo"
+  }
+  return "unknown"
+}
+
+function getGitErrorMessage(kind: GitErrorKind, error: unknown): string {
+  if (kind === "not_found") {
+    return "git not found"
+  }
+  if (kind === "not_repo") {
+    return "not a git repository"
+  }
+  const err = error as NodeJS.ErrnoException
+  return err?.message ?? "git failed"
 }

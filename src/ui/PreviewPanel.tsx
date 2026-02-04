@@ -11,7 +11,7 @@ type PreviewPanelProps = {
 export function PreviewPanel({ repo }: PreviewPanelProps) {
   const { stdout } = useStdout()
   const maxHeight = Math.max(10, Math.floor((stdout?.rows ?? 24) * 0.7))
-  const { loading, data } = useRepoPreview(repo)
+  const { loading, data, error } = useRepoPreview(repo)
   const [scrollOffset, setScrollOffset] = useState(0)
 
   const content = useMemo(() => {
@@ -22,6 +22,10 @@ export function PreviewPanel({ repo }: PreviewPanelProps) {
       return ["Loading..."]
     }
     const lines: string[] = []
+    if (error) {
+      lines.push(`错误: ${error}`)
+      lines.push("")
+    }
     lines.push(`PATH: ${data?.path ?? repo.path}`)
     lines.push(`ORIGIN: ${data?.origin ?? "-"}`)
     lines.push(`BRANCH: ${data?.branch ?? "-"}`)
@@ -42,7 +46,7 @@ export function PreviewPanel({ repo }: PreviewPanelProps) {
       lines.push("无 README")
     }
     return lines
-  }, [repo, loading, data])
+  }, [repo, loading, data, error])
 
   useInput((_input, key) => {
     if (!repo) {
@@ -78,9 +82,14 @@ export function PreviewPanel({ repo }: PreviewPanelProps) {
 
   return (
     <Box width="60%" height={maxHeight} borderStyle="round" paddingX={1} flexDirection="column">
-      {visible.map((line, index) => (
-        <Text key={`${repo.path}-preview-${start + index}`}>{line}</Text>
-      ))}
+      {visible.map((line, index) => {
+        const isError = error && index === 0
+        return (
+          <Text key={`${repo.path}-preview-${start + index}`} color={isError ? "red" : undefined}>
+            {line}
+          </Text>
+        )
+      })}
     </Box>
   )
 }

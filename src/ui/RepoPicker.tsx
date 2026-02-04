@@ -3,15 +3,27 @@ import { Box, Text, useApp, useInput, useStdout } from "ink"
 import type { Key } from "ink"
 import type { RepoInfo } from "../core/types.js"
 import { PreviewPanel } from "./PreviewPanel.js"
+import { ErrorBoundary } from "./ErrorBoundary.js"
 
 type RepoPickerProps = {
   repos: RepoInfo[]
   onSelect?: (repo: RepoInfo) => void
   onCancel?: () => void
   initialQuery?: string
+  status?: {
+    mode?: "cache" | "scan" | "rebuild"
+    scanDurationMs?: number
+    message?: string
+  }
 }
 
-export function RepoPicker({ repos, onSelect, onCancel, initialQuery = "" }: RepoPickerProps) {
+export function RepoPicker({
+  repos,
+  onSelect,
+  onCancel,
+  initialQuery = "",
+  status
+}: RepoPickerProps) {
   const { exit } = useApp()
   const { stdout } = useStdout()
   const [query, setQuery] = useState<string>(initialQuery)
@@ -36,6 +48,14 @@ export function RepoPicker({ repos, onSelect, onCancel, initialQuery = "" }: Rep
   )
   const visible = filtered.slice(start, start + maxVisible)
   const selectedRepo = filtered[clampedIndex] ?? null
+  const statusText = buildStatusText({
+    mode: status?.mode,
+    scanDurationMs: status?.scanDurationMs,
+    message: status?.message,
+    filteredCount: filtered.length,
+    totalCount: repos.length,
+    query
+  })
 
   useInput((input: string, key: Key) => {
     if (key.upArrow) {
@@ -71,36 +91,81 @@ export function RepoPicker({ repos, onSelect, onCancel, initialQuery = "" }: Rep
   })
 
   return (
-    <Box flexDirection="column" height="100%">
-      <Box borderStyle="round" paddingX={1}>
-        <Text>Repos: {filtered.length} / {repos.length}</Text>
-      </Box>
-      <Box flexGrow={1} gap={1} marginTop={1}>
-        <Box width="40%" borderStyle="round" paddingX={1} flexDirection="column">
-          <Text>
-            Search: {query || " "}
-          </Text>
-          <Box flexDirection="column" marginTop={1} flexGrow={1}>
-            {visible.length === 0 ? (
-              <Text dimColor>无匹配仓库</Text>
-            ) : (
-              visible.map((repo: RepoInfo, index: number) => {
-                const absoluteIndex = start + index
-                const isSelected = absoluteIndex === clampedIndex
-                return (
-                  <Text key={repo.path} color={isSelected ? "black" : undefined} backgroundColor={isSelected ? "cyan" : undefined}>
-                    {repo.ownerRepo}
-                  </Text>
-                )
-              })
-            )}
-          </Box>
+    <ErrorBoundary>
+      <Box flexDirection="column" height="100%">
+        <Box borderStyle="round" paddingX={1}>
+          <Text>{statusText}</Text>
         </Box>
-        <PreviewPanel repo={selectedRepo} />
+        <Box flexGrow={1} gap={1} marginTop={1}>
+          <Box width="40%" borderStyle="round" paddingX={1} flexDirection="column">
+            <Text color="cyan">
+              搜索: {query || " "}
+            </Text>
+            <Box flexDirection="column" marginTop={1} flexGrow={1}>
+              {visible.length === 0 ? (
+                <Text dimColor>无匹配仓库</Text>
+              ) : (
+                visible.map((repo: RepoInfo, index: number) => {
+                  const absoluteIndex = start + index
+                  const isSelected = absoluteIndex === clampedIndex
+                  return (
+                    <Text key={repo.path} color={isSelected ? "black" : undefined} backgroundColor={isSelected ? "cyan" : undefined}>
+                      {repo.ownerRepo}
+                    </Text>
+                  )
+                })
+              )}
+            </Box>
+          </Box>
+          <PreviewPanel repo={selectedRepo} />
+        </Box>
+        <Box borderStyle="round" paddingX={1} marginTop={1}>
+          <Text>↑/↓ 选择  Enter 确认  Esc/q 退出  PgUp/PgDn 或 Ctrl+U/Ctrl+D 预览滚动</Text>
+        </Box>
       </Box>
-      <Box borderStyle="round" paddingX={1} marginTop={1}>
-        <Text>↑/↓ 选择  Enter 确认  Esc/q 退出  PgUp/PgDn 或 Ctrl+U/Ctrl+D 预览滚动</Text>
-      </Box>
-    </Box>
+    </ErrorBoundary>
   )
+}
+
+function buildStatusText(input: {
+  mode?: "cache" | "scan" | "rebuild"
+  scanDurationMs?: number
+  message?: string
+  filteredCount: number
+  totalCount: number
+  query: string
+}): string {
+  const modeLabel =
+    input.mode === "cache"
+      ? "使用缓存"
+      : input.mode === "rebuild"
+        ? "重建缓存"
+        : input.mode === "scan"
+          ? "扫描中"
+          : "就绪"
+  const parts = [
+    `状态: ${modeLabel}`,
+    `仓库: ${input.filteredCount} / ${input.totalCount}`,
+    `过滤: ${input.query ? input.query : "-"}`
+  ]
+  if (typeof input.scanDurationMs === "number") {
+    parts.push(`扫描耗时: ${formatDuration(input.scanDurationMs)}`)
+  }
+  if (input.message) {
+    parts.push(input.message)
+  }
+  return parts.join("  |  ")
+}
+
+function formatDuration(durationMs: number): string {
+  if (durationMs < 1000) {
+    return `${durationMs}ms`
+  }
+  const seconds = durationMs / 1000
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`
+  }
+  const minutes = Math.floor(seconds / 60)
+  const rest = seconds - minutes * 60
+  return `${minutes}m${rest.toFixed(0)}s`
 }

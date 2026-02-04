@@ -1,10 +1,11 @@
-import type { RepoInfo, ScanOptions } from "./core/types.js"
+import type { Action, CacheMetadata, RepoInfo, ScanOptions } from "./core/types.js"
 import { buildCache, loadCache, refreshCache } from "./core/cache.js"
 import { readLru, sortByLru, updateLru } from "./core/lru.js"
 import { scanRepos } from "./core/scan.js"
 import { RepoPicker } from "./ui/RepoPicker.js"
 import { PreviewPanel } from "./ui/PreviewPanel.js"
 import { useRepoPreview } from "./ui/useRepoPreview.js"
+import { ErrorBoundary } from "./ui/ErrorBoundary.js"
 import {
   ensureConfigFile,
   getConfigPaths,
@@ -24,12 +25,13 @@ export {
   RepoPicker,
   PreviewPanel,
   useRepoPreview,
+  ErrorBoundary,
   getConfigPaths,
   readConfig,
   writeConfig,
   ensureConfigFile
 }
-export type { RepoInfo, ScanOptions, AppConfig }
+export type { RepoInfo, ScanOptions, AppConfig, CacheMetadata, Action }
 
 export default async function pickRepo(
   options: ScanOptions & { refresh?: boolean }

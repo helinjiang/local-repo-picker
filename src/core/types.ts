@@ -20,11 +20,30 @@ export type ScanOptions = {
 export type CacheData = {
   savedAt: number
   ttlMs: number
+  metadata: CacheMetadata
   repos: RepoInfo[]
+}
+
+export type CacheMetadata = {
+  cacheVersion: number
+  scanStartedAt: number
+  scanFinishedAt: number
+  scanDurationMs: number
+  buildDurationMs: number
+  repoCount: number
+  scanRoots: string[]
+  prunedAt?: number
+  prunedRepoCount?: number
 }
 
 export type FoundRepo = {
   path: string
   scanRoot: string
   autoTag?: string
+}
+
+export type Action = {
+  id: string
+  label: string
+  run: (repo: RepoInfo) => Promise<void>
 }

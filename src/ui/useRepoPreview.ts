@@ -1,16 +1,16 @@
-import { execFile } from "node:child_process"
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import { promisify } from "node:util"
 import { useEffect, useRef, useState } from "react"
-import pLimit from "p-limit"
 import type { RepoInfo } from "../core/types.js"
-import { isDirty, readOriginUrl } from "../core/git.js"
+import { checkGitAvailable, isDirty, readOriginUrl, runGit, type GitErrorKind } from "../core/git.js"
 
-const execFileAsync = promisify(execFile)
-const gitLimit = pLimit(4)
-const cache = new Map<string, RepoPreview>()
-const inFlight = new Map<string, Promise<RepoPreview>>()
+type RepoPreviewResult = {
+  data: RepoPreview
+  error?: string
+}
+
+const cache = new Map<string, RepoPreviewResult>()
+const inFlight = new Map<string, Promise<RepoPreviewResult>>()
 
 export type RepoPreview = {
   path: string
@@ -25,6 +25,7 @@ export type RepoPreview = {
 export type PreviewState = {
   loading: boolean
   data: RepoPreview | null
+  error?: string
 }
 
 export function useRepoPreview(repo: RepoInfo | null): PreviewState {
@@ -41,18 +42,18 @@ export function useRepoPreview(repo: RepoInfo | null): PreviewState {
     }
     const cached = cache.get(repoPath)
     if (cached) {
-      setState({ loading: false, data: cached })
+      setState({ loading: false, data: cached.data, error: cached.error })
       return
     }
     setState({ loading: true, data: null })
     const timer = setTimeout(() => {
       const pending = inFlight.get(repoPath) ?? fetchPreview(repoPath)
       inFlight.set(repoPath, pending)
-      pending.then((data) => {
-        cache.set(repoPath, data)
+      pending.then((result) => {
+        cache.set(repoPath, result)
         inFlight.delete(repoPath)
         if (requestId === requestIdRef.current) {
-          setState({ loading: false, data })
+          setState({ loading: false, data: result.data, error: result.error })
         }
       })
     }, 120)
@@ -64,7 +65,23 @@ export function useRepoPreview(repo: RepoInfo | null): PreviewState {
   return state
 }
 
-async function fetchPreview(repoPath: string): Promise<RepoPreview> {
+async function fetchPreview(repoPath: string): Promise<RepoPreviewResult> {
+  const gitAvailable = await checkGitAvailable()
+  if (!gitAvailable) {
+    const readme = await readReadme(repoPath)
+    return {
+      data: {
+        path: repoPath,
+        origin: "-",
+        branch: "-",
+        status: "clean",
+        sync: "-",
+        recentCommits: [],
+        readme
+      },
+      error: "Git 不可用，预览信息已降级"
+    }
+  }
   const [origin, branch, status, sync, recentCommits, readme] = await Promise.all([
     getOrigin(repoPath),
     getBranch(repoPath),
@@ -73,33 +90,44 @@ async function fetchPreview(repoPath: string): Promise<RepoPreview> {
     getRecentCommits(repoPath),
     readReadme(repoPath)
   ])
-  return { path: repoPath, origin, branch, status, sync, recentCommits, readme }
+  const error = pickPreviewError([
+    origin.errorKind,
+    branch.errorKind,
+    sync.errorKind,
+    recentCommits.errorKind
+  ])
+  return {
+    data: {
+      path: repoPath,
+      origin: origin.value,
+      branch: branch.value,
+      status,
+      sync: sync.value,
+      recentCommits: recentCommits.value,
+      readme
+    },
+    error
+  }
 }
 
-async function getOrigin(repoPath: string): Promise<string> {
+async function getOrigin(repoPath: string): Promise<{ value: string; errorKind?: GitErrorKind }> {
   const fromConfig = await readOriginUrl(repoPath)
   if (fromConfig) {
-    return fromConfig
+    return { value: fromConfig }
   }
-  try {
-    const { stdout } = await gitLimit(() =>
-      execFileAsync("git", ["-C", repoPath, "config", "--get", "remote.origin.url"])
-    )
-    return stdout.trim() || "-"
-  } catch {
-    return "-"
+  const result = await runGit(["config", "--get", "remote.origin.url"], { cwd: repoPath })
+  if (!result.ok) {
+    return { value: "-", errorKind: result.kind }
   }
+  return { value: result.stdout.trim() || "-" }
 }
 
-async function getBranch(repoPath: string): Promise<string> {
-  try {
-    const { stdout } = await gitLimit(() =>
-      execFileAsync("git", ["-C", repoPath, "rev-parse", "--abbrev-ref", "HEAD"])
-    )
-    return stdout.trim() || "-"
-  } catch {
-    return "-"
+async function getBranch(repoPath: string): Promise<{ value: string; errorKind?: GitErrorKind }> {
+  const result = await runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repoPath })
+  if (!result.ok) {
+    return { value: "-", errorKind: result.kind }
   }
+  return { value: result.stdout.trim() || "-" }
 }
 
 async function getStatus(repoPath: string): Promise<"dirty" | "clean"> {
@@ -107,46 +135,35 @@ async function getStatus(repoPath: string): Promise<"dirty" | "clean"> {
   return dirty ? "dirty" : "clean"
 }
 
-async function getSync(repoPath: string): Promise<string> {
-  try {
-    const { stdout } = await gitLimit(() =>
-      execFileAsync("git", [
-        "-C",
-        repoPath,
-        "rev-list",
-        "--left-right",
-        "--count",
-        "HEAD...@{upstream}"
-      ])
-    )
-    const [aheadRaw, behindRaw] = stdout.trim().split(/\s+/)
-    const ahead = Number(aheadRaw ?? 0)
-    const behind = Number(behindRaw ?? 0)
-    return `ahead ${ahead} / behind ${behind}`
-  } catch {
-    return "-"
+async function getSync(repoPath: string): Promise<{ value: string; errorKind?: GitErrorKind }> {
+  const result = await runGit(
+    ["rev-list", "--left-right", "--count", "HEAD...@{upstream}"],
+    { cwd: repoPath }
+  )
+  if (!result.ok) {
+    return { value: "-", errorKind: result.kind }
   }
+  const [aheadRaw, behindRaw] = result.stdout.trim().split(/\s+/)
+  const ahead = Number(aheadRaw ?? 0)
+  const behind = Number(behindRaw ?? 0)
+  return { value: `ahead ${ahead} / behind ${behind}` }
 }
 
-async function getRecentCommits(repoPath: string): Promise<string[]> {
-  try {
-    const { stdout } = await gitLimit(() =>
-      execFileAsync("git", [
-        "-C",
-        repoPath,
-        "log",
-        "-n",
-        "12",
-        "--date=iso",
-        "--pretty=format:%cd %h %s"
-      ])
-    )
-    return stdout
+async function getRecentCommits(
+  repoPath: string
+): Promise<{ value: string[]; errorKind?: GitErrorKind }> {
+  const result = await runGit(
+    ["log", "-n", "12", "--date=iso", "--pretty=format:%cd %h %s"],
+    { cwd: repoPath }
+  )
+  if (!result.ok) {
+    return { value: [], errorKind: result.kind }
+  }
+  return {
+    value: result.stdout
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
-  } catch {
-    return []
   }
 }
 
@@ -163,4 +180,17 @@ async function readReadme(repoPath: string): Promise<string[]> {
     }
   }
   return []
+}
+
+function pickPreviewError(errors: Array<GitErrorKind | undefined>): string | undefined {
+  if (errors.includes("not_found")) {
+    return "Git 不可用，预览信息已降级"
+  }
+  if (errors.includes("not_repo")) {
+    return "仓库不可用或不是 Git 仓库"
+  }
+  if (errors.includes("unknown")) {
+    return "Git 预览失败，已降级展示"
+  }
+  return undefined
 }

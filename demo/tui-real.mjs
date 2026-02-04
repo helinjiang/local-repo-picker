@@ -21,6 +21,10 @@ const cache = await buildCache({
 render(
   React.createElement(RepoPicker, {
     repos: cache.repos,
+    status: {
+      mode: "scan",
+      scanDurationMs: cache.metadata?.scanDurationMs
+    },
     onSelect: (repo) => {
       console.log(JSON.stringify(repo, null, 2))
     },
