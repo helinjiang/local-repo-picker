@@ -5,9 +5,13 @@ import os from "node:os"
 import path from "node:path"
 import readline from "node:readline/promises"
 import { fileURLToPath } from "node:url"
+import React from "react"
+import { render } from "ink"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./config/config"
 import { isDebugEnabled, logger } from "./core/logger"
+import { RepoPicker } from "./ui/RepoPicker"
+import type { RepoInfo } from "./core/types"
 
 process.on("unhandledRejection", (reason) => {
   handleFatalError(reason)
@@ -69,13 +73,23 @@ async function main(): Promise<void> {
     return
   }
 
-  const cache = (await loadCache(options)) ?? (await buildCache(options))
-  if (cache.metadata.warningCount && cache.metadata.warningCount > 0) {
-    console.error(`部分路径被跳过: ${cache.metadata.warningCount}`)
+  const listOnly = command === "list" || args.includes("--list")
+  const cached = await loadCache(options)
+  const resolved = cached ?? (await buildCache(options))
+  if (resolved.metadata.warningCount && resolved.metadata.warningCount > 0) {
+    console.error(`部分路径被跳过: ${resolved.metadata.warningCount}`)
   }
-  for (const repo of cache.repos) {
-    console.log(repo.path)
+  if (listOnly || !process.stdout.isTTY) {
+    for (const repo of resolved.repos) {
+      console.log(repo.path)
+    }
+    return
   }
+  await runTui(resolved.repos, {
+    mode: cached ? "cache" : "scan",
+    scanDurationMs: resolved.metadata.scanDurationMs,
+    warningCount: resolved.metadata.warningCount
+  })
 }
 
 async function runSetupWizard(configFile: string) {
@@ -193,15 +207,39 @@ function expandPath(input: string): string {
   return input
 }
 
+async function runTui(
+  repos: RepoInfo[],
+  status: { mode: "cache" | "scan"; scanDurationMs?: number; warningCount?: number }
+) {
+  let selectedPath: string | null = null
+  const { waitUntilExit } = render(
+    React.createElement(RepoPicker, {
+      repos,
+      status,
+      onSelect: (repo) => {
+        selectedPath = repo.path
+      },
+      onCancel: () => {}
+    }),
+    { patchConsole: false }
+  )
+  await waitUntilExit()
+  if (selectedPath) {
+    console.log(selectedPath)
+  }
+}
+
 function printHelp(): void {
   const lines = [
     "Usage: repo [command] [options]",
     "",
     "Commands:",
     "  refresh            强制重建 cache",
+    "  list               输出 repo 路径列表",
     "",
     "Options:",
     "  --config           创建默认配置并输出路径",
+    "  --list             输出 repo 路径列表",
     "  -h, --help         显示帮助",
     "  -v, --version      显示版本号"
   ]

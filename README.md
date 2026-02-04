@@ -74,11 +74,14 @@ repo --config
 repo refresh
 repo --help
 repo --version
+repo list
+repo --list
 ```
 
-- `repo`：输出当前 cache 的 repo 路径
+- `repo`：启动 TUI 选择界面
 - `repo --config`：创建默认配置并输出 config.json 路径
 - `repo refresh`：强制重建 cache
+- `repo list` / `repo --list`：输出 repo 路径列表
 
 Debug：
 
