@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs"
+import path from "node:path"
 import { normalizeRepoKey } from "./path-utils"
 
 export type ManualTagsMap = Map<string, string[]>
@@ -86,4 +87,54 @@ export function buildTags(options: {
         : [options.remoteTag]
   const tags = options.dirty ? [...base, "[dirty]"] : base
   return uniqueTags(tags)
+}
+
+export async function upsertManualTags(
+  filePath: string,
+  repoPath: string,
+  tags: string[]
+): Promise<void> {
+  const normalizedPath = normalizeRepoKey(repoPath)
+  if (!normalizedPath) {
+    return
+  }
+  const existing = await readManualTagsRaw(filePath)
+  existing.set(normalizedPath, { path: repoPath, tags })
+  await fs.mkdir(path.dirname(filePath), { recursive: true }).catch(() => {})
+  const lines = Array.from(existing.values())
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .map((item) => `${item.path}\t${item.tags.join("")}`)
+  const content = lines.length > 0 ? `${lines.join("\n")}\n` : ""
+  await fs.writeFile(filePath, content, "utf8")
+}
+
+async function readManualTagsRaw(
+  filePath: string
+): Promise<Map<string, { path: string; tags: string[] }>> {
+  const map = new Map<string, { path: string; tags: string[] }>()
+  try {
+    const content = await fs.readFile(filePath, "utf8")
+    const lines = content.split(/\r?\n/)
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue
+      }
+      const [rawPath, rawTags] = line.split("\t")
+      if (!rawPath || !rawTags) {
+        continue
+      }
+      const key = normalizeRepoKey(rawPath)
+      if (!key) {
+        continue
+      }
+      const parsed = parseTagList(rawTags)
+      if (parsed.length === 0) {
+        continue
+      }
+      map.set(key, { path: rawPath, tags: parsed })
+    }
+  } catch {
+    return map
+  }
+  return map
 }

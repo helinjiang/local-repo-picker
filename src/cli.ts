@@ -14,6 +14,8 @@ import { normalizeRepoKey } from "./core/path-utils"
 import { updateLru } from "./core/lru"
 import { getRegisteredActions } from "./core/plugins"
 import { registerBuiltInPlugins } from "./plugins/built-in"
+import { startWebServer } from "./web/server"
+import { isProcessAlive, readUiState } from "./web/state"
 
 process.on("unhandledRejection", (reason) => {
   handleFatalError(reason)
@@ -43,6 +45,17 @@ async function main(): Promise<void> {
   if (args.includes("--config")) {
     const configFile = await ensureConfigFile()
     console.log(configFile)
+    return
+  }
+
+  if (command === "status") {
+    const state = await readUiState()
+    if (!state || !isProcessAlive(state.pid)) {
+      logger.error("Web UI 未运行")
+      process.exitCode = 1
+      return
+    }
+    console.log(state.url)
     return
   }
 
@@ -78,6 +91,12 @@ async function main(): Promise<void> {
       console.error(`部分路径被跳过: ${cache.metadata.warningCount}`)
     }
     console.log(`refresh: ${cache.repos.length}`)
+    return
+  }
+
+  if (command === "ui") {
+    const state = await startWebServer(options)
+    console.log(state.url)
     return
   }
 
@@ -606,6 +625,8 @@ function printHelp(): void {
     "Commands:",
     "  refresh            强制重建 cache",
     "  list               输出 repo 路径列表",
+    "  ui                 启动本地 Web UI",
+    "  status             查看 Web UI 状态",
     "",
     "Options:",
     "  --config           创建默认配置并输出路径",
