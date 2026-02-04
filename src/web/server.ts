@@ -1,6 +1,9 @@
 import fastify from "fastify"
+import fastifyStatic from "@fastify/static"
 import cors from "@fastify/cors"
 import helmet from "@fastify/helmet"
+import path from "node:path"
+import { promises as fs } from "node:fs"
 import type { UiState } from "./state"
 import { clearUiState, writeUiState } from "./state"
 import { registerRoutes } from "./routes"
@@ -31,6 +34,21 @@ export async function startWebServer(options: ServerOptions): Promise<UiState> {
   const startedAt = Date.now()
   const state: UiState = { pid: process.pid, port: 0, url: "", startedAt }
   await registerRoutes(app, options, state)
+  const distRoot = path.resolve(process.cwd(), "webapp", "dist")
+  const distExists = await fs
+    .stat(distRoot)
+    .then(() => true)
+    .catch(() => false)
+  if (distExists) {
+    await app.register(fastifyStatic, { root: distRoot, prefix: "/" })
+    app.setNotFoundHandler((request, reply) => {
+      if (request.url.startsWith("/api/")) {
+        reply.code(404).send({ error: "Not Found" })
+        return
+      }
+      reply.sendFile("index.html")
+    })
+  }
   const { port, url } = await listenWithRetry(app, 17333)
   state.port = port
   state.url = url

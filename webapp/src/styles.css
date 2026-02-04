@@ -1,0 +1,58 @@
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.app-shell {
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+.content-area {
+  display: flex;
+  height: calc(100% - 58px);
+}
+
+.list-pane {
+  width: 45%;
+  border-right: 1px solid #f0f0f0;
+  overflow: auto;
+}
+
+.preview-pane {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.repo-row-selected {
+  background: #e6f4ff !important;
+}
+
+.preview-code {
+  background: #0f1115;
+  color: #d6e4ff;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: pre-wrap;
+}
+
+.preview-meta {
+  margin-bottom: 16px;
+}
