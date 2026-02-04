@@ -72,6 +72,8 @@ asciinema play docs/demo.cast
 repo
 repo --config
 repo refresh
+repo --help
+repo --version
 ```
 
 - `repo`：输出当前 cache 的 repo 路径

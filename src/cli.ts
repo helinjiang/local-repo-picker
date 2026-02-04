@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import readline from "node:readline/promises"
+import { fileURLToPath } from "node:url"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./config/config"
 import { isDebugEnabled, logger } from "./core/logger"
@@ -21,6 +22,17 @@ await main()
 async function main(): Promise<void> {
   const args = process.argv.slice(2)
   const command = args[0]
+
+  if (args.includes("--help") || args.includes("-h")) {
+    printHelp()
+    return
+  }
+
+  if (args.includes("--version") || args.includes("-v")) {
+    const version = await readPackageVersion()
+    console.log(version || "0.0.0")
+    return
+  }
 
   if (args.includes("--config")) {
     const configFile = await ensureConfigFile()
@@ -179,6 +191,33 @@ function expandPath(input: string): string {
     return path.join(os.homedir(), input.slice(1))
   }
   return input
+}
+
+function printHelp(): void {
+  const lines = [
+    "Usage: repo [command] [options]",
+    "",
+    "Commands:",
+    "  refresh            强制重建 cache",
+    "",
+    "Options:",
+    "  --config           创建默认配置并输出路径",
+    "  -h, --help         显示帮助",
+    "  -v, --version      显示版本号"
+  ]
+  console.log(lines.join("\n"))
+}
+
+async function readPackageVersion(): Promise<string> {
+  const currentDir = path.dirname(fileURLToPath(import.meta.url))
+  const packageFile = path.resolve(currentDir, "../package.json")
+  try {
+    const content = await fs.readFile(packageFile, "utf8")
+    const data = JSON.parse(content) as { version?: string }
+    return typeof data.version === "string" ? data.version : ""
+  } catch {
+    return ""
+  }
 }
 
 function handleFatalError(error: unknown): void {
