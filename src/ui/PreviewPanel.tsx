@@ -61,15 +61,17 @@ export function PreviewPanel({ repo }: PreviewPanelProps) {
     return lines
   }, [repo, loading, data, error])
 
-  useInput((_input, key) => {
+  useInput((input, key) => {
     if (!repo) {
       return
     }
-    if (key.pageDown || (key.ctrl && _input === "d")) {
+    const ctrlDown = key.ctrl && (input === "d" || input === "\u0004")
+    const ctrlUp = key.ctrl && (input === "u" || input === "\u0015")
+    if (key.pageDown || ctrlDown) {
       setScrollOffset((value) => Math.min(value + Math.max(1, maxHeight - 6), Math.max(0, content.length - maxHeight)))
       return
     }
-    if (key.pageUp || (key.ctrl && _input === "u")) {
+    if (key.pageUp || ctrlUp) {
       setScrollOffset((value) => Math.max(0, value - Math.max(1, maxHeight - 6)))
     }
   })

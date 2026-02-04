@@ -87,6 +87,10 @@ export function RepoPicker({
       return
     }
     if (input) {
+      const code = input.charCodeAt(0)
+      if (code < 32) {
+        return
+      }
       setQuery((value: string) => value + input)
       setSelectedIndex(0)
     }

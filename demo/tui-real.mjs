@@ -18,7 +18,8 @@ const cache = await buildCache({
   lruFile: path.join(cacheDir, "lru.txt")
 })
 
-render(
+let result = null
+const { waitUntilExit } = render(
   React.createElement(RepoPicker, {
     repos: cache.repos,
     status: {
@@ -27,10 +28,17 @@ render(
       warningCount: cache.metadata?.warningCount
     },
     onSelect: (repo) => {
-      console.log(JSON.stringify(repo, null, 2))
+      result = { type: "select", repo }
     },
     onCancel: () => {
-      console.log("cancel")
+      result = { type: "cancel" }
     }
-  })
+  }),
+  { patchConsole: false }
 )
+await waitUntilExit()
+if (result?.type === "select") {
+  console.log(JSON.stringify(result.repo, null, 2))
+} else {
+  console.log("cancel")
+}
