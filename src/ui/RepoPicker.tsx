@@ -41,7 +41,12 @@ export function RepoPicker({
     })
   }, [query, repos])
 
-  const maxVisible = Math.max(5, (stdout?.rows ?? 24) - 10)
+  const rows = stdout?.rows ?? 24
+  const headerHeight = 3
+  const footerHeight = 3
+  const layoutPadding = 2
+  const contentHeight = Math.max(8, rows - headerHeight - footerHeight - layoutPadding)
+  const maxVisible = Math.max(3, contentHeight - 4)
   const clampedIndex = Math.min(Math.max(0, selectedIndex), Math.max(0, filtered.length - 1))
   const start = Math.min(
     Math.max(0, clampedIndex - Math.floor(maxVisible / 2)),
@@ -49,15 +54,20 @@ export function RepoPicker({
   )
   const visible = filtered.slice(start, start + maxVisible)
   const selectedRepo = filtered[clampedIndex] ?? null
-  const statusText = buildStatusText({
-    mode: status?.mode,
-    scanDurationMs: status?.scanDurationMs,
-    warningCount: status?.warningCount,
-    message: status?.message,
-    filteredCount: filtered.length,
-    totalCount: repos.length,
-    query
-  })
+  const headerWidth = Math.max(0, (stdout?.columns ?? 80) - 4)
+  const statusText = truncateText(
+    buildStatusText({
+      mode: status?.mode,
+      scanDurationMs: status?.scanDurationMs,
+      warningCount: status?.warningCount,
+      message: status?.message,
+      filteredCount: filtered.length,
+      totalCount: repos.length,
+      query
+    }),
+    headerWidth
+  )
+  const searchText = truncateText(`搜索: ${query || " "}`, Math.max(0, Math.floor(headerWidth * 0.4) - 2))
 
   useInput((input: string, key: Key) => {
     if (key.upArrow) {
@@ -99,14 +109,12 @@ export function RepoPicker({
   return (
     <ErrorBoundary>
       <Box flexDirection="column" height="100%">
-        <Box borderStyle="round" paddingX={1}>
+        <Box borderStyle="round" paddingX={1} width="100%">
           <Text>{statusText}</Text>
         </Box>
         <Box flexGrow={1} gap={1} marginTop={1}>
           <Box width="40%" borderStyle="round" paddingX={1} flexDirection="column">
-            <Text color="cyan">
-              搜索: {query || " "}
-            </Text>
+            <Text color="cyan">{searchText}</Text>
             <Box flexDirection="column" marginTop={1} flexGrow={1}>
               {visible.length === 0 ? (
                 <Text dimColor>无匹配仓库</Text>
@@ -123,7 +131,7 @@ export function RepoPicker({
               )}
             </Box>
           </Box>
-          <PreviewPanel repo={selectedRepo} />
+          <PreviewPanel repo={selectedRepo} height={contentHeight} />
         </Box>
         <Box borderStyle="round" paddingX={1} marginTop={1}>
           <Text>↑/↓ 选择  Enter 确认  Esc/q 退出  PgUp/PgDn 或 Ctrl+U/Ctrl+D 预览滚动</Text>
@@ -165,6 +173,20 @@ function buildStatusText(input: {
     parts.push(input.message)
   }
   return parts.join("  |  ")
+}
+
+function truncateText(text: string, maxWidth: number): string {
+  if (maxWidth <= 0) {
+    return ""
+  }
+  const chars = Array.from(text)
+  if (chars.length <= maxWidth) {
+    return text
+  }
+  if (maxWidth === 1) {
+    return "…"
+  }
+  return `${chars.slice(0, maxWidth - 1).join("")}…`
 }
 
 function formatDuration(durationMs: number): string {

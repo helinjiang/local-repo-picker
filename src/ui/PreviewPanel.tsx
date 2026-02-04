@@ -6,11 +6,13 @@ import { useRepoPreview } from "./useRepoPreview"
 
 type PreviewPanelProps = {
   repo: RepoInfo | null
+  height?: number
 }
 
-export function PreviewPanel({ repo }: PreviewPanelProps) {
+export function PreviewPanel({ repo, height }: PreviewPanelProps) {
   const { stdout } = useStdout()
-  const maxHeight = Math.max(10, Math.floor((stdout?.rows ?? 24) * 0.7))
+  const baseHeight = height ?? Math.floor((stdout?.rows ?? 24) * 0.7)
+  const maxHeight = Math.max(10, baseHeight)
   const { loading, data, error } = useRepoPreview(repo)
   const [scrollOffset, setScrollOffset] = useState(0)
 
