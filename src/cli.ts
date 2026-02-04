@@ -46,8 +46,14 @@ async function main(): Promise<void> {
 
   const { cacheFile, manualTagsFile, lruFile, configFile } = getConfigPaths()
   let config = await readConfig()
+  const isInternal = typeof command === "string" && command.startsWith("__")
 
   if (!config.scanRoots || config.scanRoots.length === 0) {
+    if (isInternal) {
+      logger.error(`请在 ${configFile} 配置 scanRoots`)
+      process.exitCode = 1
+      return
+    }
     const updated = await runSetupWizard(configFile)
     if (!updated) {
       logger.error(`请在 ${configFile} 配置 scanRoots`)
@@ -73,6 +79,11 @@ async function main(): Promise<void> {
     return
   }
 
+  if (command === "__list") {
+    await runInternalList(options, args)
+    return
+  }
+
   const listOnly = command === "list" || args.includes("--list")
   const cached = await loadCache(options)
   const resolved = cached ?? (await buildCache(options))
@@ -90,6 +101,53 @@ async function main(): Promise<void> {
     scanDurationMs: resolved.metadata.scanDurationMs,
     warningCount: resolved.metadata.warningCount
   })
+}
+
+async function runInternalList(
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  },
+  args: string[]
+): Promise<void> {
+  const filterTag = readArgValue(args, "--filter-tag")
+  const cached = await loadCache(options)
+  const resolved = cached ?? (await buildCache(options))
+  const rows = filterTag
+    ? resolved.repos.filter((repo) => repo.tags.some((tag) => tag.includes(filterTag)))
+    : resolved.repos
+  for (const repo of rows) {
+    const display = buildListDisplay(repo)
+    const rawTags = repo.tags.join("")
+    console.log(`${display}\t${repo.path}\t${rawTags}`)
+  }
+}
+
+function buildListDisplay(repo: RepoInfo): string {
+  const name = repo.ownerRepo || path.basename(repo.path)
+  const rawTags = repo.tags.join("")
+  if (!rawTags) {
+    return name
+  }
+  return `${name} ${applyAnsiTag(rawTags)}`
+}
+
+function applyAnsiTag(input: string): string {
+  return `\u001b[36m${input}\u001b[0m`
+}
+
+function readArgValue(args: string[], key: string): string {
+  const index = args.indexOf(key)
+  if (index >= 0 && index + 1 < args.length) {
+    return args[index + 1]
+  }
+  return ""
 }
 
 async function runSetupWizard(configFile: string) {
