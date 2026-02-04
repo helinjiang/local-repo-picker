@@ -150,7 +150,6 @@ remote tag（从 origin host 推导）
 host	tag
 github.com	[github]
 gitee.com	[gitee]
-code.domain.org / *.domain.org	[domain]
 其他	[internal:host]
 无 origin	[noremote]
 

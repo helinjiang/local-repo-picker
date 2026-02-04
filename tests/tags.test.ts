@@ -10,7 +10,6 @@ describe("tags", () => {
   it("生成 remote tag", () => {
     expect(getRemoteTag("github.com")).toBe("[github]")
     expect(getRemoteTag("gitee.com")).toBe("[gitee]")
-    expect(getRemoteTag("code.domain.org")).toBe("[domain]")
     expect(getRemoteTag("custom.local")).toBe("[internal:custom.local]")
     expect(getRemoteTag()).toBe("[noremote]")
   })

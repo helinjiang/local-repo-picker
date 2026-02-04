@@ -52,9 +52,6 @@ export function getRemoteTag(host?: string): string {
   if (host === "gitee.com") {
     return "[gitee]"
   }
-  if (host === "code.domain.org" || host.endsWith(".domain.org")) {
-    return "[domain]"
-  }
   return `[internal:${host}]`
 }
 

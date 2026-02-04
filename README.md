@@ -97,7 +97,7 @@ DEBUG=1 repo
 
 Tag 由多部分组成：
 
-- remote tag：`[github]` / `[gitee]` / `[domain]` / `[internal:host]`
+- remote tag：`[github]` / `[gitee]`  / `[internal:host]`
 - auto tag：扫描路径第一层目录，如 `[team-a]`
 - dirty tag：工作区有改动时追加 `[dirty]`
 - manual tag：从 `repo_tags.tsv` 读取

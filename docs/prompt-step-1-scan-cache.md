@@ -26,7 +26,7 @@
 
 ## Tags
 - auto tag（一级目录）
-- remote tag（github / gitee / domain / internal）
+- remote tag（github / gitee  / internal）
 - dirty tag（git status --porcelain）
 - manual tag（repo_tags.tsv）
 
