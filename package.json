@@ -13,7 +13,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "demo:cache": "npm run build && node demo/cache.mjs",
-    "demo:tui": "npm run build && node demo/tui.mjs"
+    "demo:tui": "npm run build && node demo/tui.mjs",
+    "demo:tui-real": "npm run build && node demo/tui-real.mjs"
   },
   "dependencies": {
     "ink": "^5.1.0",
