@@ -108,6 +108,18 @@ repo --list
 - `ctrl-a` 恢复全量列表
 - 其他键按 tag 过滤（tag 精确包含即可）
 
+## Actions
+
+选择仓库后会进入二次 fzf，执行动作（可通过 Esc 取消并仅输出路径）。
+
+内置动作：
+
+- open in VSCode
+- open in iTerm
+- open in Finder
+- add tag（打开 `repo_tags.tsv` 并刷新 cache）
+- refresh cache
+
 Debug：
 
 ```bash

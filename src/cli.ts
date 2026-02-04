@@ -16,6 +16,8 @@ import { RepoPicker } from "./ui/RepoPicker"
 import type { RepoInfo } from "./core/types"
 import { normalizeRepoKey } from "./core/path-utils"
 import { updateLru } from "./core/lru"
+import { getRegisteredActions } from "./core/plugins"
+import { registerBuiltInPlugins } from "./plugins/built-in"
 
 process.on("unhandledRejection", (reason) => {
   handleFatalError(reason)
@@ -113,7 +115,13 @@ async function main(): Promise<void> {
   const selected = await runFzfPicker(options, config.fzfTagFilters ?? {})
   if (selected) {
     await updateLru(options.lruFile, selected)
-    console.log(selected)
+    const picked = await resolveRepoInfo(options, selected)
+    const action = await runFzfActionPicker(picked, options)
+    if (!action) {
+      console.log(selected)
+      return
+    }
+    await action.run(picked)
   }
 }
 
@@ -357,6 +365,97 @@ async function runFzfPicker(
   }
   const parts = line.split("\t")
   return parts[1]?.trim() || null
+}
+
+async function runFzfActionPicker(
+  repo: RepoInfo,
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  }
+) {
+  registerBuiltInPlugins()
+  const actions = getRegisteredActions()
+  const builtins = getBuiltinActions(repo, options)
+  const merged = [...builtins, ...actions]
+  if (merged.length === 0) {
+    return null
+  }
+  const input = merged.map((item) => `${item.label}\t${item.id}`).join("\n")
+  const result = await execa("fzf", ["--delimiter=\t", "--with-nth=1", "--prompt", "Action> "], {
+    input,
+    stdout: "pipe",
+    stderr: "inherit",
+    reject: false
+  })
+  if (result.exitCode !== 0) {
+    return null
+  }
+  const line = result.stdout.trim()
+  if (!line) {
+    return null
+  }
+  const id = line.split("\t")[1]
+  return merged.find((item) => item.id === id) ?? null
+}
+
+function getBuiltinActions(
+  repo: RepoInfo,
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  }
+) {
+  return [
+    {
+      id: "builtin.open-vscode",
+      label: "open in VSCode",
+      run: async () => {
+        await execa("code", [repo.path], { reject: false })
+      }
+    },
+    {
+      id: "builtin.open-iterm",
+      label: "open in iTerm",
+      run: async () => {
+        await execa("open", ["-a", "iTerm", repo.path], { reject: false })
+      }
+    },
+    {
+      id: "builtin.open-finder",
+      label: "open in Finder",
+      run: async () => {
+        await execa("open", [repo.path], { reject: false })
+      }
+    },
+    {
+      id: "builtin.add-tag",
+      label: "add tag",
+      run: async () => {
+        await execa("open", ["-e", options.manualTagsFile], { reject: false })
+        await refreshCache(options)
+      }
+    },
+    {
+      id: "builtin.refresh-cache",
+      label: "refresh cache",
+      run: async () => {
+        await refreshCache(options)
+      }
+    }
+  ]
 }
 
 function buildFzfBinds(filters: Record<string, string>): string {
