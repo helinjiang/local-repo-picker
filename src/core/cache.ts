@@ -19,7 +19,17 @@ export async function buildCache(
   const buildStartedAt = Date.now()
   const manualTags = await readManualTags(normalized.manualTagsFile)
   const scanStartedAt = Date.now()
-  const found = await scanRepos(normalized)
+  let warningCount = 0
+  const warningSamples: string[] = []
+  const found = await scanRepos({
+    ...normalized,
+    onWarning: (warning) => {
+      warningCount += 1
+      if (warningSamples.length < 5) {
+        warningSamples.push(`${warning.reason}: ${warning.path}`)
+      }
+    }
+  })
   const scanFinishedAt = Date.now()
   const scanDurationMs = scanFinishedAt - scanStartedAt
   logger.debug(
@@ -59,7 +69,9 @@ export async function buildCache(
     scanDurationMs,
     buildDurationMs: buildFinishedAt - buildStartedAt,
     repoCount: sorted.length,
-    scanRoots: normalized.scanRoots
+    scanRoots: normalized.scanRoots,
+    warningCount: warningCount > 0 ? warningCount : undefined,
+    warningSamples: warningSamples.length > 0 ? warningSamples : undefined
   }
   const cache: CacheData = {
     savedAt: Date.now(),
@@ -82,7 +94,17 @@ export async function loadCache(
   const normalized = normalizeOptions(options)
   try {
     const content = await fs.readFile(normalized.cacheFile, "utf8")
-    const data = JSON.parse(content) as Partial<CacheData>
+    let data: Partial<CacheData>
+    try {
+      data = JSON.parse(content) as Partial<CacheData>
+    } catch {
+      await handleCorruptedCache(normalized.cacheFile)
+      return null
+    }
+    if (!data || !Array.isArray(data.repos)) {
+      await handleCorruptedCache(normalized.cacheFile)
+      return null
+    }
     const ttlMs = data.ttlMs ?? normalized.cacheTtlMs
     const savedAt = data.savedAt ?? 0
     if (Date.now() - savedAt > ttlMs) {
@@ -131,17 +153,30 @@ async function applyLruIfNeeded(
   return sortByLru(repos, lruList)
 }
 
-function normalizeOptions(options: ScanOptions): Required<ScanOptions> {
+function normalizeOptions(
+  options: ScanOptions
+): ScanOptions & {
+  maxDepth: number
+  pruneDirs: string[]
+  cacheTtlMs: number
+  followSymlinks: boolean
+  cacheFile: string
+  manualTagsFile: string
+  lruFile: string
+  lruLimit: number
+} {
   const { cacheFile, manualTagsFile, lruFile } = getConfigPaths()
   return {
     scanRoots: options.scanRoots,
     maxDepth: options.maxDepth ?? 7,
     pruneDirs: options.pruneDirs ?? [],
     cacheTtlMs: options.cacheTtlMs ?? defaultTtlMs,
+    followSymlinks: options.followSymlinks ?? false,
     cacheFile: options.cacheFile ?? cacheFile,
     manualTagsFile: options.manualTagsFile ?? manualTagsFile,
     lruFile: options.lruFile ?? lruFile,
-    lruLimit: options.lruLimit ?? 300
+    lruLimit: options.lruLimit ?? 300,
+    onWarning: options.onWarning
   }
 }
 
@@ -197,4 +232,9 @@ async function persistCache(
 ): Promise<void> {
   await ensureDir(path.dirname(cacheFile))
   await fs.writeFile(cacheFile, JSON.stringify(cache, null, 2), "utf8")
+}
+
+async function handleCorruptedCache(cacheFile: string): Promise<void> {
+  logger.debug("cache corrupted, rebuilding")
+  await fs.unlink(cacheFile).catch(() => {})
 }

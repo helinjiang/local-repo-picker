@@ -7,9 +7,10 @@ import { isDebugEnabled, logger } from "./logger"
 
 const execFileAsync = promisify(execFile)
 const gitLimit = pLimit(6)
+const defaultTimeoutMs = 2000
 let gitAvailableCache: boolean | null = null
 
-export type GitErrorKind = "not_found" | "not_repo" | "unknown"
+export type GitErrorKind = "not_found" | "not_repo" | "timeout" | "unknown"
 
 export type GitResult =
   | { ok: true; stdout: string }
@@ -45,10 +46,11 @@ export async function runGit(
   options: { cwd?: string; timeoutMs?: number } = {}
 ): Promise<GitResult> {
   const gitArgs = options.cwd ? ["-C", options.cwd, ...args] : args
+  const timeoutMs = options.timeoutMs ?? defaultTimeoutMs
   const start = Date.now()
   try {
     const { stdout } = await gitLimit(() =>
-      execFileAsync("git", gitArgs, { timeout: options.timeoutMs })
+      execFileAsync("git", gitArgs, { timeout: timeoutMs })
     )
     if (isDebugEnabled()) {
       logger.debug(`git ${gitArgs.join(" ")} ${Date.now() - start}ms`)
@@ -138,8 +140,8 @@ export function parseOriginInfo(originUrl: string | null): {
   return { host, ownerRepo }
 }
 
-export async function isDirty(repoPath: string): Promise<boolean> {
-  const result = await runGit(["status", "--porcelain"], { cwd: repoPath })
+export async function isDirty(repoPath: string, timeoutMs?: number): Promise<boolean> {
+  const result = await runGit(["status", "--porcelain"], { cwd: repoPath, timeoutMs })
   if (!result.ok) {
     return false
   }
@@ -151,7 +153,13 @@ function parseGitError(error: unknown): GitErrorKind {
   if (err?.code === "ENOENT") {
     return "not_found"
   }
+  if (err?.code === "ETIMEDOUT") {
+    return "timeout"
+  }
   const message = `${err?.stderr ?? ""}\n${err?.message ?? ""}`.toLowerCase()
+  if (message.includes("timed out")) {
+    return "timeout"
+  }
   if (message.includes("not a git repository")) {
     return "not_repo"
   }
@@ -164,6 +172,9 @@ function getGitErrorMessage(kind: GitErrorKind, error: unknown): string {
   }
   if (kind === "not_repo") {
     return "not a git repository"
+  }
+  if (kind === "timeout") {
+    return "git timeout"
   }
   const err = error as NodeJS.ErrnoException
   return err?.message ?? "git failed"

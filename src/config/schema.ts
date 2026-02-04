@@ -3,4 +3,5 @@ export type AppConfig = {
   maxDepth?: number
   pruneDirs?: string[]
   cacheTtlMs?: number
+  followSymlinks?: boolean
 }

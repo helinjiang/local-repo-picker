@@ -23,7 +23,7 @@ export function PreviewPanel({ repo }: PreviewPanelProps) {
     }
     const lines: string[] = []
     if (error) {
-      lines.push(`错误: ${error}`)
+      lines.push(error)
       lines.push("")
     }
     lines.push(`PATH: ${data?.path ?? repo.path}`)
@@ -42,6 +42,8 @@ export function PreviewPanel({ repo }: PreviewPanelProps) {
     lines.push("README:")
     if (data?.readme?.length) {
       lines.push(...data.readme.map((line) => (line === "" ? " " : line)))
+    } else if (data?.readmeStatus === "unavailable") {
+      lines.push("README unavailable")
     } else {
       lines.push("无 README")
     }

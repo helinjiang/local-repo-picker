@@ -23,7 +23,8 @@ render(
     repos: cache.repos,
     status: {
       mode: "scan",
-      scanDurationMs: cache.metadata?.scanDurationMs
+      scanDurationMs: cache.metadata?.scanDurationMs,
+      warningCount: cache.metadata?.warningCount
     },
     onSelect: (repo) => {
       console.log(JSON.stringify(repo, null, 2))

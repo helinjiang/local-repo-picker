@@ -13,6 +13,7 @@ type RepoPickerProps = {
   status?: {
     mode?: "cache" | "scan" | "rebuild"
     scanDurationMs?: number
+    warningCount?: number
     message?: string
   }
 }
@@ -51,6 +52,7 @@ export function RepoPicker({
   const statusText = buildStatusText({
     mode: status?.mode,
     scanDurationMs: status?.scanDurationMs,
+    warningCount: status?.warningCount,
     message: status?.message,
     filteredCount: filtered.length,
     totalCount: repos.length,
@@ -130,6 +132,7 @@ export function RepoPicker({
 function buildStatusText(input: {
   mode?: "cache" | "scan" | "rebuild"
   scanDurationMs?: number
+  warningCount?: number
   message?: string
   filteredCount: number
   totalCount: number
@@ -150,6 +153,9 @@ function buildStatusText(input: {
   ]
   if (typeof input.scanDurationMs === "number") {
     parts.push(`扫描耗时: ${formatDuration(input.scanDurationMs)}`)
+  }
+  if (input.warningCount && input.warningCount > 0) {
+    parts.push(`部分路径被跳过: ${input.warningCount}`)
   }
   if (input.message) {
     parts.push(input.message)

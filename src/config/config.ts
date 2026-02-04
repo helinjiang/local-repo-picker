@@ -92,11 +92,16 @@ function normalizeConfig(raw: unknown): AppConfig {
     typeof value.cacheTtlMs === "number"
       ? value.cacheTtlMs
       : defaultConfig.cacheTtlMs
+  const followSymlinks =
+    typeof value.followSymlinks === "boolean"
+      ? value.followSymlinks
+      : defaultConfig.followSymlinks
   return {
     scanRoots,
     maxDepth,
     pruneDirs,
-    cacheTtlMs
+    cacheTtlMs,
+    followSymlinks
   }
 }
 

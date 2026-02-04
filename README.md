@@ -72,7 +72,8 @@ DEBUG=1 repo
   "scanRoots": ["/Users/you/workspace", "/Volumes/repos"],
   "maxDepth": 7,
   "pruneDirs": ["node_modules", "dist", "build"],
-  "cacheTtlMs": 43200000
+  "cacheTtlMs": 43200000,
+  "followSymlinks": false
 }
 ```
 
@@ -88,6 +89,7 @@ DEBUG=1 repo
 - `metadata.repoCount`
 - `metadata.scanRoots`
 - `metadata.prunedRepoCount`
+- `metadata.warningCount`
 
 ## Tag 体系
 
@@ -113,6 +115,7 @@ Tag 由多部分组成：
 
 - 顶部状态栏显示缓存 / 扫描状态、仓库数量、当前过滤词
 - 右侧预览区域提供 loading 与错误提示
+- 扫描路径异常时状态栏提示“部分路径被跳过”
 - 键位：↑/↓ 移动，Enter 确认，Esc/q 退出，PgUp/PgDn 或 Ctrl+U/Ctrl+D 滚动预览
 
 ## 扩展性
@@ -132,16 +135,25 @@ type Action = {
 ## FAQ
 
 **Q: 没有安装 git 会怎样？**  
-A: UI 仍可启动，预览区显示降级提示，基础信息与 README 可见。
+A: UI 仍可启动，预览区显示 Git not available，基础信息与 README 可见。
 
 **Q: repo 删除或移动会怎样？**  
 A: cache 加载时会剔除不可访问路径，下次 refresh 会修复。
 
+**Q: README 读取失败会怎样？**  
+A: 预览区显示 README unavailable，不影响其他信息。
+
+**Q: git 超时或仓库异常会怎样？**  
+A: 预览区显示降级提示，仍可浏览列表与非 git 信息。
+
+**Q: scanRoot 是符号链接会怎样？**  
+A: 默认跳过并提示，可在配置中开启 followSymlinks。
+
 **Q: 大 workspace 性能如何？**  
 A: 扫描阶段使用受控遍历与并发控制，Git 预览只在选中仓库时触发，DEBUG 模式可查看耗时统计。
 
-**Q: cache 结构变更怎么办？**  
-A: 旧 cache 自动失效并重建，不尝试跨版本兼容。
+**Q: cache 结构变更或损坏怎么办？**  
+A: 旧 cache 自动失效或重建，不尝试跨版本兼容。
 
 ## 开发命令
 

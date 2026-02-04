@@ -42,11 +42,17 @@ async function main(): Promise<void> {
 
   if (command === "refresh") {
     const cache = await refreshCache(options)
+    if (cache.metadata.warningCount && cache.metadata.warningCount > 0) {
+      console.error(`部分路径被跳过: ${cache.metadata.warningCount}`)
+    }
     console.log(`refresh: ${cache.repos.length}`)
     return
   }
 
   const cache = (await loadCache(options)) ?? (await buildCache(options))
+  if (cache.metadata.warningCount && cache.metadata.warningCount > 0) {
+    console.error(`部分路径被跳过: ${cache.metadata.warningCount}`)
+  }
   for (const repo of cache.repos) {
     console.log(repo.path)
   }
