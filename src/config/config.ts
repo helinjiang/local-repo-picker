@@ -96,12 +96,20 @@ function normalizeConfig(raw: unknown): AppConfig {
     typeof value.followSymlinks === "boolean"
       ? value.followSymlinks
       : defaultConfig.followSymlinks
+  const fzfTagFilters =
+    typeof value.fzfTagFilters === "object" && value.fzfTagFilters !== null
+      ? (Object.fromEntries(
+          Object.entries(value.fzfTagFilters as Record<string, unknown>)
+            .filter(([key, item]) => typeof key === "string" && typeof item === "string")
+        ) as Record<string, string>)
+      : defaultConfig.fzfTagFilters
   return {
     scanRoots,
     maxDepth,
     pruneDirs,
     cacheTtlMs,
-    followSymlinks
+    followSymlinks,
+    fzfTagFilters
   }
 }
 

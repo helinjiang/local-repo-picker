@@ -4,4 +4,5 @@ export type AppConfig = {
   pruneDirs?: string[]
   cacheTtlMs?: number
   followSymlinks?: boolean
+  fzfTagFilters?: Record<string, string>
 }

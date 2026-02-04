@@ -10,7 +10,13 @@
 npm i -g local-repo-picker
 ```
 
-2) 生成配置并填写扫描路径
+2) 安装 fzf（交互依赖）
+
+```bash
+brew install fzf
+```
+
+3) 生成配置并填写扫描路径
 
 ```bash
 repo --config
@@ -28,13 +34,13 @@ repo --config
 }
 ```
 
-3) 启动 UI
+4) 启动交互选择
 
 ```bash
 repo
 ```
 
-4) 刷新缓存
+5) 刷新缓存
 
 ```bash
 repo refresh
@@ -78,10 +84,29 @@ repo list
 repo --list
 ```
 
-- `repo`：启动 TUI 选择界面
+- `repo`：启动 fzf 选择界面
 - `repo --config`：创建默认配置并输出 config.json 路径
 - `repo refresh`：强制重建 cache
 - `repo list` / `repo --list`：输出 repo 路径列表
+
+## fzf 快捷键
+
+默认快捷键由配置项 `fzfTagFilters` 控制：
+
+```json
+{
+  "fzfTagFilters": {
+    "ctrl-b": "[byted]",
+    "ctrl-g": "[github]",
+    "ctrl-e": "[gitee]",
+    "ctrl-d": "[dirty]",
+    "ctrl-a": "all"
+  }
+}
+```
+
+- `ctrl-a` 恢复全量列表
+- 其他键按 tag 过滤（tag 精确包含即可）
 
 Debug：
 

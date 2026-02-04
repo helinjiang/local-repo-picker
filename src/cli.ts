@@ -5,6 +5,7 @@ import os from "node:os"
 import path from "node:path"
 import readline from "node:readline/promises"
 import { fileURLToPath } from "node:url"
+import { execa } from "execa"
 import React from "react"
 import { render } from "ink"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
@@ -14,6 +15,7 @@ import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "
 import { RepoPicker } from "./ui/RepoPicker"
 import type { RepoInfo } from "./core/types"
 import { normalizeRepoKey } from "./core/path-utils"
+import { updateLru } from "./core/lru"
 
 process.on("unhandledRejection", (reason) => {
   handleFatalError(reason)
@@ -92,22 +94,27 @@ async function main(): Promise<void> {
   }
 
   const listOnly = command === "list" || args.includes("--list")
-  const cached = await loadCache(options)
-  const resolved = cached ?? (await buildCache(options))
-  if (resolved.metadata.warningCount && resolved.metadata.warningCount > 0) {
-    console.error(`部分路径被跳过: ${resolved.metadata.warningCount}`)
-  }
-  if (listOnly || !process.stdout.isTTY) {
+  if (listOnly || !process.stdout.isTTY || !process.stdin.isTTY) {
+    const cached = await loadCache(options)
+    const resolved = cached ?? (await buildCache(options))
+    if (resolved.metadata.warningCount && resolved.metadata.warningCount > 0) {
+      console.error(`部分路径被跳过: ${resolved.metadata.warningCount}`)
+    }
     for (const repo of resolved.repos) {
       console.log(repo.path)
     }
     return
   }
-  await runTui(resolved.repos, {
-    mode: cached ? "cache" : "scan",
-    scanDurationMs: resolved.metadata.scanDurationMs,
-    warningCount: resolved.metadata.warningCount
-  })
+  const ok = await ensureFzfAvailable()
+  if (!ok) {
+    process.exitCode = 1
+    return
+  }
+  const selected = await runFzfPicker(options, config.fzfTagFilters ?? {})
+  if (selected) {
+    await updateLru(options.lruFile, selected)
+    console.log(selected)
+  }
 }
 
 async function runInternalList(
@@ -124,15 +131,9 @@ async function runInternalList(
   args: string[]
 ): Promise<void> {
   const filterTag = readArgValue(args, "--filter-tag")
-  const cached = await loadCache(options)
-  const resolved = cached ?? (await buildCache(options))
-  const rows = filterTag
-    ? resolved.repos.filter((repo) => repo.tags.some((tag) => tag.includes(filterTag)))
-    : resolved.repos
-  for (const repo of rows) {
-    const display = buildListDisplay(repo)
-    const rawTags = repo.tags.join("")
-    console.log(`${display}\t${repo.path}\t${rawTags}`)
+  const rows = await getListRows(options, filterTag)
+  for (const row of rows) {
+    console.log(`${row.display}\t${row.path}\t${row.rawTags}`)
   }
 }
 
@@ -270,6 +271,114 @@ function readArgValue(args: string[], key: string): string {
     return args[index + 1]
   }
   return ""
+}
+
+async function getListRows(
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  },
+  filterTag?: string
+): Promise<Array<{ display: string; path: string; rawTags: string }>> {
+  const cached = await loadCache(options)
+  const resolved = cached ?? (await buildCache(options))
+  const rows = filterTag
+    ? resolved.repos.filter((repo) => repo.tags.some((tag) => tag.includes(filterTag)))
+    : resolved.repos
+  return rows.map((repo) => ({
+    display: buildListDisplay(repo),
+    path: repo.path,
+    rawTags: repo.tags.join("")
+  }))
+}
+
+async function ensureFzfAvailable(): Promise<boolean> {
+  try {
+    const result = await execa("fzf", ["--version"], {
+      stdout: "ignore",
+      stderr: "ignore",
+      reject: false
+    })
+    if (result.exitCode === 0) {
+      return true
+    }
+  } catch {
+    logger.error("未检测到 fzf，请先安装：brew install fzf")
+    return false
+  }
+  logger.error("未检测到 fzf，请先安装：brew install fzf")
+  return false
+}
+
+async function runFzfPicker(
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  },
+  filters: Record<string, string>
+): Promise<string | null> {
+  const rows = await getListRows(options)
+  const input = rows.map((row) => `${row.display}\t${row.path}\t${row.rawTags}`).join("\n")
+  const binds = buildFzfBinds(filters)
+  const args = [
+    "--ansi",
+    "--delimiter=\t",
+    "--with-nth=1",
+    "--preview",
+    "repo __preview --path {2}",
+    "--preview-window=right:60%:wrap",
+    "--bind",
+    binds
+  ]
+  const result = await execa("fzf", args, {
+    input,
+    stdout: "pipe",
+    stderr: "inherit",
+    reject: false
+  })
+  if (result.exitCode !== 0) {
+    return null
+  }
+  const line = result.stdout.trim()
+  if (!line) {
+    return null
+  }
+  const parts = line.split("\t")
+  return parts[1]?.trim() || null
+}
+
+function buildFzfBinds(filters: Record<string, string>): string {
+  const entries = Object.entries(filters)
+  if (entries.length === 0) {
+    return "ctrl-a:reload(repo __list --all)"
+  }
+  const binds = entries.map(([key, tag]) => {
+    if (tag === "all") {
+      return `${key}:reload(repo __list --all)`
+    }
+    return `${key}:reload(repo __list --filter-tag ${escapeShellArg(tag)})`
+  })
+  if (!filters["ctrl-a"]) {
+    binds.push("ctrl-a:reload(repo __list --all)")
+  }
+  return binds.join(",")
+}
+
+function escapeShellArg(input: string): string {
+  const safe = input.replace(/'/g, "'\"'\"'")
+  return `'${safe}'`
 }
 
 async function runSetupWizard(configFile: string) {
