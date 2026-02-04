@@ -212,7 +212,7 @@ async function runTui(
   status: { mode: "cache" | "scan"; scanDurationMs?: number; warningCount?: number }
 ) {
   let selectedPath: string | null = null
-  const { waitUntilExit } = render(
+  const app = render(
     React.createElement(RepoPicker, {
       repos,
       status,
@@ -223,10 +223,16 @@ async function runTui(
     }),
     { patchConsole: false }
   )
-  await waitUntilExit()
+  await app.waitUntilExit()
+  clearTuiArea()
   if (selectedPath) {
     console.log(selectedPath)
   }
+}
+
+function clearTuiArea(): void {
+  const rows = process.stdout.rows ?? 24
+  process.stdout.write(`\u001b[${rows}A\u001b[0G\u001b[0J`)
 }
 
 function printHelp(): void {
