@@ -16,7 +16,7 @@ npm i -g local-repo-picker
 repo --config
 ```
 
-打开输出的 `config.json`，填入你的路径，例如：
+首次运行 `repo` 会启动向导并写入配置，也可手动编辑 `config.json`：
 
 ```json
 {
