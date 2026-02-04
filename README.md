@@ -1,40 +1,70 @@
 # local-repo-picker
 
-面向本地开发者的仓库选择与预览工具，帮助快速在大规模 workspace 中定位目标 repo。
+在大型 workspace 中快速定位与预览本地 Git 仓库的 TUI 工具。
 
-## 项目动机
+## 5 分钟上手
 
-当本地仓库数量达到几百到上千时，仅靠文件夹跳转和手动搜索会非常低效。local-repo-picker 通过扫描、缓存、标签与可视化预览，让日常在仓库间切换更快、更可控。
-
-## 功能概览
-
-- 扫描多路径仓库并生成缓存
-- UI 列表 + 搜索，支持快速选择
-- Git 预览（origin / branch / status / sync / recent commits / README）
-- 标签体系（auto / remote / dirty / manual）
-- LRU 排序支持最近访问置顶
-- CLI 输出与配置管理
-- Debug 模式与统一日志输出
-
-## 安装
-
-发布版本：
+1) 安装
 
 ```bash
 npm i -g local-repo-picker
 ```
 
-仅支持 ESM（Node >= 18）。
-
-本地开发：
+2) 生成配置并填写扫描路径
 
 ```bash
-npm install
-npm run build
-npm i -g .
+repo --config
 ```
 
-源码可省略导入路径的 .js 后缀，构建时会自动补全到 dist 中。
+打开输出的 `config.json`，填入你的路径，例如：
+
+```json
+{
+  "scanRoots": ["/Users/you/workspace", "/Volumes/repos"],
+  "maxDepth": 7,
+  "pruneDirs": ["node_modules", "dist", "build"],
+  "cacheTtlMs": 43200000,
+  "followSymlinks": false
+}
+```
+
+3) 启动 UI
+
+```bash
+repo
+```
+
+4) 刷新缓存
+
+```bash
+repo refresh
+```
+
+## 演示
+
+- asciinema 本地演示文件：docs/demo.cast
+- 播放方式：
+
+```bash
+asciinema play docs/demo.cast
+```
+
+## 使用场景
+
+- 本地仓库数量较多（百级 / 千级）时快速筛选
+- 通过 Tag 与 LRU 把常用仓库置顶
+- 预览 Git 状态、最近提交、README
+- 多个 scanRoot 下统一检索
+
+## 功能概览
+
+- 多路径扫描与缓存
+- 交互式列表与搜索
+- Git 预览（origin / branch / status / sync / recent commits / README）
+- 标签体系（auto / remote / dirty / manual）
+- LRU 最近访问排序
+- CLI 输出与配置管理
+- Debug 日志
 
 ## CLI 使用
 
@@ -44,11 +74,11 @@ repo --config
 repo refresh
 ```
 
-- `repo`：输出当前 cache 中的 repo 路径
+- `repo`：输出当前 cache 的 repo 路径
 - `repo --config`：创建默认配置并输出 config.json 路径
 - `repo refresh`：强制重建 cache
 
-Debug 模式：
+Debug：
 
 ```bash
 DEBUG=1 repo
@@ -67,37 +97,11 @@ DEBUG=1 repo
 
 如果系统目录无权限，可设置 `LOCAL_REPO_PICKER_DIR` 指定本地目录。
 
-### 配置示例
-
-```json
-{
-  "scanRoots": ["/Users/you/workspace", "/Volumes/repos"],
-  "maxDepth": 7,
-  "pruneDirs": ["node_modules", "dist", "build"],
-  "cacheTtlMs": 43200000,
-  "followSymlinks": false
-}
-```
-
-## Cache 与 Metadata
-
-- cache 命中时不重新扫描
-- cache 过期或 refresh 时触发重建
-- metadata 记录扫描耗时、repo 数量、扫描路径等信息
-
-常用字段：
-
-- `metadata.scanDurationMs`
-- `metadata.repoCount`
-- `metadata.scanRoots`
-- `metadata.prunedRepoCount`
-- `metadata.warningCount`
-
 ## Tag 体系
 
 Tag 由多部分组成：
 
-- remote tag：`[github]` / `[gitee]`  / `[internal:host]`
+- remote tag：`[github]` / `[gitee]` / `[internal:host]`
 - auto tag：扫描路径第一层目录，如 `[team-a]`
 - dirty tag：工作区有改动时追加 `[dirty]`
 - manual tag：从 `repo_tags.tsv` 读取
@@ -116,20 +120,13 @@ Tag 由多部分组成：
 ## 跨平台兼容
 
 - 路径分隔符自动归一化，`repo_tags.tsv` 与 `lru.txt` 可使用 `/` 或 `\`
-- Windows 请确保 `git` 可执行文件在 PATH 中，建议安装 Git for Windows 或使用 WSL
+- Windows 请确保 `git` 在 PATH 中，建议安装 Git for Windows 或使用 WSL
 - WSL 环境下使用 Linux 路径作为 scanRoots，避免混用 Windows 盘符路径
 - 终端渲染建议使用现代终端（Windows Terminal / PowerShell 7 / iTerm2 等）
 
-## UI 体验
+## 插件系统
 
-- 顶部状态栏显示缓存 / 扫描状态、仓库数量、当前过滤词
-- 右侧预览区域提供 loading 与错误提示
-- 扫描路径异常时状态栏提示“部分路径被跳过”
-- 键位：↑/↓ 移动，Enter 确认，Esc/q 退出，PgUp/PgDn 或 Ctrl+U/Ctrl+D 滚动预览
-
-## 扩展性
-
-插件系统支持 action / tag / preview 扩展，必须显式注册，插件失败不会影响主流程。
+支持 action / tag / preview 扩展，必须显式注册，插件失败不会影响主流程。
 
 ```ts
 import {
@@ -175,7 +172,7 @@ const myPlugin: PluginModule = {
 registerPlugins([myPlugin])
 ```
 
-内置插件示例：
+内置插件：
 
 - Node 项目标记 `[node]`
 - Node 预览扩展（name / scripts 数量）
@@ -183,13 +180,13 @@ registerPlugins([myPlugin])
 
 ## 安全与威胁模型
 
-- 信任边界：工具只读取本地文件与执行本机 git，不与外部服务通信
+- 信任边界：只读取本地文件与执行本机 git，不与外部服务通信
 - 命令执行：仅通过受控封装调用 git，禁止 shell，参数以数组传递，并限制子命令白名单
-- 路径处理：所有命令执行路径强制绝对化，避免相对路径被注入
+- 路径处理：命令执行路径强制绝对化，避免相对路径被注入
 - 输入风险：仓库名与路径可能包含特殊字符，但不会参与 shell 拼接
 - 降级策略：git 不可用或超时仅影响预览信息，不影响列表与基础信息展示
 
-## FAQ
+## 常见问题
 
 **Q: 没有安装 git 会怎样？**  
 A: UI 仍可启动，预览区显示 Git not available，基础信息与 README 可见。
@@ -207,7 +204,7 @@ A: 预览区显示降级提示，仍可浏览列表与非 git 信息。
 A: 默认跳过并提示，可在配置中开启 followSymlinks。
 
 **Q: 大 workspace 性能如何？**  
-A: 扫描阶段使用受控遍历与并发控制，Git 预览只在选中仓库时触发，DEBUG 模式可查看耗时统计。
+A: 扫描阶段使用受控遍历与并发控制，Git 预览只在选中仓库时触发，DEBUG 可查看耗时统计。
 
 **Q: cache 结构变更或损坏怎么办？**  
 A: 旧 cache 自动失效或重建，不尝试跨版本兼容。

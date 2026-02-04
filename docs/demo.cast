@@ -1,0 +1,6 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760215200, "env": {"TERM": "xterm-256color"}}
+[0.1, "o", "$ repo --config\r\n"]
+[0.3, "o", "/Users/you/Library/Application Support/local-repo-picker/config.json\r\n"]
+[0.6, "o", "$ repo\r\n"]
+[1.2, "o", "Loading...\r\n"]
+[1.6, "o", "PATH: /Users/you/workspace/project-a\r\nORIGIN: https://github.com/acme/project-a.git\r\nBRANCH: main\r\nSTATUS: clean\r\nSYNC: ahead 0 / behind 0\r\n\r\nRECENT COMMITS:\r\n2026-02-04 10:00:00 +0800 1a2b3c4 init\r\n\r\nREADME:\r\n# project-a\r\n\r\n...\r\n"]
