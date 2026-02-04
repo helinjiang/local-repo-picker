@@ -1,15 +1,50 @@
 {
   "name": "local-repo-picker",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "Local repository picker with cache and preview for large workspaces",
+  "keywords": [
+    "repo",
+    "git",
+    "picker",
+    "cli",
+    "tui",
+    "ink",
+    "workspace"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helinjiang/local-repo-picker"
+  },
+  "homepage": "https://github.com/helinjiang/local-repo-picker#readme",
+  "bugs": {
+    "url": "https://github.com/helinjiang/local-repo-picker/issues"
+  },
   "type": "module",
   "bin": {
     "repo": "./dist/cli.js"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./ui": "./dist/ui/index.js",
-    "./config": "./dist/config/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    }
   },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/append-js-extensions.mjs",
     "test": "vitest run",

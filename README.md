@@ -24,6 +24,8 @@
 npm i -g local-repo-picker
 ```
 
+仅支持 ESM（Node >= 18）。
+
 本地开发：
 
 ```bash
@@ -179,4 +181,27 @@ npm run test
 npm run demo:cache
 npm run demo:tui
 npm run demo:tui-real
+```
+
+## 发布与分发
+
+版本策略（SemVer）：
+
+- MAJOR：破坏性变更（CLI 行为 / Config 结构）
+- MINOR：新增功能（向后兼容）
+- PATCH：修复与优化
+
+发布前检查：
+
+- npm run build
+- npm run typecheck
+- npm run test
+- npm i -g .
+- repo
+
+发布：
+
+```bash
+npm login
+npm publish
 ```
