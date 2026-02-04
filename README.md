@@ -32,6 +32,8 @@ npm run build
 npm i -g .
 ```
 
+源码可省略导入路径的 .js 后缀，构建时会自动补全到 dist 中。
+
 ## CLI 使用
 
 ```bash

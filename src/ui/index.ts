@@ -1,4 +1,4 @@
-export { RepoPicker } from "./RepoPicker.js"
-export { PreviewPanel } from "./PreviewPanel.js"
-export { useRepoPreview } from "./useRepoPreview.js"
-export { ErrorBoundary } from "./ErrorBoundary.js"
+export { RepoPicker } from "./RepoPicker"
+export { PreviewPanel } from "./PreviewPanel"
+export { useRepoPreview } from "./useRepoPreview"
+export { ErrorBoundary } from "./ErrorBoundary"

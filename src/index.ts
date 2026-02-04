@@ -1,18 +1,18 @@
-import type { Action, CacheMetadata, RepoInfo, ScanOptions } from "./core/types.js"
-import { buildCache, loadCache, refreshCache } from "./core/cache.js"
-import { readLru, sortByLru, updateLru } from "./core/lru.js"
-import { scanRepos } from "./core/scan.js"
-import { RepoPicker } from "./ui/RepoPicker.js"
-import { PreviewPanel } from "./ui/PreviewPanel.js"
-import { useRepoPreview } from "./ui/useRepoPreview.js"
-import { ErrorBoundary } from "./ui/ErrorBoundary.js"
+import type { Action, CacheMetadata, RepoInfo, ScanOptions } from "./core/types"
+import { buildCache, loadCache, refreshCache } from "./core/cache"
+import { readLru, sortByLru, updateLru } from "./core/lru"
+import { scanRepos } from "./core/scan"
+import { RepoPicker } from "./ui/RepoPicker"
+import { PreviewPanel } from "./ui/PreviewPanel"
+import { useRepoPreview } from "./ui/useRepoPreview"
+import { ErrorBoundary } from "./ui/ErrorBoundary"
 import {
   ensureConfigFile,
   getConfigPaths,
   readConfig,
   writeConfig
-} from "./config/config.js"
-import type { AppConfig } from "./config/schema.js"
+} from "./config/config"
+import type { AppConfig } from "./config/schema"
 
 export {
   buildCache,

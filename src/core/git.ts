@@ -3,7 +3,7 @@ import { promisify } from "node:util"
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import pLimit from "p-limit"
-import { isDebugEnabled, logger } from "./logger.js"
+import { isDebugEnabled, logger } from "./logger"
 
 const execFileAsync = promisify(execFile)
 const gitLimit = pLimit(6)

@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import { useEffect, useRef, useState } from "react"
-import type { RepoInfo } from "../core/types.js"
-import { checkGitAvailable, isDirty, readOriginUrl, runGit, type GitErrorKind } from "../core/git.js"
+import type { RepoInfo } from "../core/types"
+import { checkGitAvailable, isDirty, readOriginUrl, runGit, type GitErrorKind } from "../core/git"
 
 type RepoPreviewResult = {
   data: RepoPreview

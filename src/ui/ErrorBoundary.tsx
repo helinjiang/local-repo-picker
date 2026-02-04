@@ -1,6 +1,6 @@
 import React from "react"
 import { Box, Text } from "ink"
-import { isDebugEnabled } from "../core/logger.js"
+import { isDebugEnabled } from "../core/logger"
 
 type ErrorBoundaryState = {
   error: Error | null

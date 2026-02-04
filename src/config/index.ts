@@ -1,3 +1,3 @@
-export { getConfigPaths, readConfig, writeConfig, ensureConfigFile } from "./config.js"
-export { defaultConfig } from "./defaults.js"
-export type { AppConfig } from "./schema.js"
+export { getConfigPaths, readConfig, writeConfig, ensureConfigFile } from "./config"
+export { defaultConfig } from "./defaults"
+export type { AppConfig } from "./schema"

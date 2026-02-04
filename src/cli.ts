@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { buildCache, loadCache, refreshCache } from "./core/cache.js"
-import { ensureConfigFile, getConfigPaths, readConfig } from "./config/config.js"
-import { isDebugEnabled, logger } from "./core/logger.js"
+import { buildCache, loadCache, refreshCache } from "./core/cache"
+import { ensureConfigFile, getConfigPaths, readConfig } from "./config/config"
+import { isDebugEnabled, logger } from "./core/logger"
 
 process.on("unhandledRejection", (reason) => {
   handleFatalError(reason)

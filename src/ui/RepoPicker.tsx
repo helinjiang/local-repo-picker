@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react"
 import { Box, Text, useApp, useInput, useStdout } from "ink"
 import type { Key } from "ink"
-import type { RepoInfo } from "../core/types.js"
-import { PreviewPanel } from "./PreviewPanel.js"
-import { ErrorBoundary } from "./ErrorBoundary.js"
+import type { RepoInfo } from "../core/types"
+import { PreviewPanel } from "./PreviewPanel"
+import { ErrorBoundary } from "./ErrorBoundary"
 
 type RepoPickerProps = {
   repos: RepoInfo[]

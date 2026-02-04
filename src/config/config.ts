@@ -1,8 +1,8 @@
 import path from "node:path"
 import { promises as fs } from "node:fs"
 import envPaths from "env-paths"
-import type { AppConfig } from "./schema.js"
-import { defaultConfig } from "./defaults.js"
+import type { AppConfig } from "./schema"
+import { defaultConfig } from "./defaults"
 
 export type ConfigPaths = {
   configDir: string

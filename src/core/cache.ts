@@ -1,13 +1,13 @@
 import path from "node:path"
 import { promises as fs } from "node:fs"
 import pLimit from "p-limit"
-import type { CacheData, CacheMetadata, RepoInfo, ScanOptions } from "./types.js"
-import { scanRepos } from "./scan.js"
-import { readManualTags, buildTags, getRemoteTag } from "./tags.js"
-import { isDirty, parseOriginInfo, readOriginUrl } from "./git.js"
-import { readLru, sortByLru } from "./lru.js"
-import { getConfigPaths } from "../config/config.js"
-import { logger } from "./logger.js"
+import type { CacheData, CacheMetadata, RepoInfo, ScanOptions } from "./types"
+import { scanRepos } from "./scan"
+import { readManualTags, buildTags, getRemoteTag } from "./tags"
+import { isDirty, parseOriginInfo, readOriginUrl } from "./git"
+import { readLru, sortByLru } from "./lru"
+import { getConfigPaths } from "../config/config"
+import { logger } from "./logger"
 
 const defaultTtlMs = 12 * 60 * 60 * 1000
 

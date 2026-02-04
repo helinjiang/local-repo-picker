@@ -11,7 +11,7 @@
     "./config": "./dist/config/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/append-js-extensions.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "demo:cache": "npm run build && node demo/cache.mjs",
     "demo:tui": "npm run build && node demo/tui.mjs",

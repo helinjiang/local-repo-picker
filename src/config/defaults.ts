@@ -1,4 +1,4 @@
-import type { AppConfig } from "./schema.js"
+import type { AppConfig } from "./schema"
 
 export const defaultConfig: AppConfig = {
   scanRoots: [],

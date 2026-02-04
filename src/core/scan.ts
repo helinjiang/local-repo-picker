@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import type { FoundRepo, ScanOptions } from "./types.js"
+import type { FoundRepo, ScanOptions } from "./types"
 
 const defaultMaxDepth = 7
 

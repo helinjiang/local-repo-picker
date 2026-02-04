@@ -1,8 +1,8 @@
 import React from "react"
 import { Box, Text, useInput, useStdout } from "ink"
 import { useMemo, useState } from "react"
-import type { RepoInfo } from "../core/types.js"
-import { useRepoPreview } from "./useRepoPreview.js"
+import type { RepoInfo } from "../core/types"
+import { useRepoPreview } from "./useRepoPreview"
 
 type PreviewPanelProps = {
   repo: RepoInfo | null
