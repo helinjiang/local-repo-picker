@@ -10,8 +10,10 @@ import { render } from "ink"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./config/config"
 import { isDebugEnabled, logger } from "./core/logger"
+import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "./core/preview"
 import { RepoPicker } from "./ui/RepoPicker"
 import type { RepoInfo } from "./core/types"
+import { normalizeRepoKey } from "./core/path-utils"
 
 process.on("unhandledRejection", (reason) => {
   handleFatalError(reason)
@@ -84,6 +86,11 @@ async function main(): Promise<void> {
     return
   }
 
+  if (command === "__preview") {
+    await runInternalPreview(options, args)
+    return
+  }
+
   const listOnly = command === "list" || args.includes("--list")
   const cached = await loadCache(options)
   const resolved = cached ?? (await buildCache(options))
@@ -127,6 +134,121 @@ async function runInternalList(
     const rawTags = repo.tags.join("")
     console.log(`${display}\t${repo.path}\t${rawTags}`)
   }
+}
+
+async function runInternalPreview(
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  },
+  args: string[]
+): Promise<void> {
+  const rawPath = readArgValue(args, "--path")
+  if (!rawPath) {
+    logger.error("missing --path")
+    process.exitCode = 1
+    return
+  }
+  if (!path.isAbsolute(rawPath)) {
+    logger.error("path must be absolute")
+    process.exitCode = 1
+    return
+  }
+  const repoPath = path.resolve(rawPath)
+  const repo = await resolveRepoInfo(options, repoPath)
+  const result = await buildPreviewWithTimeout(repo, 2000)
+  const lines = formatPreviewLines(result)
+  console.log(lines.join("\n"))
+}
+
+async function resolveRepoInfo(
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  },
+  repoPath: string
+): Promise<RepoInfo> {
+  const cached = await loadCache(options)
+  const targetKey = normalizeRepoKey(repoPath)
+  const found = cached?.repos.find((repo) => normalizeRepoKey(repo.path) === targetKey)
+  if (found) {
+    return found
+  }
+  return {
+    path: repoPath,
+    ownerRepo: path.basename(repoPath),
+    tags: [],
+    lastScannedAt: Date.now()
+  }
+}
+
+async function buildPreviewWithTimeout(repo: RepoInfo, timeoutMs: number): Promise<RepoPreviewResult> {
+  let timer: NodeJS.Timeout | null = null
+  const timeout = new Promise<RepoPreviewResult>((resolve) => {
+    timer = setTimeout(() => {
+      resolve(buildFallbackPreview(repo.path, "preview timed out"))
+    }, timeoutMs)
+  })
+  const result = await Promise.race([buildRepoPreview(repo), timeout])
+  if (timer) {
+    clearTimeout(timer)
+  }
+  return result
+}
+
+function formatPreviewLines(result: RepoPreviewResult): string[] {
+  const lines: string[] = []
+  if (result.error) {
+    lines.push(result.error)
+    lines.push("")
+  }
+  lines.push(`PATH: ${result.data.path}`)
+  lines.push(`ORIGIN: ${result.data.origin}`)
+  lines.push(`BRANCH: ${result.data.branch}`)
+  lines.push(`STATUS: ${result.data.status}`)
+  if (result.data.sync !== "-") {
+    lines.push(`SYNC: ${result.data.sync}`)
+  }
+  lines.push("")
+  lines.push("RECENT COMMITS:")
+  if (result.data.recentCommits.length > 0) {
+    lines.push(...result.data.recentCommits)
+  } else {
+    lines.push("无提交信息")
+  }
+  lines.push("")
+  lines.push("README:")
+  if (result.data.readme.length > 0) {
+    lines.push(...result.data.readme.map((line) => (line === "" ? " " : line)))
+  } else if (result.data.readmeStatus === "unavailable") {
+    lines.push("README unavailable")
+  } else {
+    lines.push("无 README")
+  }
+  if (result.data.extensions.length > 0) {
+    lines.push("")
+    for (const section of result.data.extensions) {
+      lines.push(`${section.title}:`)
+      if (section.lines.length > 0) {
+        lines.push(...section.lines)
+      } else {
+        lines.push("-")
+      }
+    }
+  }
+  return lines
 }
 
 function buildListDisplay(repo: RepoInfo): string {
