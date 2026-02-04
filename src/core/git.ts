@@ -1,23 +1,22 @@
-import { execFile } from "node:child_process"
-import { promisify } from "node:util"
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import pLimit from "p-limit"
 import { isDebugEnabled, logger } from "./logger"
+import { runCommand } from "./command"
 
-const execFileAsync = promisify(execFile)
 const gitLimit = pLimit(6)
 const defaultTimeoutMs = 2000
 let gitAvailableCache: boolean | null = null
 
-export type GitErrorKind = "not_found" | "not_repo" | "timeout" | "unknown"
+export type GitErrorKind = "not_found" | "not_repo" | "timeout" | "unknown" | "not_allowed"
 
 export type GitResult =
   | { ok: true; stdout: string }
   | { ok: false; kind: GitErrorKind; message: string }
 
 export async function resolveGitDir(repoPath: string): Promise<string | null> {
-  const dotGitPath = path.join(repoPath, ".git")
+  const normalizedRepoPath = path.resolve(repoPath)
+  const dotGitPath = path.join(normalizedRepoPath, ".git")
   try {
     const stat = await fs.stat(dotGitPath)
     if (stat.isDirectory()) {
@@ -33,7 +32,7 @@ export async function resolveGitDir(repoPath: string): Promise<string | null> {
       if (path.isAbsolute(gitdir)) {
         return gitdir
       }
-      return path.resolve(repoPath, gitdir)
+      return path.resolve(normalizedRepoPath, gitdir)
     }
   } catch {
     return null
@@ -45,13 +44,16 @@ export async function runGit(
   args: string[],
   options: { cwd?: string; timeoutMs?: number } = {}
 ): Promise<GitResult> {
-  const gitArgs = options.cwd ? ["-C", options.cwd, ...args] : args
+  const allowed = validateGitArgs(args)
+  if (!allowed.ok) {
+    return { ok: false, kind: "not_allowed", message: allowed.message }
+  }
+  const normalizedCwd = options.cwd ? path.resolve(options.cwd) : undefined
+  const gitArgs = normalizedCwd ? ["-C", normalizedCwd, ...args] : args
   const timeoutMs = options.timeoutMs ?? defaultTimeoutMs
   const start = Date.now()
   try {
-    const { stdout } = await gitLimit(() =>
-      execFileAsync("git", gitArgs, { timeout: timeoutMs })
-    )
+    const { stdout } = await gitLimit(() => runCommand("git", gitArgs, { timeoutMs }))
     if (isDebugEnabled()) {
       logger.debug(`git ${gitArgs.join(" ")} ${Date.now() - start}ms`)
     }
@@ -76,7 +78,8 @@ export async function checkGitAvailable(): Promise<boolean> {
 }
 
 export async function readOriginUrl(repoPath: string): Promise<string | null> {
-  const gitDir = await resolveGitDir(repoPath)
+  const normalizedRepoPath = path.resolve(repoPath)
+  const gitDir = await resolveGitDir(normalizedRepoPath)
   if (!gitDir) {
     return null
   }
@@ -141,11 +144,64 @@ export function parseOriginInfo(originUrl: string | null): {
 }
 
 export async function isDirty(repoPath: string, timeoutMs?: number): Promise<boolean> {
-  const result = await runGit(["status", "--porcelain"], { cwd: repoPath, timeoutMs })
+  const normalizedRepoPath = path.resolve(repoPath)
+  const result = await runGit(["status", "--porcelain"], { cwd: normalizedRepoPath, timeoutMs })
   if (!result.ok) {
     return false
   }
   return result.stdout.trim().length > 0
+}
+
+function validateGitArgs(
+  args: string[]
+): { ok: true } | { ok: false; message: string } {
+  if (args.length === 0) {
+    return { ok: false, message: "git command not allowed" }
+  }
+  const [cmd, ...rest] = args
+  if (cmd.startsWith("-")) {
+    if (cmd === "--version" && rest.length === 0) {
+      return { ok: true }
+    }
+    return { ok: false, message: "git command not allowed" }
+  }
+  if (cmd === "status") {
+    return rest.length === 1 && rest[0] === "--porcelain"
+      ? { ok: true }
+      : { ok: false, message: "git command not allowed" }
+  }
+  if (cmd === "config") {
+    return rest.length === 2 &&
+      rest[0] === "--get" &&
+      rest[1] === "remote.origin.url"
+      ? { ok: true }
+      : { ok: false, message: "git command not allowed" }
+  }
+  if (cmd === "rev-parse") {
+    return rest.length === 2 &&
+      rest[0] === "--abbrev-ref" &&
+      rest[1] === "HEAD"
+      ? { ok: true }
+      : { ok: false, message: "git command not allowed" }
+  }
+  if (cmd === "rev-list") {
+    return rest.length === 3 &&
+      rest[0] === "--left-right" &&
+      rest[1] === "--count" &&
+      rest[2] === "HEAD...@{upstream}"
+      ? { ok: true }
+      : { ok: false, message: "git command not allowed" }
+  }
+  if (cmd === "log") {
+    return rest.length === 4 &&
+      rest[0] === "-n" &&
+      rest[1] === "12" &&
+      rest[2] === "--date=iso" &&
+      rest[3] === "--pretty=format:%cd %h %s"
+      ? { ok: true }
+      : { ok: false, message: "git command not allowed" }
+  }
+  return { ok: false, message: "git command not allowed" }
 }
 
 function parseGitError(error: unknown): GitErrorKind {

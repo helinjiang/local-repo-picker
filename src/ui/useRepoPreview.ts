@@ -242,6 +242,9 @@ function pickPreviewError(errors: Array<GitErrorKind | undefined>): string | und
   if (errors.includes("timeout")) {
     return "Git 超时，预览信息已降级"
   }
+  if (errors.includes("not_allowed")) {
+    return "Git 命令未获允许，预览信息已降级"
+  }
   if (errors.includes("unknown")) {
     return "Git 预览失败，已降级展示"
   }
