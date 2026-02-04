@@ -155,11 +155,27 @@ A: 扫描阶段使用受控遍历与并发控制，Git 预览只在选中仓库�
 **Q: cache 结构变更或损坏怎么办？**  
 A: 旧 cache 自动失效或重建，不尝试跨版本兼容。
 
+## 测试策略
+
+- 单元测试覆盖扫描、tag、origin 解析、config 默认值等核心逻辑
+- 集成测试覆盖扫描 + cache 的关键路径
+- UI 侧以人工回归为主，关键状态逻辑做最小化测试
+
+回归清单：
+
+- [ ] UI 可启动
+- [ ] repo 列表完整
+- [ ] 预览切换正常
+- [ ] dirty 判断正确
+- [ ] cache refresh 正常
+- [ ] repo --config 正常
+
 ## 开发命令
 
 ```bash
 npm run build
 npm run typecheck
+npm run test
 npm run demo:cache
 npm run demo:tui
 npm run demo:tui-real
