@@ -20,10 +20,6 @@ import {
   registerPlugin,
   registerPlugins
 } from "./core/plugins"
-import { RepoPicker } from "./ui/RepoPicker"
-import { PreviewPanel } from "./ui/PreviewPanel"
-import { useRepoPreview } from "./ui/useRepoPreview"
-import { ErrorBoundary } from "./ui/ErrorBoundary"
 import {
   ensureConfigFile,
   getConfigPaths,
@@ -49,10 +45,6 @@ export {
   clearPlugins,
   builtInPlugins,
   registerBuiltInPlugins,
-  RepoPicker,
-  PreviewPanel,
-  useRepoPreview,
-  ErrorBoundary,
   getConfigPaths,
   readConfig,
   writeConfig,

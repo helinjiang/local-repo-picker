@@ -1,6 +1,6 @@
 # local-repo-picker
 
-在大型 workspace 中快速定位与预览本地 Git 仓库的 TUI 工具。
+在大型 workspace 中快速定位与预览本地 Git 仓库的 fzf 工具。
 
 ## 5 分钟上手
 

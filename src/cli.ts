@@ -4,15 +4,11 @@ import { promises as fs } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import readline from "node:readline/promises"
-import { fileURLToPath } from "node:url"
 import { execa } from "execa"
-import React from "react"
-import { render } from "ink"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./config/config"
 import { isDebugEnabled, logger } from "./core/logger"
 import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "./core/preview"
-import { RepoPicker } from "./ui/RepoPicker"
 import type { RepoInfo } from "./core/types"
 import { normalizeRepoKey } from "./core/path-utils"
 import { updateLru } from "./core/lru"
@@ -603,34 +599,6 @@ function expandPath(input: string): string {
   return input
 }
 
-async function runTui(
-  repos: RepoInfo[],
-  status: { mode: "cache" | "scan"; scanDurationMs?: number; warningCount?: number }
-) {
-  let selectedPath: string | null = null
-  const app = render(
-    React.createElement(RepoPicker, {
-      repos,
-      status,
-      onSelect: (repo) => {
-        selectedPath = repo.path
-      },
-      onCancel: () => {}
-    }),
-    { patchConsole: false }
-  )
-  await app.waitUntilExit()
-  clearTuiArea()
-  if (selectedPath) {
-    console.log(selectedPath)
-  }
-}
-
-function clearTuiArea(): void {
-  const rows = process.stdout.rows ?? 24
-  process.stdout.write(`\u001b[${rows}A\u001b[0G\u001b[0J`)
-}
-
 function printHelp(): void {
   const lines = [
     "Usage: repo [command] [options]",
@@ -649,8 +617,7 @@ function printHelp(): void {
 }
 
 async function readPackageVersion(): Promise<string> {
-  const currentDir = path.dirname(fileURLToPath(import.meta.url))
-  const packageFile = path.resolve(currentDir, "../package.json")
+  const packageFile = path.resolve(process.cwd(), "package.json")
   try {
     const content = await fs.readFile(packageFile, "utf8")
     const data = JSON.parse(content) as { version?: string }
