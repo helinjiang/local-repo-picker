@@ -5,6 +5,13 @@ import { scanRepos } from "./core/scan.js"
 import { RepoPicker } from "./ui/RepoPicker.js"
 import { PreviewPanel } from "./ui/PreviewPanel.js"
 import { useRepoPreview } from "./ui/useRepoPreview.js"
+import {
+  ensureConfigFile,
+  getConfigPaths,
+  readConfig,
+  writeConfig
+} from "./config/config.js"
+import type { AppConfig } from "./config/schema.js"
 
 export {
   buildCache,
@@ -16,9 +23,13 @@ export {
   scanRepos,
   RepoPicker,
   PreviewPanel,
-  useRepoPreview
+  useRepoPreview,
+  getConfigPaths,
+  readConfig,
+  writeConfig,
+  ensureConfigFile
 }
-export type { RepoInfo, ScanOptions }
+export type { RepoInfo, ScanOptions, AppConfig }
 
 export default async function pickRepo(
   options: ScanOptions & { refresh?: boolean }

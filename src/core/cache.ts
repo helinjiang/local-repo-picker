@@ -5,7 +5,7 @@ import { scanRepos } from "./scan.js"
 import { readManualTags, buildTags, getRemoteTag } from "./tags.js"
 import { isDirty, parseOriginInfo, readOriginUrl } from "./git.js"
 import { readLru, sortByLru } from "./lru.js"
-import { getPaths } from "../config/paths.js"
+import { getConfigPaths } from "../config/config.js"
 
 const defaultTtlMs = 12 * 60 * 60 * 1000
 
@@ -87,16 +87,15 @@ async function applyLruIfNeeded(
 }
 
 function normalizeOptions(options: ScanOptions): Required<ScanOptions> {
-  const { dataDir } = getPaths()
+  const { cacheFile, manualTagsFile, lruFile } = getConfigPaths()
   return {
     scanRoots: options.scanRoots,
     maxDepth: options.maxDepth ?? 7,
     pruneDirs: options.pruneDirs ?? [],
     cacheTtlMs: options.cacheTtlMs ?? defaultTtlMs,
-    cacheFile: options.cacheFile ?? path.join(dataDir, "cache.json"),
-    manualTagsFile:
-      options.manualTagsFile ?? path.join(dataDir, "repo_tags.tsv"),
-    lruFile: options.lruFile ?? path.join(dataDir, "lru.txt"),
+    cacheFile: options.cacheFile ?? cacheFile,
+    manualTagsFile: options.manualTagsFile ?? manualTagsFile,
+    lruFile: options.lruFile ?? lruFile,
     lruLimit: options.lruLimit ?? 300
   }
 }

@@ -10,3 +10,4 @@ yarn-error.log*
 .cache
 coverage
 demo/.cache
+.local-repo-picker

@@ -1,14 +1,16 @@
+import envPaths from "env-paths"
+
 export type AppPaths = {
   configDir: string
   dataDir: string
+  cacheDir: string
 }
 
 export function getPaths(): AppPaths {
-  const home =
-    process.env.HOME || process.env.USERPROFILE || process.cwd()
-
+  const paths = envPaths("local-repo-picker")
   return {
-    configDir: `${home}/.config/local-repo-picker`,
-    dataDir: `${home}/.local/share/local-repo-picker`
+    configDir: paths.config,
+    dataDir: paths.data,
+    cacheDir: paths.cache
   }
 }
