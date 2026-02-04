@@ -337,8 +337,16 @@ async function runFzfPicker(
   },
   filters: Record<string, string>
 ): Promise<string | null> {
-  const rows = await getListRows(options)
-  const input = rows.map((row) => `${row.display}\t${row.path}\t${row.rawTags}`).join("\n")
+  const listResult = await execa("repo", ["__list", "--all"], {
+    stdout: "pipe",
+    stderr: "inherit",
+    reject: false
+  })
+  if (listResult.exitCode !== 0) {
+    logger.error("repo __list 执行失败")
+    return null
+  }
+  const input = listResult.stdout.trimEnd()
   const binds = buildFzfBinds(filters)
   const args = [
     "--ansi",

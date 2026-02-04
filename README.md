@@ -89,6 +89,18 @@ repo --list
 - `repo refresh`：强制重建 cache
 - `repo list` / `repo --list`：输出 repo 路径列表
 
+## Internal 命令
+
+仅供 fzf 交互层调用：
+
+- `repo __list --all`
+- `repo __list --filter-tag <tag>`
+- `repo __preview --path <absolute-path>`
+
+## fzf 预览
+
+右侧预览通过 `repo __preview --path <abs>` 输出，包含 PATH / ORIGIN / BRANCH / STATUS / SYNC / RECENT COMMITS / README（最多 200 行）。
+
 ## fzf 快捷键
 
 默认快捷键由配置项 `fzfTagFilters` 控制：
