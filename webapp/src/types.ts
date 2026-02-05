@@ -2,6 +2,7 @@ export type RepoItem = {
   path: string
   ownerRepo: string
   tags: string[]
+  manualTags?: string[]
   lastScannedAt: number
   isDirty?: boolean
 }

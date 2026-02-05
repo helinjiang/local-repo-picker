@@ -7,7 +7,7 @@ import type { Action, RepoInfo } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
-import { parseTagList, upsertManualTags } from "../core/tags"
+import { parseTagList, readManualTags, upsertManualTags } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
 import { getConfigPaths, readConfig, writeConfig } from "../config/config"
 import type { AppConfig } from "../config/schema"
@@ -139,6 +139,7 @@ export async function registerRoutes(
     }
     const cached = await loadCache(options)
     const resolved = cached ?? (await buildCache(options))
+    const manualTags = await readManualTags(options.manualTagsFile)
     let repos = resolved.repos
     if (query.tag) {
       repos = repos.filter((repo) => repo.tags.includes(query.tag as string))
@@ -162,6 +163,7 @@ export async function registerRoutes(
     const offset = (page - 1) * pageSize
     const items = repos.slice(offset, offset + pageSize).map((repo) => ({
       ...repo,
+      manualTags: manualTags.get(normalizeRepoKey(repo.path)) ?? [],
       isDirty: repo.tags.includes("[dirty]")
     }))
     const payload: PaginatedRepos = {

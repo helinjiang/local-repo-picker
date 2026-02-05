@@ -39,6 +39,8 @@ export default function App() {
   const [pageSize, setPageSize] = useState(200)
   const [total, setTotal] = useState(0)
   const [tagModalOpen, setTagModalOpen] = useState(false)
+  const [tagModalRepo, setTagModalRepo] = useState<RepoItem | null>(null)
+  const [tagModalMode, setTagModalMode] = useState<"add" | "edit">("add")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [configPaths, setConfigPaths] = useState<ConfigPaths | null>(null)
   const [configText, setConfigText] = useState("")
@@ -182,16 +184,59 @@ export default function App() {
   }
 
   const handleSaveTags = async (nextTags: string) => {
-    if (!selectedRepo) return
+    if (!tagModalRepo) return
     try {
-      await upsertTags(selectedRepo.path, nextTags)
-      messageApi.success("标签已更新")
+      if (tagModalMode === "add") {
+        const parsed = nextTags
+          .split(/[\s,]+/)
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .map(normalizeTag)
+          .filter(Boolean)
+        if (parsed.length === 0) {
+          setTagModalOpen(false)
+          setTagModalRepo(null)
+          return
+        }
+        const base = tagModalRepo.manualTags ?? []
+        const merged = Array.from(new Set([...base, ...parsed]))
+        await upsertTags(tagModalRepo.path, merged.join(" "))
+        messageApi.success("标签已新增")
+      } else {
+        await upsertTags(tagModalRepo.path, nextTags)
+        messageApi.success("标签已更新")
+      }
       setTagModalOpen(false)
+      setTagModalRepo(null)
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
       setRepos(data.items)
       setTotal(data.total)
     } catch (error) {
       messageApi.error(`更新标签失败：${(error as Error).message}`)
+    }
+  }
+
+  const handleAddTag = (repo: RepoItem) => {
+    setTagModalRepo(repo)
+    setTagModalMode("add")
+    setTagModalOpen(true)
+  }
+
+  const handleRemoveTag = async (repo: RepoItem, removedTag: string) => {
+    const manualTags = repo.manualTags ?? []
+    if (!manualTags.includes(removedTag)) {
+      messageApi.warning("仅支持删除手动标签")
+      return
+    }
+    const nextTags = manualTags.filter((tag) => tag !== removedTag)
+    try {
+      await upsertTags(repo.path, nextTags.join(" "))
+      messageApi.success("标签已删除")
+      const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
+      setRepos(data.items)
+      setTotal(data.total)
+    } catch (error) {
+      messageApi.error(`删除标签失败：${(error as Error).message}`)
     }
   }
 
@@ -226,6 +271,15 @@ export default function App() {
     } finally {
       setSavingConfig(false)
     }
+  }
+
+  const normalizeTag = (raw: string) => {
+    const trimmed = raw.trim()
+    if (!trimmed) return ""
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      return trimmed
+    }
+    return `[${trimmed}]`
   }
 
   return (
@@ -263,6 +317,8 @@ export default function App() {
               page={page}
               pageSize={pageSize}
               total={total}
+              onAddTag={handleAddTag}
+              onRemoveTag={handleRemoveTag}
               onPageChange={(nextPage, nextPageSize) => {
                 setPage(nextPage)
                 setPageSize(nextPageSize)
@@ -273,7 +329,6 @@ export default function App() {
             <ActionsBar
               disabled={!selectedRepo}
               actions={actions}
-              onAddTag={() => setTagModalOpen(true)}
               onRunAction={handleRunAction}
               repo={selectedRepo}
             />
@@ -282,8 +337,12 @@ export default function App() {
         </div>
         <TagModal
           open={tagModalOpen}
-          repo={selectedRepo}
-          onCancel={() => setTagModalOpen(false)}
+          repo={tagModalRepo}
+          mode={tagModalMode}
+          onCancel={() => {
+            setTagModalOpen(false)
+            setTagModalRepo(null)
+          }}
           onSave={handleSaveTags}
         />
         <Modal

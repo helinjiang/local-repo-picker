@@ -3,8 +3,7 @@ import {
   DesktopOutlined,
   FolderOpenOutlined,
   GlobalOutlined,
-  QuestionCircleOutlined,
-  TagsOutlined
+  QuestionCircleOutlined
 } from "@ant-design/icons"
 import { Button, Card, Space } from "antd"
 import type { ActionInfo, RepoItem } from "../types"
@@ -13,11 +12,10 @@ type Props = {
   repo: RepoItem | null
   disabled: boolean
   actions: ActionInfo[]
-  onAddTag: () => void
   onRunAction: (actionId: string, path: string) => Promise<void>
 }
 
-export default function ActionsBar({ repo, disabled, actions, onAddTag, onRunAction }: Props) {
+export default function ActionsBar({ repo, disabled, actions, onRunAction }: Props) {
   const handleAction = async (actionId: string) => {
     if (!repo) return
     await onRunAction(actionId, repo.path)
@@ -36,9 +34,6 @@ export default function ActionsBar({ repo, disabled, actions, onAddTag, onRunAct
             {action.label}
           </Button>
         ))}
-        <Button icon={<TagsOutlined />} disabled={disabled} onClick={onAddTag}>
-          Add Tag
-        </Button>
       </Space>
     </Card>
   )

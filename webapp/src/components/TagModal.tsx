@@ -5,33 +5,37 @@ import type { RepoItem } from "../types"
 type Props = {
   open: boolean
   repo: RepoItem | null
+  mode: "add" | "edit"
   onCancel: () => void
   onSave: (value: string) => void
 }
 
-export default function TagModal({ open, repo, onCancel, onSave }: Props) {
+export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) {
   const [value, setValue] = useState("")
 
   useEffect(() => {
-    if (repo) {
-      setValue(repo.tags.join(" "))
+    if (!repo) return
+    if (mode === "edit") {
+      setValue((repo.manualTags ?? []).join(" "))
+      return
     }
-  }, [repo])
+    setValue("")
+  }, [repo, mode])
 
   return (
     <Modal
       open={open}
-      title="编辑标签"
+      title={mode === "edit" ? "编辑标签" : "新增标签"}
       okText="保存"
       cancelText="取消"
       onCancel={onCancel}
       onOk={() => onSave(value)}
     >
       <Typography.Paragraph type="secondary">
-        使用空格或逗号分隔多个标签
+        {mode === "edit" ? "使用空格或逗号分隔多个标签" : "输入一个标签名称"}
       </Typography.Paragraph>
       <Input
-        placeholder="例如：frontend urgent"
+        placeholder={mode === "edit" ? "例如：frontend urgent" : "例如：frontend"}
         value={value}
         onChange={(event) => setValue(event.target.value)}
       />
