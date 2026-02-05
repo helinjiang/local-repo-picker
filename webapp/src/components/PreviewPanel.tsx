@@ -18,6 +18,15 @@ export default function PreviewPanel({ loading, preview, repo }: Props) {
         <Descriptions size="small" column={1} className="preview-meta">
           <Descriptions.Item label="路径">{repo.path}</Descriptions.Item>
           <Descriptions.Item label="Origin">{preview?.data.origin ?? "-"}</Descriptions.Item>
+          <Descriptions.Item label="站点">
+            {preview?.data.siteUrl && preview.data.siteUrl !== "-" ? (
+              <a href={preview.data.siteUrl} target="_blank" rel="noreferrer">
+                {preview.data.siteUrl}
+              </a>
+            ) : (
+              "-"
+            )}
+          </Descriptions.Item>
           <Descriptions.Item label="分支">{preview?.data.branch ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="状态">
             <Tag color={preview?.data.status === "dirty" ? "red" : "green"}>

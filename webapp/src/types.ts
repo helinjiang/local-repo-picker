@@ -13,13 +13,6 @@ export type RepoListResult = {
   pageSize: number
 }
 
-export type RepoListResult = {
-  items: RepoItem[]
-  total: number
-  page: number
-  pageSize: number
-}
-
 export type PreviewSection = {
   title: string
   lines: string[]
@@ -28,6 +21,7 @@ export type PreviewSection = {
 export type RepoPreview = {
   path: string
   origin: string
+  siteUrl: string
   branch: string
   status: "dirty" | "clean"
   sync: string

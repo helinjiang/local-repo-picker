@@ -16,6 +16,7 @@ import { normalizeRepoKey } from "./core/path-utils"
 import { readLru, sortByLru } from "./core/lru"
 import { getRegisteredActions } from "./core/plugins"
 import { registerBuiltInPlugins } from "./plugins/built-in"
+import { parseOriginToSiteUrl, readOriginValue } from "./core/origin"
 import { startWebServer } from "./web/server"
 import type { UiState } from "./web/state"
 import { clearUiState, isProcessAlive, readUiState } from "./web/state"
@@ -865,6 +866,19 @@ function getBuiltinActions(
       label: "open in Finder",
       run: async () => {
         await execa("open", [repo.path], { reject: false })
+      }
+    },
+    {
+      id: "builtin.open-site",
+      label: "open site",
+      run: async () => {
+        const origin = await readOriginValue(repo.path)
+        const siteUrl = parseOriginToSiteUrl(origin)
+        if (!siteUrl) {
+          logger.error("无法从 origin 解析站点地址")
+          return
+        }
+        await execa("open", [siteUrl], { reject: false })
       }
     },
     {

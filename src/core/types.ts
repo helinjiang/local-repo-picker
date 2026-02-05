@@ -14,6 +14,7 @@ export type PreviewSection = {
 export type RepoPreview = {
   path: string
   origin: string
+  siteUrl: string
   branch: string
   status: "dirty" | "clean"
   sync: string
