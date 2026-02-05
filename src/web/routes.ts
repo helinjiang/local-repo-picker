@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify"
 import pLimit from "p-limit"
 import { buildCache, loadCache, refreshCache } from "../core/cache"
 import { buildRepoPreview } from "../core/preview"
-import type { RepoInfo } from "../core/types"
+import type { Action, RepoInfo } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
@@ -198,7 +198,9 @@ export async function registerRoutes(
     const repo = await resolveRepoInfo(options, allowedPath)
     const builtins = getBuiltinActions(repo, options)
     const plugins = getRegisteredActions()
-    const action = [...builtins, ...plugins].find((item) => item.id === body.actionId)
+    const action = [...builtins, ...plugins]
+      .filter((item) => isActionAllowed(item, "web"))
+      .find((item) => item.id === body.actionId)
     if (!action) {
       reply.code(404)
       return { error: "action not found" }
@@ -296,13 +298,13 @@ function getBuiltinActions(repo: RepoInfo, options: ServerOptions) {
         await execa("open", ["-e", options.manualTagsFile], { reject: false })
         await refreshCache(options)
       }
-    },
-    {
-      id: "builtin.refresh-cache",
-      label: "refresh cache",
-      run: async () => {
-        await refreshCache(options)
-      }
     }
   ]
+}
+
+function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
+  if (!action.scopes || action.scopes.length === 0) {
+    return true
+  }
+  return action.scopes.includes(scope)
 }

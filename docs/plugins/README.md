@@ -5,11 +5,19 @@
 ## 术语与结构
 
 - PluginModule：一个插件模块，可包含 actions / tags / previews
-- Action：面向仓库的执行动作
+- Action：面向仓库的执行动作（可限制作用域）
 - TagPlugin：为仓库追加标签
 - PreviewPlugin：为预览区追加扩展块
 
 相关类型定义位于 src/core/types.ts，插件注册逻辑位于 src/core/plugins.ts。
+
+## Action 作用域
+
+Action 可通过 scopes 限制使用场景：
+
+- scopes: ["cli"] 仅在 CLI action picker 中可用
+- scopes: ["web"] 仅在 Web UI Actions 中可用
+- 不设置 scopes 默认两端都可用
 
 ## 内置插件如何新增
 
@@ -80,6 +88,7 @@ const myPlugin: PluginModule = {
     {
       id: "print-path",
       label: "打印路径",
+      scopes: ["cli"],
       run: async (repo) => {
         console.log(repo.path)
       }

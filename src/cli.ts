@@ -12,7 +12,7 @@ import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./con
 import type { ConfigPaths } from "./config/config"
 import { isDebugEnabled, logger } from "./core/logger"
 import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "./core/preview"
-import type { RepoInfo } from "./core/types"
+import type { Action, RepoInfo } from "./core/types"
 import { normalizeRepoKey } from "./core/path-utils"
 import { readLru, sortByLru } from "./core/lru"
 import { getRegisteredActions } from "./core/plugins"
@@ -845,7 +845,7 @@ async function runFzfActionPicker(
   registerBuiltInPlugins()
   const actions = getRegisteredActions()
   const builtins = getBuiltinActions(repo, options)
-  const merged = [...builtins, ...actions]
+  const merged = [...builtins, ...actions].filter((action) => isActionAllowed(action, "cli"))
   if (merged.length === 0) {
     return null
   }
@@ -926,11 +926,19 @@ function getBuiltinActions(
     {
       id: "builtin.refresh-cache",
       label: "refresh cache",
+      scopes: ["cli"] as Array<"cli" | "web">,
       run: async () => {
         await refreshCache(options)
       }
     }
   ]
+}
+
+function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
+  if (!action.scopes || action.scopes.length === 0) {
+    return true
+  }
+  return action.scopes.includes(scope)
 }
 
 function buildFzfBinds(filters: Record<string, string>): string {
