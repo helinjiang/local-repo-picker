@@ -30,6 +30,7 @@ export default function RepoList({
   onRemoveTag
 }: Props) {
   const [hoveredTagKey, setHoveredTagKey] = useState<string | null>(null)
+  const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
   const columns: ColumnsType<RepoItem> = [
     {
       title: "仓库",
@@ -59,7 +60,7 @@ export default function RepoList({
                 }}
                 onMouseLeave={() => setHoveredTagKey(null)}
               >
-                <span>{tag}</span>
+                <span>{formatTagLabel(tag)}</span>
                 <Popconfirm
                   title="删除该标签？"
                   okText="删除"

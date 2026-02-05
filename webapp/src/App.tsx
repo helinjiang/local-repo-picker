@@ -53,9 +53,12 @@ export default function App() {
   const [messageApi, contextHolder] = message.useMessage()
 
   const tagOptions = useMemo(() => {
+    const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
     const tagSet = new Set<string>()
     repos.forEach((repo) => repo.tags.forEach((item) => tagSet.add(item)))
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b))
+    return Array.from(tagSet)
+      .sort((a, b) => a.localeCompare(b))
+      .map((item) => ({ label: formatTagLabel(item), value: item }))
   }, [repos])
 
   const selectedRepo = useMemo(
@@ -190,9 +193,7 @@ export default function App() {
       if (tagModalMode === "add") {
         const parsed = nextTags
           .split(/[\s,]+/)
-          .map((item) => item.trim())
-          .filter(Boolean)
-          .map(normalizeTag)
+          .map(stripTagBrackets)
           .filter(Boolean)
         if (parsed.length === 0) {
           setTagModalOpen(false)
@@ -266,14 +267,7 @@ export default function App() {
     }
   }
 
-  const normalizeTag = (raw: string) => {
-    const trimmed = raw.trim()
-    if (!trimmed) return ""
-    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-      return trimmed
-    }
-    return `[${trimmed}]`
-  }
+  const stripTagBrackets = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1").trim()
 
   return (
     <AntApp>
@@ -293,7 +287,7 @@ export default function App() {
             value={tag}
             onChange={(value) => setTag(value)}
             style={{ minWidth: 180 }}
-            options={tagOptions.map((item) => ({ label: item, value: item }))}
+            options={tagOptions}
           />
           <Space>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新缓存</Button>
