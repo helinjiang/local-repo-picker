@@ -55,6 +55,7 @@ function buildCoreActions(): Action[] {
     {
       id: "builtin.print-path",
       label: "打印路径",
+      scopes: ["cli"],
       run: async (repo) => {
         console.log(repo.path)
       }
@@ -98,15 +99,6 @@ function buildCoreActions(): Action[] {
 // 仅 CLI 需要的 actions（涉及本地文件编辑与缓存刷新）
 function buildCliActions(options: BuiltInActionOptions): Action[] {
   return [
-    {
-      id: "builtin.add-tag",
-      label: "add tag",
-      scopes: ["cli"],
-      run: async () => {
-        await execa("open", ["-e", options.manualTagsFile], { reject: false })
-        await refreshCache(options)
-      }
-    },
     {
       id: "builtin.refresh-cache",
       label: "refresh cache",
