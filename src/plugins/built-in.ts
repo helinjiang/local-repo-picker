@@ -6,6 +6,7 @@ import { registerPlugins } from "../core/plugins"
 import { refreshCache } from "../core/cache"
 import { parseOriginToSiteUrl, readOriginValue } from "../core/origin"
 
+// Node 项目相关的 tag 扩展
 const nodeTagPlugin: TagPlugin = {
   id: "builtin.node-tag",
   label: "Node 项目标记",
@@ -15,6 +16,7 @@ const nodeTagPlugin: TagPlugin = {
   }
 }
 
+// Node 项目相关的 preview 扩展
 const nodePreviewPlugin: PreviewPlugin = {
   id: "builtin.node-preview",
   label: "Node 预览扩展",
@@ -35,6 +37,7 @@ const nodePreviewPlugin: PreviewPlugin = {
   }
 }
 
+// 仅在 CLI 场景需要的依赖参数
 type BuiltInActionOptions = {
   scanRoots: string[]
   maxDepth?: number
@@ -46,8 +49,9 @@ type BuiltInActionOptions = {
   lruFile: string
 }
 
-function buildBuiltInActions(options?: BuiltInActionOptions): Action[] {
-  const actions: Action[] = [
+// 与运行环境无关的通用 actions
+function buildCoreActions(): Action[] {
+  return [
     {
       id: "builtin.print-path",
       label: "打印路径",
@@ -89,51 +93,50 @@ function buildBuiltInActions(options?: BuiltInActionOptions): Action[] {
       }
     }
   ]
-  if (options) {
-    actions.push(
-      {
-        id: "builtin.add-tag",
-        label: "add tag",
-        scopes: ["cli"],
-        run: async () => {
-          await execa("open", ["-e", options.manualTagsFile], { reject: false })
-          await refreshCache(options)
-        }
-      },
-      {
-        id: "builtin.refresh-cache",
-        label: "refresh cache",
-        scopes: ["cli"],
-        run: async () => {
-          await refreshCache(options)
-        }
-      }
-    )
-  }
-  return actions
 }
 
-export const builtInPlugins: PluginModule[] = [
-  {
-    id: "builtin.node",
-    label: "Node 插件",
-    tags: [nodeTagPlugin],
-    previews: [nodePreviewPlugin],
-    actions: buildBuiltInActions()
-  }
-]
+// 仅 CLI 需要的 actions（涉及本地文件编辑与缓存刷新）
+function buildCliActions(options: BuiltInActionOptions): Action[] {
+  return [
+    {
+      id: "builtin.add-tag",
+      label: "add tag",
+      scopes: ["cli"],
+      run: async () => {
+        await execa("open", ["-e", options.manualTagsFile], { reject: false })
+        await refreshCache(options)
+      }
+    },
+    {
+      id: "builtin.refresh-cache",
+      label: "refresh cache",
+      scopes: ["cli"],
+      run: async () => {
+        await refreshCache(options)
+      }
+    }
+  ]
+}
 
-export function registerBuiltInPlugins(options?: BuiltInActionOptions): void {
-  const plugins: PluginModule[] = [
+// 组装内置插件模块
+function buildBuiltInPlugins(options?: BuiltInActionOptions): PluginModule[] {
+  const actions = options ? [...buildCoreActions(), ...buildCliActions(options)] : buildCoreActions()
+  return [
     {
       id: "builtin.node",
       label: "Node 插件",
       tags: [nodeTagPlugin],
       previews: [nodePreviewPlugin],
-      actions: buildBuiltInActions(options)
+      actions
     }
   ]
-  registerPlugins(plugins)
+}
+
+// 便于在外部直接获取默认内置插件（不含 CLI 专属 action）
+export const builtInPlugins: PluginModule[] = buildBuiltInPlugins()
+
+export function registerBuiltInPlugins(options?: BuiltInActionOptions): void {
+  registerPlugins(buildBuiltInPlugins(options))
 }
 
 async function readPackageJson(repoPath: string): Promise<Record<string, unknown> | null> {
