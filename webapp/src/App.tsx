@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { CopyOutlined, EditOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons"
-import { App as AntApp, Button, Input, Modal, Select, Space, Tooltip, Tree, message } from "antd"
+import { App as AntApp, Button, Input, Modal, Select, Space, Tag, Tooltip, Tree, message } from "antd"
 import type { ActionInfo, AppConfig, ConfigPaths, RepoItem, RepoPreviewResult } from "./types"
 import {
   fetchActions,
@@ -50,17 +50,39 @@ export default function App() {
   const [refreshingCache, setRefreshingCache] = useState(false)
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null)
   const [configEditorOpen, setConfigEditorOpen] = useState(false)
+  const [quickTagsConfig, setQuickTagsConfig] = useState<string[]>([])
+  const [configLoadedOnce, setConfigLoadedOnce] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
   const [messageApi, contextHolder] = message.useMessage()
 
+  const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
+  const normalizeTagValue = (raw: string) => {
+    const trimmed = raw.trim()
+    if (!trimmed) return ""
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      return trimmed
+    }
+    return `[${trimmed}]`
+  }
+
   const tagOptions = useMemo(() => {
-    const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
     const tagSet = new Set<string>()
     repos.forEach((repo) => repo.tags.forEach((item) => tagSet.add(item)))
     return Array.from(tagSet)
       .sort((a, b) => a.localeCompare(b))
       .map((item) => ({ label: formatTagLabel(item), value: item }))
   }, [repos])
+
+  const quickTagOptions = useMemo(
+    () =>
+      quickTagsConfig
+        .map((item) => ({
+          label: formatTagLabel(item),
+          value: normalizeTagValue(item)
+        }))
+        .filter((item) => item.label && item.value),
+    [quickTagsConfig]
+  )
 
   const selectedRepo = useMemo(
     () => repos.find((repo) => repo.path === selectedPath) ?? null,
@@ -122,7 +144,6 @@ export default function App() {
   }, [debouncedQuery, tag])
 
   useEffect(() => {
-    if (!settingsOpen) return
     let cancelled = false
     async function loadConfig() {
       setLoadingConfig(true)
@@ -131,6 +152,8 @@ export default function App() {
         if (cancelled) return
         setConfigPaths(data.paths)
         setConfigText(JSON.stringify(data.config, null, 2))
+        setQuickTagsConfig(data.config.webQuickTags ?? [])
+        setConfigLoadedOnce(true)
       } catch (error) {
         if (!cancelled) {
           messageApi.error(`获取配置失败：${(error as Error).message}`)
@@ -139,11 +162,13 @@ export default function App() {
         if (!cancelled) setLoadingConfig(false)
       }
     }
-    void loadConfig()
+    if (settingsOpen || !configLoadedOnce) {
+      void loadConfig()
+    }
     return () => {
       cancelled = true
     }
-  }, [settingsOpen, messageApi])
+  }, [settingsOpen, messageApi, configLoadedOnce])
 
   useEffect(() => {
     if (!settingsOpen) {
@@ -255,10 +280,12 @@ export default function App() {
       messageApi.error(`配置 JSON 无效：${(error as Error).message}`)
       return
     }
+    parsed.webQuickTags = quickTagsConfig
     setSavingConfig(true)
     try {
       const result = await saveConfig(parsed)
       setConfigText(JSON.stringify(result.config, null, 2))
+        setQuickTagsConfig(result.config.webQuickTags ?? [])
       messageApi.success(`配置已更新并刷新缓存（${result.repoCount}）`)
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
       setRepos(data.items)
@@ -273,6 +300,18 @@ export default function App() {
   }
 
   const stripTagBrackets = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1").trim()
+
+  const handleQuickTagsChange = (values: string[]) => {
+    const next = values.map(stripTagBrackets).filter(Boolean)
+    setQuickTagsConfig(next)
+    try {
+      const parsed = JSON.parse(configText) as AppConfig
+      const updated = { ...parsed, webQuickTags: next }
+      setConfigText(JSON.stringify(updated, null, 2))
+    } catch {
+      setConfigText((prev) => prev)
+    }
+  }
 
   return (
     <AntApp>
@@ -294,6 +333,20 @@ export default function App() {
             style={{ minWidth: 180 }}
             options={tagOptions}
           />
+          {quickTagOptions.length > 0 ? (
+            <Space size={[4, 4]} wrap>
+              {quickTagOptions.map((item) => (
+                <Tag
+                  key={item.value}
+                  color={item.value === tag ? "blue" : undefined}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setTag(item.value === tag ? undefined : item.value)}
+                >
+                  {item.label}
+                </Tag>
+              ))}
+            </Space>
+          ) : null}
           <Space>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshingCache}>刷新缓存</Button>
             <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
@@ -347,6 +400,16 @@ export default function App() {
           cancelText="关闭"
           width={720}
         >
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>快速筛选标签</div>
+          <Select
+            mode="tags"
+            placeholder="输入标签并回车，多个标签可用空格或逗号"
+            value={quickTagsConfig}
+            onChange={handleQuickTagsChange}
+            tokenSeparators={[",", " "]}
+            options={tagOptions.map((item) => ({ label: item.label, value: item.label }))}
+            style={{ width: "100%" }}
+          />
           <div style={{ fontWeight: 600, marginBottom: 8 }}>可编辑配置</div>
           <div
             style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}

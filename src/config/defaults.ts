@@ -6,6 +6,7 @@ export const defaultConfig: AppConfig = {
   pruneDirs: [],
   cacheTtlMs: 12 * 60 * 60 * 1000,
   followSymlinks: false,
+  webQuickTags: [],
   fzfTagFilters: {
     "ctrl-b": "[byted]",
     "ctrl-g": "[github]",
