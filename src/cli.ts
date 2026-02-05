@@ -383,9 +383,15 @@ async function runListCommand(
   }
   if (isTty && hasFzf && flags.format === "text" && !flags.query && !flags.tag && !flags.dirtyOnly) {
     const selected = await runFzfPicker(options, options.fzfTagFilters ?? {})
-    if (selected) {
-      console.log(selected)
+    if (!selected) {
+      return
     }
+    const repo = await resolveRepoInfo(options, selected)
+    const action = await runFzfActionPicker(repo, options)
+    if (!action) {
+      return
+    }
+    await action.run(repo)
     return
   }
   let repos = cached.repos.slice()
