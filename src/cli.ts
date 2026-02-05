@@ -9,6 +9,7 @@ import { spawn } from "node:child_process"
 import { execa } from "execa"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./config/config"
+import type { ConfigPaths } from "./config/config"
 import { isDebugEnabled, logger } from "./core/logger"
 import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "./core/preview"
 import type { RepoInfo } from "./core/types"
@@ -189,12 +190,22 @@ async function main(): Promise<void> {
 
 async function runStatus(args: string[]): Promise<void> {
   const useJson = args.includes("--json")
+  const paths = getConfigPaths()
+  const fzfAvailable = await checkFzfAvailable()
   const state = await readUiState()
   if (!state) {
     if (useJson) {
-      console.log(JSON.stringify({ running: false }))
+      console.log(
+        JSON.stringify({
+          running: false,
+          fzfAvailable,
+          paths
+        })
+      )
     } else {
       console.log("UI not running, run `repo ui`")
+      console.log(`fzf: ${fzfAvailable ? "available" : "missing"}`)
+      printConfigPaths(paths)
     }
     process.exitCode = 1
     return
@@ -206,6 +217,8 @@ async function runStatus(args: string[]): Promise<void> {
         JSON.stringify({
           running: false,
           crashed: true,
+          fzfAvailable,
+          paths,
           lastUrl: state.url,
           lastPid: state.pid,
           startedAt: state.startedAt
@@ -213,6 +226,8 @@ async function runStatus(args: string[]): Promise<void> {
       )
     } else {
       console.log("UI not running, run `repo ui` (last run crashed)")
+      console.log(`fzf: ${fzfAvailable ? "available" : "missing"}`)
+      printConfigPaths(paths)
     }
     process.exitCode = 1
     return
@@ -221,6 +236,8 @@ async function runStatus(args: string[]): Promise<void> {
     console.log(
       JSON.stringify({
         running: true,
+        fzfAvailable,
+        paths,
         url: state.url,
         pid: state.pid,
         port: state.port,
@@ -230,6 +247,19 @@ async function runStatus(args: string[]): Promise<void> {
     return
   }
   console.log(state.url)
+  console.log(`fzf: ${fzfAvailable ? "available" : "missing"}`)
+  printConfigPaths(paths)
+}
+
+function printConfigPaths(paths: ConfigPaths): void {
+  console.log("paths:")
+  console.log(`  configFile: ${paths.configFile}`)
+  console.log(`  cacheFile: ${paths.cacheFile}`)
+  console.log(`  manualTagsFile: ${paths.manualTagsFile}`)
+  console.log(`  lruFile: ${paths.lruFile}`)
+  console.log(`  configDir: ${paths.configDir}`)
+  console.log(`  dataDir: ${paths.dataDir}`)
+  console.log(`  cacheDir: ${paths.cacheDir}`)
 }
 
 async function stopUiServer(options: { allowMissing: boolean }): Promise<void> {
