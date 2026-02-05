@@ -54,10 +54,19 @@ function buildCoreActions(): Action[] {
   return [
     {
       id: "builtin.print-path",
-      label: "打印路径",
+      label: "打印此项目路径",
       scopes: ["cli"],
       run: async (repo) => {
         console.log(repo.path)
+      }
+    },
+    {
+      id: "builtin.cd-path",
+      label: "cd 到此项目",
+      scopes: ["cli"],
+      run: async (repo) => {
+        const shell = process.env.SHELL || "bash"
+        await execa(shell, [], { cwd: repo.path, stdio: "inherit", reject: false })
       }
     },
     {
