@@ -73,6 +73,7 @@ export type Action = {
   id: string
   label: string
   run: (repo: RepoInfo) => Promise<void>
+  scopes?: Array<"cli" | "web">
 }
 
 export type TagPluginInput = {

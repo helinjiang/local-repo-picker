@@ -96,6 +96,9 @@ function normalizeConfig(raw: unknown): AppConfig {
     typeof value.followSymlinks === "boolean"
       ? value.followSymlinks
       : defaultConfig.followSymlinks
+  const webQuickTags = Array.isArray(value.webQuickTags)
+    ? value.webQuickTags.filter((item) => typeof item === "string")
+    : defaultConfig.webQuickTags
   const fzfTagFilters =
     typeof value.fzfTagFilters === "object" && value.fzfTagFilters !== null
       ? (Object.fromEntries(
@@ -109,6 +112,7 @@ function normalizeConfig(raw: unknown): AppConfig {
     pruneDirs,
     cacheTtlMs,
     followSymlinks,
+    webQuickTags,
     fzfTagFilters
   }
 }

@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs"
 import pLimit from "p-limit"
 import type { CacheData, CacheMetadata, RepoInfo, ScanOptions } from "./types"
 import { scanRepos } from "./scan"
-import { readManualTags, buildTags, getRemoteTag, uniqueTags } from "./tags"
+import { buildTags, getRemoteTag, readManualTagEdits, uniqueTags } from "./tags"
 import { isDirty, parseOriginInfo, readOriginUrl } from "./git"
 import { readLru, sortByLru } from "./lru"
 import { getConfigPaths } from "../config/config"
@@ -19,7 +19,7 @@ export async function buildCache(
 ): Promise<CacheData> {
   const normalized = normalizeOptions(options)
   const buildStartedAt = Date.now()
-  const manualTags = await readManualTags(normalized.manualTagsFile)
+  const manualEdits = await readManualTagEdits(normalized.manualTagsFile)
   const scanStartedAt = Date.now()
   let warningCount = 0
   const warningSamples: string[] = []
@@ -44,12 +44,12 @@ export async function buildCache(
       const originUrl = await readOriginUrl(repo.path)
       const { host, ownerRepo } = parseOriginInfo(originUrl)
       const remoteTag = getRemoteTag(host)
-      const manual = manualTags.get(normalizeRepoKey(repo.path))
+      const manual = manualEdits.get(normalizeRepoKey(repo.path))
       const dirty = await isDirty(repo.path)
       const baseTags = buildTags({
         remoteTag,
         autoTag: repo.autoTag,
-        manualTags: manual,
+        manualTags: manual?.add,
         dirty
       })
       const baseRepo = {
@@ -65,13 +65,14 @@ export async function buildCache(
         originUrl: baseRepo.originUrl,
         ownerRepo: baseRepo.ownerRepo,
         autoTag: repo.autoTag,
-        manualTags: manual,
+        manualTags: manual?.add,
         dirty,
         baseTags
       })
+      const removed = new Set(manual?.remove ?? [])
       return {
         ...baseRepo,
-        tags: uniqueTags([...baseTags, ...extraTags])
+        tags: uniqueTags([...baseTags, ...extraTags]).filter((tag) => !removed.has(tag))
       } satisfies RepoInfo
     })
   )

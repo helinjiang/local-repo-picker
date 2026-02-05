@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
-import { App as AntApp, Button, Input, Select, Space, message } from "antd"
-import type { RepoItem, RepoPreviewResult } from "./types"
-import { fetchPreview, fetchRepos, refreshCache, runAction, upsertTags } from "./api"
+import { CopyOutlined, EditOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons"
+import { App as AntApp, Button, Input, Modal, Select, Space, Tag, Tooltip, Tree, message } from "antd"
+import type { ActionInfo, AppConfig, ConfigPaths, RepoItem, RepoPreviewResult } from "./types"
+import {
+  fetchActions,
+  fetchConfig,
+  fetchPreview,
+  fetchRepos,
+  refreshCache,
+  runAction,
+  saveConfig,
+  updateTags,
+  upsertTags
+} from "./api"
 import RepoList from "./components/RepoList"
 import PreviewPanel from "./components/PreviewPanel"
 import ActionsBar from "./components/ActionsBar"
@@ -22,20 +33,56 @@ export default function App() {
   const [preview, setPreview] = useState<RepoPreviewResult | null>(null)
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
+  const [actions, setActions] = useState<ActionInfo[]>([])
   const [query, setQuery] = useState("")
   const [tag, setTag] = useState<string | undefined>()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(200)
   const [total, setTotal] = useState(0)
   const [tagModalOpen, setTagModalOpen] = useState(false)
+  const [tagModalRepo, setTagModalRepo] = useState<RepoItem | null>(null)
+  const [tagModalMode, setTagModalMode] = useState<"add" | "edit">("add")
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [configPaths, setConfigPaths] = useState<ConfigPaths | null>(null)
+  const [configText, setConfigText] = useState("")
+  const [loadingConfig, setLoadingConfig] = useState(false)
+  const [savingConfig, setSavingConfig] = useState(false)
+  const [refreshingCache, setRefreshingCache] = useState(false)
+  const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null)
+  const [configEditorOpen, setConfigEditorOpen] = useState(false)
+  const [quickTagsConfig, setQuickTagsConfig] = useState<string[]>([])
+  const [configLoadedOnce, setConfigLoadedOnce] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
   const [messageApi, contextHolder] = message.useMessage()
+
+  const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
+  const normalizeTagValue = (raw: string) => {
+    const trimmed = raw.trim()
+    if (!trimmed) return ""
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      return trimmed
+    }
+    return `[${trimmed}]`
+  }
 
   const tagOptions = useMemo(() => {
     const tagSet = new Set<string>()
     repos.forEach((repo) => repo.tags.forEach((item) => tagSet.add(item)))
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b))
+    return Array.from(tagSet)
+      .sort((a, b) => a.localeCompare(b))
+      .map((item) => ({ label: formatTagLabel(item), value: item }))
   }, [repos])
+
+  const quickTagOptions = useMemo(
+    () =>
+      quickTagsConfig
+        .map((item) => ({
+          label: formatTagLabel(item),
+          value: normalizeTagValue(item)
+        }))
+        .filter((item) => item.label && item.value),
+    [quickTagsConfig]
+  )
 
   const selectedRepo = useMemo(
     () => repos.find((repo) => repo.path === selectedPath) ?? null,
@@ -75,8 +122,59 @@ export default function App() {
   }, [debouncedQuery, tag, page, pageSize, messageApi])
 
   useEffect(() => {
+    let cancelled = false
+    async function loadActions() {
+      try {
+        const data = await fetchActions()
+        if (!cancelled) setActions(data)
+      } catch (error) {
+        if (!cancelled) {
+          messageApi.error(`获取 Actions 失败：${(error as Error).message}`)
+        }
+      }
+    }
+    void loadActions()
+    return () => {
+      cancelled = true
+    }
+  }, [messageApi])
+
+  useEffect(() => {
     setPage(1)
   }, [debouncedQuery, tag])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadConfig() {
+      setLoadingConfig(true)
+      try {
+        const data = await fetchConfig()
+        if (cancelled) return
+        setConfigPaths(data.paths)
+        setConfigText(JSON.stringify(data.config, null, 2))
+        setQuickTagsConfig(data.config.webQuickTags ?? [])
+        setConfigLoadedOnce(true)
+      } catch (error) {
+        if (!cancelled) {
+          messageApi.error(`获取配置失败：${(error as Error).message}`)
+        }
+      } finally {
+        if (!cancelled) setLoadingConfig(false)
+      }
+    }
+    if (settingsOpen || !configLoadedOnce) {
+      void loadConfig()
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [settingsOpen, messageApi, configLoadedOnce])
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      setConfigEditorOpen(false)
+    }
+  }, [settingsOpen])
 
   useEffect(() => {
     let cancelled = false
@@ -104,6 +202,8 @@ export default function App() {
   }, [selectedPath, messageApi])
 
   const handleRefresh = async () => {
+    if (refreshingCache) return
+    setRefreshingCache(true)
     try {
       await refreshCache()
       messageApi.success("缓存已刷新")
@@ -112,15 +212,32 @@ export default function App() {
       setTotal(data.total)
     } catch (error) {
       messageApi.error(`刷新缓存失败：${(error as Error).message}`)
+    } finally {
+      setRefreshingCache(false)
     }
   }
 
   const handleSaveTags = async (nextTags: string) => {
-    if (!selectedRepo) return
+    if (!tagModalRepo) return
     try {
-      await upsertTags(selectedRepo.path, nextTags)
-      messageApi.success("标签已更新")
+      if (tagModalMode === "add") {
+        const parsed = nextTags
+          .split(/[\s,]+/)
+          .map(stripTagBrackets)
+          .filter(Boolean)
+        if (parsed.length === 0) {
+          setTagModalOpen(false)
+          setTagModalRepo(null)
+          return
+        }
+        await updateTags(tagModalRepo.path, { add: parsed })
+        messageApi.success("标签已新增")
+      } else {
+        await upsertTags(tagModalRepo.path, nextTags)
+        messageApi.success("标签已更新")
+      }
       setTagModalOpen(false)
+      setTagModalRepo(null)
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
       setRepos(data.items)
       setTotal(data.total)
@@ -129,11 +246,70 @@ export default function App() {
     }
   }
 
+  const handleAddTag = (repo: RepoItem) => {
+    setTagModalRepo(repo)
+    setTagModalMode("add")
+    setTagModalOpen(true)
+  }
+
+  const handleRemoveTag = async (repo: RepoItem, removedTag: string) => {
+    try {
+      await updateTags(repo.path, { remove: [removedTag] })
+      messageApi.success("标签已删除")
+      const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
+      setRepos(data.items)
+      setTotal(data.total)
+    } catch (error) {
+      messageApi.error(`删除标签失败：${(error as Error).message}`)
+    }
+  }
+
   const handleRunAction = async (actionId: string, repoPath: string) => {
     try {
       await runAction(actionId, repoPath)
     } catch (error) {
       messageApi.error(`执行操作失败：${(error as Error).message}`)
+    }
+  }
+
+  const handleSaveConfig = async () => {
+    let parsed: AppConfig
+    try {
+      parsed = JSON.parse(configText) as AppConfig
+    } catch (error) {
+      messageApi.error(`配置 JSON 无效：${(error as Error).message}`)
+      return
+    }
+    parsed.webQuickTags = quickTagsConfig
+    setSavingConfig(true)
+    try {
+      const result = await saveConfig(parsed)
+      setConfigText(JSON.stringify(result.config, null, 2))
+        setQuickTagsConfig(result.config.webQuickTags ?? [])
+      messageApi.success(`配置已更新并刷新缓存（${result.repoCount}）`)
+      const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
+      setRepos(data.items)
+      setTotal(data.total)
+      setPage(data.page)
+      setPageSize(data.pageSize)
+    } catch (error) {
+      messageApi.error(`更新配置失败：${(error as Error).message}`)
+    } finally {
+      setSavingConfig(false)
+    }
+  }
+
+  const stripTagBrackets = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1").trim()
+
+  const handleQuickTagsChange = (values: string[]) => {
+    const next = values.map(stripTagBrackets).filter(Boolean)
+    setQuickTagsConfig(next)
+    try {
+      const parsed = JSON.parse(configText) as AppConfig
+      const updated = { ...parsed, webQuickTags: next }
+      setConfigText(JSON.stringify(updated, null, 2))
+    } catch {
+      setConfigText((prev) => prev)
     }
   }
 
@@ -155,10 +331,25 @@ export default function App() {
             value={tag}
             onChange={(value) => setTag(value)}
             style={{ minWidth: 180 }}
-            options={tagOptions.map((item) => ({ label: item, value: item }))}
+            options={tagOptions}
           />
+          {quickTagOptions.length > 0 ? (
+            <Space size={[4, 4]} wrap>
+              {quickTagOptions.map((item) => (
+                <Tag
+                  key={item.value}
+                  color={item.value === tag ? "blue" : undefined}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setTag(item.value === tag ? undefined : item.value)}
+                >
+                  {item.label}
+                </Tag>
+              ))}
+            </Space>
+          ) : null}
           <Space>
-            <Button onClick={handleRefresh}>刷新缓存</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshingCache}>刷新缓存</Button>
+            <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
           </Space>
         </div>
         <div className="content-area">
@@ -171,6 +362,8 @@ export default function App() {
               page={page}
               pageSize={pageSize}
               total={total}
+              onAddTag={handleAddTag}
+              onRemoveTag={handleRemoveTag}
               onPageChange={(nextPage, nextPageSize) => {
                 setPage(nextPage)
                 setPageSize(nextPageSize)
@@ -180,8 +373,7 @@ export default function App() {
           <div className="preview-pane">
             <ActionsBar
               disabled={!selectedRepo}
-              onAddTag={() => setTagModalOpen(true)}
-              onRefreshCache={handleRefresh}
+              actions={actions}
               onRunAction={handleRunAction}
               repo={selectedRepo}
             />
@@ -190,11 +382,187 @@ export default function App() {
         </div>
         <TagModal
           open={tagModalOpen}
-          repo={selectedRepo}
-          onCancel={() => setTagModalOpen(false)}
+          repo={tagModalRepo}
+          mode={tagModalMode}
+          onCancel={() => {
+            setTagModalOpen(false)
+            setTagModalRepo(null)
+          }}
           onSave={handleSaveTags}
         />
+        <Modal
+          title="配置"
+          open={settingsOpen}
+          onCancel={() => setSettingsOpen(false)}
+          onOk={handleSaveConfig}
+          confirmLoading={savingConfig}
+          okText="保存并刷新缓存"
+          cancelText="关闭"
+          width={720}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>快速筛选标签</div>
+          <Select
+            mode="tags"
+            placeholder="输入标签并回车，多个标签可用空格或逗号"
+            value={quickTagsConfig}
+            onChange={handleQuickTagsChange}
+            tokenSeparators={[",", " "]}
+            options={tagOptions.map((item) => ({ label: item.label, value: item.label }))}
+            style={{ width: "100%" }}
+          />
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>可编辑配置</div>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}
+            onMouseEnter={() => setHoveredConfigKey("config.json")}
+            onMouseLeave={() => setHoveredConfigKey(null)}
+          >
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                fontFamily: "monospace"
+              }}
+            >
+              {configPaths?.configFile ?? "-"}
+            </span>
+            {configPaths?.configFile && hoveredConfigKey === "config.json" ? (
+              <Tooltip title="复制路径">
+                <Button
+                  size="small"
+                  type="text"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    void copyPathToClipboard(configPaths.configFile, messageApi)
+                  }}
+                  icon={<CopyOutlined />}
+                >
+                </Button>
+              </Tooltip>
+            ) : null}
+            <Tooltip title={configEditorOpen ? "收起编辑" : "编辑配置"}>
+              <Button
+                size="small"
+                type="text"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setConfigEditorOpen((prev) => !prev)
+                }}
+                icon={<EditOutlined />}
+              >
+              </Button>
+            </Tooltip>
+          </div>
+          {configEditorOpen ? (
+            <div style={{ marginTop: 12 }}>
+              <Input.TextArea
+                value={configText}
+                onChange={(event) => setConfigText(event.target.value)}
+                autoSize={{ minRows: 12, maxRows: 20 }}
+                placeholder={loadingConfig ? "加载配置中..." : "请输入配置 JSON"}
+                style={{ fontFamily: "monospace" }}
+              />
+            </div>
+          ) : null}
+          <div style={{ fontWeight: 600, marginTop: 16, marginBottom: 8 }}>系统配置</div>
+          <Tree
+            blockNode
+            defaultExpandAll
+            treeData={buildConfigTree(configPaths)}
+            titleRender={(node) => (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}
+                onMouseEnter={() => setHoveredConfigKey(node.key)}
+                onMouseLeave={() => setHoveredConfigKey(null)}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  {node.title}
+                </span>
+                {node.path && hoveredConfigKey === node.key ? (
+                  <Tooltip title="复制路径">
+                    <Button
+                      size="small"
+                      type="text"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (!node.path) return
+                        void copyPathToClipboard(node.path, messageApi)
+                      }}
+                      icon={<CopyOutlined />}
+                    >
+                    </Button>
+                  </Tooltip>
+                ) : null}
+              </div>
+            )}
+          />
+        </Modal>
       </div>
     </AntApp>
   )
+}
+
+type ConfigTreeNode = {
+  title: string
+  key: string
+  path?: string
+  isLeaf?: boolean
+  children?: ConfigTreeNode[]
+}
+
+function buildConfigTree(paths: ConfigPaths | null): ConfigTreeNode[] {
+  if (!paths) {
+    return [
+      {
+        title: "加载中",
+        key: "loading"
+      }
+    ]
+  }
+  const cacheFiles = [
+    { title: "cache.json", key: "cache.json", path: paths.cacheFile, isLeaf: true }
+  ]
+  const dataFiles = [
+    { title: "repo_tags.tsv", key: "repo_tags.tsv", path: paths.manualTagsFile, isLeaf: true },
+    { title: "lru.txt", key: "lru.txt", path: paths.lruFile, isLeaf: true }
+  ]
+  return [
+    {
+      title: paths.dataDir,
+      key: paths.dataDir,
+      path: paths.dataDir,
+      children: dataFiles
+    },
+    {
+      title: paths.cacheDir,
+      key: paths.cacheDir,
+      path: paths.cacheDir,
+      children: cacheFiles
+    }
+  ]
+}
+
+async function copyPathToClipboard(path: string, messageApi: ReturnType<typeof message.useMessage>[0]) {
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("clipboard unavailable")
+    }
+    await navigator.clipboard.writeText(path)
+    messageApi.success("路径已复制")
+  } catch (error) {
+    messageApi.error(`复制失败：${(error as Error).message}`)
+  }
 }

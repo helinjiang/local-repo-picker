@@ -178,11 +178,13 @@ function validateGitArgs(
       : { ok: false, message: "git command not allowed" }
   }
   if (cmd === "rev-parse") {
-    return rest.length === 2 &&
-      rest[0] === "--abbrev-ref" &&
-      rest[1] === "HEAD"
-      ? { ok: true }
-      : { ok: false, message: "git command not allowed" }
+    if (rest.length === 2 && rest[0] === "--abbrev-ref" && rest[1] === "HEAD") {
+      return { ok: true }
+    }
+    if (rest.length === 1 && rest[0] === "--show-toplevel") {
+      return { ok: true }
+    }
+    return { ok: false, message: "git command not allowed" }
   }
   if (cmd === "rev-list") {
     return rest.length === 3 &&

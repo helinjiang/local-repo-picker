@@ -3,14 +3,14 @@ import type { FastifyInstance } from "fastify"
 import pLimit from "p-limit"
 import { buildCache, loadCache, refreshCache } from "../core/cache"
 import { buildRepoPreview } from "../core/preview"
-import type { RepoInfo } from "../core/types"
+import type { Action, RepoInfo } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
-import { parseTagList, upsertManualTags } from "../core/tags"
+import { parseTagList, readManualTagEdits, setManualTags, updateManualTagEdits } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
-import { parseOriginToSiteUrl, readOriginValue } from "../core/origin"
-import { execa } from "execa"
+import { getConfigPaths, readConfig, writeConfig } from "../config/config"
+import type { AppConfig } from "../config/schema"
 import type { UiState } from "./state"
 
 type ServerOptions = {
@@ -69,7 +69,7 @@ export async function registerRoutes(
   options: ServerOptions,
   state: UiState
 ): Promise<void> {
-  registerBuiltInPlugins()
+  registerBuiltInPlugins(options)
   app.get("/api/status", async () => {
     const cached = await loadCache(options)
     return {
@@ -82,6 +82,53 @@ export async function registerRoutes(
     }
   })
 
+  app.get("/api/config", async () => {
+    const config = await readConfig()
+    const paths = getConfigPaths()
+    return { config, paths }
+  })
+
+  app.post("/api/config", async (request, reply) => {
+    const body = request.body as { config?: unknown }
+    let raw = body?.config
+    if (typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw)
+      } catch {
+        reply.code(400)
+        return { error: "invalid config json" }
+      }
+    }
+    if (!raw || typeof raw !== "object") {
+      reply.code(400)
+      return { error: "invalid config" }
+    }
+    try {
+      await writeConfig(raw as AppConfig)
+      const updated = await readConfig()
+      options.scanRoots = updated.scanRoots
+      options.maxDepth = updated.maxDepth
+      options.pruneDirs = updated.pruneDirs
+      options.cacheTtlMs = updated.cacheTtlMs
+      options.followSymlinks = updated.followSymlinks
+      const cache = await refreshCache({
+        ...updated,
+        cacheFile: options.cacheFile,
+        manualTagsFile: options.manualTagsFile,
+        lruFile: options.lruFile
+      })
+      return { ok: true, config: updated, repoCount: cache.repos.length }
+    } catch (error) {
+      reply.code(500)
+      return { error: String(error instanceof Error ? error.message : error) }
+    }
+  })
+
+  app.get("/api/actions", async () => {
+    const actions = getRegisteredActions().filter((action) => isActionAllowed(action, "web"))
+    return actions.map((action) => ({ id: action.id, label: action.label }))
+  })
+
   app.get("/api/repos", async (request) => {
     const query = request.query as {
       q?: string
@@ -92,6 +139,7 @@ export async function registerRoutes(
     }
     const cached = await loadCache(options)
     const resolved = cached ?? (await buildCache(options))
+    const manualEdits = await readManualTagEdits(options.manualTagsFile)
     let repos = resolved.repos
     if (query.tag) {
       repos = repos.filter((repo) => repo.tags.includes(query.tag as string))
@@ -115,6 +163,7 @@ export async function registerRoutes(
     const offset = (page - 1) * pageSize
     const items = repos.slice(offset, offset + pageSize).map((repo) => ({
       ...repo,
+      manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
       isDirty: repo.tags.includes("[dirty]")
     }))
     const payload: PaginatedRepos = {
@@ -151,9 +200,10 @@ export async function registerRoutes(
       return { error: "invalid actionId or path" }
     }
     const repo = await resolveRepoInfo(options, allowedPath)
-    const builtins = getBuiltinActions(repo, options)
     const plugins = getRegisteredActions()
-    const action = [...builtins, ...plugins].find((item) => item.id === body.actionId)
+    const action = plugins
+      .filter((item) => isActionAllowed(item, "web"))
+      .find((item) => item.id === body.actionId)
     if (!action) {
       reply.code(404)
       return { error: "action not found" }
@@ -168,14 +218,24 @@ export async function registerRoutes(
   })
 
   app.post("/api/tags", async (request, reply) => {
-    const body = request.body as { path?: string; tags?: string[] | string; refresh?: boolean }
+    const body = request.body as {
+      path?: string
+      tags?: string[] | string | { add?: string[]; remove?: string[] }
+      refresh?: boolean
+    }
     const allowedPath = resolveAllowedPath(options.scanRoots, body?.path)
     if (!allowedPath || !body.tags) {
       reply.code(400)
       return { error: "invalid path or tags" }
     }
-    const tags = Array.isArray(body.tags) ? parseTagList(body.tags.join(" ")) : parseTagList(body.tags)
-    await upsertManualTags(options.manualTagsFile, allowedPath, tags)
+    if (typeof body.tags === "object" && !Array.isArray(body.tags)) {
+      const add = body.tags.add ? parseTagList(body.tags.add.join(" ")) : []
+      const remove = body.tags.remove ? parseTagList(body.tags.remove.join(" ")) : []
+      await updateManualTagEdits(options.manualTagsFile, allowedPath, { add, remove })
+    } else {
+      const tags = Array.isArray(body.tags) ? parseTagList(body.tags.join(" ")) : parseTagList(body.tags)
+      await setManualTags(options.manualTagsFile, allowedPath, tags)
+    }
     if (body.refresh ?? true) {
       await refreshCache(options)
     }
@@ -209,55 +269,9 @@ function resolveAllowedPath(scanRoots: string[], repoPath?: string | null): stri
   return allowed ? resolved : null
 }
 
-function getBuiltinActions(repo: RepoInfo, options: ServerOptions) {
-  return [
-    {
-      id: "builtin.open-vscode",
-      label: "open in VSCode",
-      run: async () => {
-        await execa("code", [repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-iterm",
-      label: "open in iTerm",
-      run: async () => {
-        await execa("open", ["-a", "iTerm", repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-finder",
-      label: "open in Finder",
-      run: async () => {
-        await execa("open", [repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-site",
-      label: "open site",
-      run: async () => {
-        const origin = await readOriginValue(repo.path)
-        const siteUrl = parseOriginToSiteUrl(origin)
-        if (!siteUrl) {
-          throw new Error("无法从 origin 解析站点地址")
-        }
-        await execa("open", [siteUrl], { reject: false })
-      }
-    },
-    {
-      id: "builtin.add-tag",
-      label: "add tag",
-      run: async () => {
-        await execa("open", ["-e", options.manualTagsFile], { reject: false })
-        await refreshCache(options)
-      }
-    },
-    {
-      id: "builtin.refresh-cache",
-      label: "refresh cache",
-      run: async () => {
-        await refreshCache(options)
-      }
-    }
-  ]
+function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
+  if (!action.scopes || action.scopes.length === 0) {
+    return true
+  }
+  return action.scopes.includes(scope)
 }

@@ -5,4 +5,5 @@ export type AppConfig = {
   cacheTtlMs?: number
   followSymlinks?: boolean
   fzfTagFilters?: Record<string, string>
+  webQuickTags?: string[]
 }

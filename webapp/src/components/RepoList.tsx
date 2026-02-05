@@ -1,5 +1,7 @@
-import { Table, Tag, Typography } from "antd"
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons"
+import { Button, Popconfirm, Table, Tag, Tooltip, Typography } from "antd"
 import type { ColumnsType } from "antd/es/table"
+import { useState } from "react"
 import type { RepoItem } from "../types"
 
 type Props = {
@@ -11,6 +13,8 @@ type Props = {
   total: number
   onSelect: (path: string) => void
   onPageChange: (page: number, pageSize: number) => void
+  onAddTag: (repo: RepoItem) => void
+  onRemoveTag: (repo: RepoItem, tag: string) => void
 }
 
 export default function RepoList({
@@ -21,8 +25,12 @@ export default function RepoList({
   pageSize,
   total,
   onSelect,
-  onPageChange
+  onPageChange,
+  onAddTag,
+  onRemoveTag
 }: Props) {
+  const [hoveredTagKey, setHoveredTagKey] = useState<string | null>(null)
+  const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
   const columns: ColumnsType<RepoItem> = [
     {
       title: "仓库",
@@ -37,13 +45,61 @@ export default function RepoList({
     {
       title: "标签",
       dataIndex: "tags",
-      render: (tags: string[]) => (
-        <div>
-          {tags.map((tag) => (
-            <Tag color={tag === "[dirty]" ? "red" : "blue"} key={tag}>
-              {tag}
-            </Tag>
-          ))}
+      render: (_: string[], repo) => (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {repo.tags.map((tag) => {
+            const tagKey = `${repo.path}::${tag}`
+            const hovered = hoveredTagKey === tagKey
+            return (
+              <Tag
+                color={tag === "[dirty]" ? "red" : "blue"}
+                key={tagKey}
+                style={{ position: "relative" }}
+                onMouseEnter={() => {
+                  setHoveredTagKey(tagKey)
+                }}
+                onMouseLeave={() => setHoveredTagKey(null)}
+              >
+                <span>{formatTagLabel(tag)}</span>
+                <Popconfirm
+                  title="删除该标签？"
+                  okText="删除"
+                  cancelText="取消"
+                  onConfirm={() => onRemoveTag(repo, tag)}
+                >
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                    style={{
+                      position: "absolute",
+                      right: -6,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      opacity: hovered ? 1 : 0,
+                      pointerEvents: hovered ? "auto" : "none"
+                    }}
+                  />
+                </Popconfirm>
+              </Tag>
+            )
+          })}
+          <Tooltip title="新增标签">
+            <Button
+              size="small"
+              type="text"
+              icon={<PlusOutlined />}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                onAddTag(repo)
+              }}
+            />
+          </Tooltip>
         </div>
       )
     }

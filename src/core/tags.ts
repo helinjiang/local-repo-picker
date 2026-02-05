@@ -2,12 +2,17 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { normalizeRepoKey } from "./path-utils"
 
-export type ManualTagsMap = Map<string, string[]>
+export type ManualTagEdits = {
+  add: string[]
+  remove: string[]
+}
 
-export async function readManualTags(
+export type ManualTagEditsMap = Map<string, ManualTagEdits>
+
+export async function readManualTagEdits(
   filePath: string
-): Promise<ManualTagsMap> {
-  const map: ManualTagsMap = new Map()
+): Promise<ManualTagEditsMap> {
+  const map: ManualTagEditsMap = new Map()
   try {
     const content = await fs.readFile(filePath, "utf8")
     const lines = content.split(/\r?\n/)
@@ -19,11 +24,11 @@ export async function readManualTags(
       if (!rawPath || !rawTags) {
         continue
       }
-      const tags = parseTagList(rawTags)
-      if (tags.length > 0) {
+      const edits = parseManualTagEdits(rawTags)
+      if (edits.add.length > 0 || edits.remove.length > 0) {
         const normalized = normalizeRepoKey(rawPath)
         if (normalized) {
-          map.set(normalized, tags)
+          map.set(normalized, edits)
         }
       }
     }
@@ -89,7 +94,7 @@ export function buildTags(options: {
   return uniqueTags(tags)
 }
 
-export async function upsertManualTags(
+export async function setManualTags(
   filePath: string,
   repoPath: string,
   tags: string[]
@@ -98,20 +103,94 @@ export async function upsertManualTags(
   if (!normalizedPath) {
     return
   }
-  const existing = await readManualTagsRaw(filePath)
-  existing.set(normalizedPath, { path: repoPath, tags })
+  const existing = await readManualTagEditsRaw(filePath)
+  const current = existing.get(normalizedPath)?.edits
+  const add = uniqueTags(tags)
+  const remove = (current?.remove ?? []).filter((tag) => !add.includes(tag))
+  if (add.length === 0 && remove.length === 0) {
+    existing.delete(normalizedPath)
+  } else {
+    existing.set(normalizedPath, { path: repoPath, edits: { add, remove } })
+  }
   await fs.mkdir(path.dirname(filePath), { recursive: true }).catch(() => {})
   const lines = Array.from(existing.values())
     .sort((a, b) => a.path.localeCompare(b.path))
-    .map((item) => `${item.path}\t${item.tags.join("")}`)
+    .map((item) => `${item.path}\t${serializeManualTagEdits(item.edits)}`)
   const content = lines.length > 0 ? `${lines.join("\n")}\n` : ""
   await fs.writeFile(filePath, content, "utf8")
 }
 
-async function readManualTagsRaw(
+export async function updateManualTagEdits(
+  filePath: string,
+  repoPath: string,
+  updates: { add?: string[]; remove?: string[] }
+): Promise<void> {
+  const normalizedPath = normalizeRepoKey(repoPath)
+  if (!normalizedPath) {
+    return
+  }
+  const existing = await readManualTagEditsRaw(filePath)
+  const current = existing.get(normalizedPath)?.edits ?? { add: [], remove: [] }
+  const addSet = new Set(current.add)
+  const removeSet = new Set(current.remove)
+  for (const tag of updates.add ?? []) {
+    addSet.add(tag)
+    removeSet.delete(tag)
+  }
+  for (const tag of updates.remove ?? []) {
+    removeSet.add(tag)
+    addSet.delete(tag)
+  }
+  const nextAdd = Array.from(addSet)
+  const nextRemove = Array.from(removeSet).filter((tag) => !addSet.has(tag))
+  if (nextAdd.length === 0 && nextRemove.length === 0) {
+    existing.delete(normalizedPath)
+  } else {
+    existing.set(normalizedPath, { path: repoPath, edits: { add: nextAdd, remove: nextRemove } })
+  }
+  await fs.mkdir(path.dirname(filePath), { recursive: true }).catch(() => {})
+  const lines = Array.from(existing.values())
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .map((item) => `${item.path}\t${serializeManualTagEdits(item.edits)}`)
+  const content = lines.length > 0 ? `${lines.join("\n")}\n` : ""
+  await fs.writeFile(filePath, content, "utf8")
+}
+
+function parseManualTagEdits(raw: string): ManualTagEdits {
+  const add: string[] = []
+  const remove: string[] = []
+  const regex = /([!-])?\[[^\]]+\]/g
+  let matched = false
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(raw)) !== null) {
+    matched = true
+    const token = match[0]
+    const prefix = match[1]
+    const tag = prefix ? token.slice(1) : token
+    if (prefix) {
+      remove.push(tag)
+    } else {
+      add.push(tag)
+    }
+  }
+  if (!matched) {
+    add.push(...parseTagList(raw))
+  }
+  const uniqueAdd = uniqueTags(add)
+  const uniqueRemove = uniqueTags(remove).filter((tag) => !uniqueAdd.includes(tag))
+  return { add: uniqueAdd, remove: uniqueRemove }
+}
+
+function serializeManualTagEdits(edits: ManualTagEdits): string {
+  const add = uniqueTags(edits.add)
+  const remove = uniqueTags(edits.remove).filter((tag) => !add.includes(tag))
+  return [...add, ...remove.map((tag) => `!${tag}`)].join("")
+}
+
+async function readManualTagEditsRaw(
   filePath: string
-): Promise<Map<string, { path: string; tags: string[] }>> {
-  const map = new Map<string, { path: string; tags: string[] }>()
+): Promise<Map<string, { path: string; edits: ManualTagEdits }>> {
+  const map = new Map<string, { path: string; edits: ManualTagEdits }>()
   try {
     const content = await fs.readFile(filePath, "utf8")
     const lines = content.split(/\r?\n/)
@@ -127,11 +206,11 @@ async function readManualTagsRaw(
       if (!key) {
         continue
       }
-      const parsed = parseTagList(rawTags)
-      if (parsed.length === 0) {
+      const edits = parseManualTagEdits(rawTags)
+      if (edits.add.length === 0 && edits.remove.length === 0) {
         continue
       }
-      map.set(key, { path: rawPath, tags: parsed })
+      map.set(key, { path: rawPath, edits })
     }
   } catch {
     return map
