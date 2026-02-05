@@ -1,6 +1,6 @@
 {
   "name": "local-repo-picker",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local repository picker with cache and preview for large workspaces",
   "keywords": [
     "repo",
@@ -46,7 +46,14 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/append-js-extensions.mjs",
+    "init": "npm install && npm run web:init",
+    "build": "npm run server:build && npm run web:build",
+    "server:build": "tsc -p tsconfig.json && node scripts/append-js-extensions.mjs",
+    "prepublishOnly": "npm run build",
+    "web:init": "npm --prefix webapp install",
+    "web:dev": "npm --prefix webapp run dev",
+    "web:build": "npm --prefix webapp run build",
+    "web:preview": "npm --prefix webapp run preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -55,8 +62,12 @@
     "demo:tui-real": "npm run build && node demo/tui-real.mjs"
   },
   "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/helmet": "^11.0.0",
+    "@fastify/static": "^7.0.1",
     "env-paths": "^3.0.0",
     "execa": "^8.0.1",
+    "fastify": "^4.29.0",
     "p-limit": "^5.0.0"
   },
   "devDependencies": {

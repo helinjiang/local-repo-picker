@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import type { RepoInfo, RepoPreview } from "./types"
 import { checkGitAvailable, isDirty, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "./git"
+import { parseOriginToSiteUrl } from "./origin"
 import { resolvePreviewExtensions } from "./plugins"
 
 export type RepoPreviewResult = {
@@ -22,6 +23,7 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
       data: {
         path: repoPath,
         origin: "-",
+        siteUrl: "-",
         branch: "-",
         status: "clean",
         sync: "-",
@@ -40,6 +42,7 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
       data: {
         path: repoPath,
         origin: "-",
+        siteUrl: "-",
         branch: "-",
         status: "clean",
         sync: "-",
@@ -68,6 +71,7 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
   const basePreview: RepoPreview = {
     path: repoPath,
     origin: origin.value,
+    siteUrl: parseOriginToSiteUrl(origin.value) ?? "-",
     branch: branch.value,
     status,
     sync: sync.value,
@@ -88,6 +92,7 @@ export function buildFallbackPreview(repoPath: string, error: string): RepoPrevi
     data: {
       path: repoPath,
       origin: "-",
+      siteUrl: "-",
       branch: "-",
       status: "clean",
       sync: "-",

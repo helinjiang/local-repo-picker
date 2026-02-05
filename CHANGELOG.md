@@ -1,5 +1,16 @@
 # 更新日志
 
+## [0.3.0] - 2026-02-05
+### 新增
+- Web UI 与本地静态托管
+- repo ui 后台运行，支持 stop / restart / status
+- repo list / status 命令与 JSON/TSV 输出
+- Web API 分页、预览缓存与并发限制
+- 预览新增站点链接与打开站点 action
+
+### 变更
+- Web UI Actions 增加图标
+
 ## [0.2.0] - 2026-02-04
 ### 新增
 - 扫描阶段对跳过路径与符号链接的告警

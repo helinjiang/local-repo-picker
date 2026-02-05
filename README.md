@@ -34,10 +34,10 @@ repo --config
 }
 ```
 
-4) 启动交互选择
+4) 启动 Web UI
 
 ```bash
-repo
+repo ui
 ```
 
 5) 刷新缓存
@@ -66,7 +66,7 @@ asciinema play docs/demo.cast
 
 - 多路径扫描与缓存
 - 交互式列表与搜索
-- Git 预览（origin / branch / status / sync / recent commits / README）
+- Git 预览（origin / site / branch / status / sync / recent commits / README）
 - 标签体系（auto / remote / dirty / manual）
 - LRU 最近访问排序
 - CLI 输出与配置管理
@@ -75,19 +75,30 @@ asciinema play docs/demo.cast
 ## CLI 使用
 
 ```bash
-repo
 repo --config
 repo refresh
+repo list
+repo list --json
+repo list --tsv --sort name
+repo list --q backend --tag github
+repo list --dirty --sort lru
+repo status
+repo status --json
+repo ui
+repo ui stop
+repo ui restart
 repo --help
 repo --version
-repo list
-repo --list
 ```
 
-- `repo`：启动 fzf 选择界面
+- `repo`：显示帮助
 - `repo --config`：创建默认配置并输出 config.json 路径
 - `repo refresh`：强制重建 cache
-- `repo list` / `repo --list`：输出 repo 路径列表
+- `repo list`：输出 repo 列表（支持过滤/排序/格式）
+- `repo ui`：启动本地 Web UI（后台运行，输出 URL 并尝试自动打开浏览器）
+- `repo ui stop`：停止 Web UI
+- `repo ui restart`：重启 Web UI
+- `repo status`：查看 Web UI 状态（输出 URL 或提示）
 
 ## Internal 命令
 
@@ -129,6 +140,7 @@ repo --list
 - open in VSCode
 - open in iTerm
 - open in Finder
+- open site（从 origin 解析站点并在浏览器打开）
 - add tag（打开 `repo_tags.tsv` 并刷新 cache）
 - refresh cache
 
@@ -262,6 +274,21 @@ A: 扫描阶段使用受控遍历与并发控制，Git 预览只在选中仓库�
 
 **Q: cache 结构变更或损坏怎么办？**  
 A: 旧 cache 自动失效或重建，不尝试跨版本兼容。
+
+## 手工验证命令
+
+```bash
+repo --help
+repo list
+repo list --json
+repo list --tsv --sort name
+repo list --q repo --tag github
+repo list --dirty
+repo status
+repo status --json
+repo ui
+repo refresh
+```
 
 ## 测试策略
 

@@ -91,6 +91,7 @@ describe("plugins", () => {
     const preview: RepoPreview = {
       path: repo.path,
       origin: "-",
+      siteUrl: "-",
       branch: "-",
       status: "clean",
       sync: "-",
