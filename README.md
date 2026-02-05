@@ -10,13 +10,7 @@
 npm i -g local-repo-picker
 ```
 
-2) 安装 fzf（交互依赖）
-
-```bash
-brew install fzf
-```
-
-3) 生成配置并填写扫描路径
+2) 生成配置并填写扫描路径
 
 ```bash
 repo --config
@@ -34,13 +28,13 @@ repo --config
 }
 ```
 
-4) 启动 Web UI
+3) 启动 Web UI（推荐）
 
 ```bash
 repo ui
 ```
 
-5) 刷新缓存
+4) 刷新缓存
 
 ```bash
 repo refresh
@@ -99,6 +93,14 @@ repo --version
 - `repo ui stop`：停止 Web UI
 - `repo ui restart`：重启 Web UI
 - `repo status`：查看 Web UI 状态（输出 URL 或提示）
+
+## 终端交互（可选）
+
+如需终端交互（fzf），请先安装：
+
+```bash
+brew install fzf
+```
 
 ## Internal 命令
 

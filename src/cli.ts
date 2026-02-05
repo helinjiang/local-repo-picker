@@ -326,6 +326,12 @@ async function runListCommand(
   },
   args: string[]
 ): Promise<void> {
+  if (process.stdout.isTTY) {
+    const hasFzf = await checkFzfAvailable()
+    if (!hasFzf) {
+      console.error("未检测到 fzf（可选，仅终端交互使用），安装：brew install fzf")
+    }
+  }
   let flags: {
     format: "text" | "json" | "tsv"
     query: string
@@ -726,7 +732,7 @@ async function getListRows(
   }))
 }
 
-async function ensureFzfAvailable(): Promise<boolean> {
+async function checkFzfAvailable(): Promise<boolean> {
   try {
     const result = await execa("fzf", ["--version"], {
       stdout: "ignore",
@@ -737,10 +743,8 @@ async function ensureFzfAvailable(): Promise<boolean> {
       return true
     }
   } catch {
-    logger.error("未检测到 fzf，请先安装：brew install fzf")
     return false
   }
-  logger.error("未检测到 fzf，请先安装：brew install fzf")
   return false
 }
 
