@@ -47,6 +47,7 @@ export default function App() {
   const [configText, setConfigText] = useState("")
   const [loadingConfig, setLoadingConfig] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
+  const [refreshingCache, setRefreshingCache] = useState(false)
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null)
   const [configEditorOpen, setConfigEditorOpen] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
@@ -176,6 +177,8 @@ export default function App() {
   }, [selectedPath, messageApi])
 
   const handleRefresh = async () => {
+    if (refreshingCache) return
+    setRefreshingCache(true)
     try {
       await refreshCache()
       messageApi.success("缓存已刷新")
@@ -184,6 +187,8 @@ export default function App() {
       setTotal(data.total)
     } catch (error) {
       messageApi.error(`刷新缓存失败：${(error as Error).message}`)
+    } finally {
+      setRefreshingCache(false)
     }
   }
 
@@ -290,7 +295,7 @@ export default function App() {
             options={tagOptions}
           />
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新缓存</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshingCache}>刷新缓存</Button>
             <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
           </Space>
         </div>

@@ -10,8 +10,12 @@ import type {
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api"
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers)
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
   const response = await fetch(`${API_BASE}${input}`, {
-    headers: { "Content-Type": "application/json" },
+    headers,
     ...init
   })
   if (!response.ok) {
