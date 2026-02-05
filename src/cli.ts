@@ -349,17 +349,17 @@ async function runListCommand(
     pruneDirs?: string[]
     cacheTtlMs?: number
     followSymlinks?: boolean
+    fzfTagFilters?: Record<string, string>
     cacheFile: string
     manualTagsFile: string
     lruFile: string
   },
   args: string[]
 ): Promise<void> {
-  if (process.stdout.isTTY) {
-    const hasFzf = await checkFzfAvailable()
-    if (!hasFzf) {
-      console.error("未检测到 fzf（可选，仅终端交互使用），安装：brew install fzf")
-    }
+  const isTty = process.stdout.isTTY
+  const hasFzf = isTty ? await checkFzfAvailable() : false
+  if (isTty && !hasFzf) {
+    console.error("未检测到 fzf（可选，仅终端交互使用），安装：brew install fzf")
   }
   let flags: {
     format: "text" | "json" | "tsv"
@@ -379,6 +379,13 @@ async function runListCommand(
   if (!cached) {
     logger.error("cache 不存在或已过期，请先运行 `repo refresh`")
     process.exitCode = 1
+    return
+  }
+  if (isTty && hasFzf && flags.format === "text" && !flags.query && !flags.tag && !flags.dirtyOnly) {
+    const selected = await runFzfPicker(options, options.fzfTagFilters ?? {})
+    if (selected) {
+      console.log(selected)
+    }
     return
   }
   let repos = cached.repos.slice()
