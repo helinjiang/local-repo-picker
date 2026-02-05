@@ -5,6 +5,7 @@ import os from "node:os"
 import path from "node:path"
 import readline from "node:readline/promises"
 import net from "node:net"
+import { spawn } from "node:child_process"
 import { execa } from "execa"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./config/config"
@@ -16,6 +17,7 @@ import { readLru, sortByLru } from "./core/lru"
 import { getRegisteredActions } from "./core/plugins"
 import { registerBuiltInPlugins } from "./plugins/built-in"
 import { startWebServer } from "./web/server"
+import type { UiState } from "./web/state"
 import { clearUiState, isProcessAlive, readUiState } from "./web/state"
 
 process.on("unhandledRejection", (reason) => {
@@ -60,6 +62,35 @@ async function main(): Promise<void> {
   }
 
   if (command === "ui") {
+    const subcommand = args[1]
+    if (subcommand === "stop") {
+      await stopUiServer({ allowMissing: false })
+      return
+    }
+    if (subcommand === "restart") {
+      await stopUiServer({ allowMissing: true })
+      const restartArgs = ["ui", ...args.slice(2)]
+      let uiFlags: { port?: number; noOpen: boolean; dev: boolean }
+      try {
+        uiFlags = parseUiFlags(restartArgs)
+      } catch (error) {
+        logger.error(formatError(error))
+        process.exitCode = 1
+        return
+      }
+      await startUiInBackground(args.slice(2))
+      const startedState = await waitForUiState(8000)
+      if (!startedState) {
+        logger.error("启动 Web UI 失败")
+        process.exitCode = 1
+        return
+      }
+      console.log(startedState.url)
+      if (!uiFlags.noOpen) {
+        await openBrowserOnMac(startedState.url)
+      }
+      return
+    }
     let uiFlags: { port?: number; noOpen: boolean; dev: boolean }
     try {
       uiFlags = parseUiFlags(args)
@@ -73,6 +104,18 @@ async function main(): Promise<void> {
       console.log(state.url)
       return
     }
+    await startUiInBackground(args.slice(1))
+    const startedState = await waitForUiState(8000)
+    if (!startedState) {
+      logger.error("启动 Web UI 失败")
+      process.exitCode = 1
+      return
+    }
+    console.log(startedState.url)
+    if (!uiFlags.noOpen) {
+      await openBrowserOnMac(startedState.url)
+    }
+    return
   }
 
   const { cacheFile, manualTagsFile, lruFile, configFile } = getConfigPaths()
@@ -111,7 +154,7 @@ async function main(): Promise<void> {
     return
   }
 
-  if (command === "ui") {
+  if (command === "__ui-serve") {
     let uiFlags: { port?: number; noOpen: boolean; dev: boolean }
     try {
       uiFlags = parseUiFlags(args)
@@ -120,11 +163,7 @@ async function main(): Promise<void> {
       process.exitCode = 1
       return
     }
-    const state = await runUiServer(options, uiFlags)
-    console.log(state.url)
-    if (!uiFlags.noOpen) {
-      await openBrowserOnMac(state.url)
-    }
+    await runUiServer(options, uiFlags)
     return
   }
 
@@ -190,6 +229,87 @@ async function runStatus(args: string[]): Promise<void> {
     return
   }
   console.log(state.url)
+}
+
+async function stopUiServer(options: { allowMissing: boolean }): Promise<void> {
+  const state = await readUiState()
+  if (!state) {
+    if (!options.allowMissing) {
+      console.log("UI not running, run `repo ui`")
+      process.exitCode = 1
+    }
+    return
+  }
+  if (!isProcessAlive(state.pid)) {
+    await clearUiState()
+    if (!options.allowMissing) {
+      console.log("UI not running, run `repo ui` (last run crashed)")
+      process.exitCode = 1
+    }
+    return
+  }
+  try {
+    process.kill(state.pid, "SIGTERM")
+  } catch (error) {
+    logger.error(formatError(error))
+    process.exitCode = 1
+    return
+  }
+  const stopped = await waitForProcessExit(state.pid, 4000)
+  if (!stopped) {
+    try {
+      process.kill(state.pid, "SIGKILL")
+    } catch (error) {
+      logger.error(formatError(error))
+      process.exitCode = 1
+      return
+    }
+    const forced = await waitForProcessExit(state.pid, 2000)
+    if (!forced) {
+      logger.error("无法停止 Web UI 进程")
+      process.exitCode = 1
+      return
+    }
+  }
+  await clearUiState()
+  console.log("Web UI stopped")
+}
+
+async function waitForProcessExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < timeoutMs) {
+    if (!isProcessAlive(pid)) {
+      return true
+    }
+    await delay(200)
+  }
+  return false
+}
+
+async function waitForUiState(timeoutMs: number): Promise<UiState | null> {
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < timeoutMs) {
+    const state = await readUiState()
+    if (state && isProcessAlive(state.pid)) {
+      return state
+    }
+    await delay(200)
+  }
+  return null
+}
+
+async function startUiInBackground(args: string[]): Promise<void> {
+  const cliPath = process.argv[1]
+  const childArgs = [cliPath, "__ui-serve", ...args]
+  const child = spawn(process.execPath, childArgs, {
+    detached: true,
+    stdio: "ignore"
+  })
+  child.unref()
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function runListCommand(
@@ -910,6 +1030,8 @@ function printHelp(): void {
     "  refresh            强制重建 cache",
     "  list               输出 repo 列表（支持过滤/排序/格式）",
     "  ui                 启动本地 Web UI",
+    "  ui stop            停止 Web UI",
+    "  ui restart         重启 Web UI",
     "  status             查看 Web UI 状态",
     "",
     "Options:",
