@@ -24,7 +24,8 @@ repo --config
   "maxDepth": 7,
   "pruneDirs": ["node_modules", "dist", "build"],
   "cacheTtlMs": 43200000,
-  "followSymlinks": false
+  "followSymlinks": false,
+  "webQuickTags": ["github", "gitee", "dirty"]
 }
 ```
 
@@ -76,6 +77,7 @@ repo list --json
 repo list --tsv --sort name
 repo list --q backend --tag github
 repo list --dirty --sort lru
+repo one
 repo status
 repo status --json
 repo ui
@@ -89,6 +91,7 @@ repo --version
 - `repo --config`：创建默认配置并输出 config.json 路径
 - `repo refresh`：强制重建 cache
 - `repo list`：输出 repo 列表（支持过滤/排序/格式）
+- `repo one`：在当前 git 仓库中选择 action
 - `repo ui`：启动本地 Web UI（后台运行，输出 URL 并尝试自动打开浏览器）
 - `repo ui stop`：停止 Web UI
 - `repo ui restart`：重启 Web UI
@@ -139,11 +142,12 @@ brew install fzf
 
 内置动作：
 
+- 打印此项目路径
+- cd 到此项目
 - open in VSCode
 - open in iTerm
 - open in Finder
 - open site（从 origin 解析站点并在浏览器打开）
-- add tag（打开 `repo_tags.tsv` 并刷新 cache）
 - refresh cache
 
 Debug：
@@ -164,6 +168,16 @@ DEBUG=1 repo
 - `lru.txt`：最近使用列表
 
 如果系统目录无权限，可设置 `LOCAL_REPO_PICKER_DIR` 指定本地目录。
+
+## Web 快速标签筛选
+
+配置项 `webQuickTags` 决定 Web 顶部的快捷筛选标签：
+
+```json
+{
+  "webQuickTags": ["github", "gitee", "dirty"]
+}
+```
 
 ## Tag 体系
 
