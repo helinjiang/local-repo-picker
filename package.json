@@ -49,6 +49,7 @@
     "init": "npm install && npm run web:init",
     "build": "npm run server:build && npm run web:build",
     "server:build": "tsc -p tsconfig.json && node scripts/append-js-extensions.mjs",
+    "prepublishOnly": "npm run build",
     "web:init": "npm --prefix webapp install",
     "web:dev": "npm --prefix webapp run dev",
     "web:build": "npm --prefix webapp run build",
