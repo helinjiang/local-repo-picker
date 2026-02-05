@@ -15,6 +15,7 @@ import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "
 import type { Action, RepoInfo } from "./core/types"
 import { normalizeRepoKey } from "./core/path-utils"
 import { readLru, sortByLru } from "./core/lru"
+import { runGit } from "./core/git"
 import { getRegisteredActions } from "./core/plugins"
 import { registerBuiltInPlugins } from "./plugins/built-in"
 import { startWebServer } from "./web/server"
@@ -170,6 +171,11 @@ async function main(): Promise<void> {
 
   if (listOnly) {
     await runListCommand(options, args)
+    return
+  }
+
+  if (command === "one") {
+    await runOneCommand(options)
     return
   }
 
@@ -422,6 +428,42 @@ async function runListCommand(
     const label = tags ? `${name} ${tags}` : name
     console.log(`${label}  ${repo.path}`)
   }
+}
+
+async function runOneCommand(options: {
+  scanRoots: string[]
+  maxDepth?: number
+  pruneDirs?: string[]
+  cacheTtlMs?: number
+  followSymlinks?: boolean
+  cacheFile: string
+  manualTagsFile: string
+  lruFile: string
+}): Promise<void> {
+  if (!process.stdout.isTTY) {
+    logger.error("repo one 仅支持交互式终端")
+    process.exitCode = 1
+    return
+  }
+  const hasFzf = await checkFzfAvailable()
+  if (!hasFzf) {
+    logger.error("未检测到 fzf（终端交互使用），安装：brew install fzf")
+    process.exitCode = 1
+    return
+  }
+  const result = await runGit(["rev-parse", "--show-toplevel"], { cwd: process.cwd() })
+  if (!result.ok) {
+    logger.error("当前目录不是 git 仓库")
+    process.exitCode = 1
+    return
+  }
+  const repoPath = path.resolve(result.stdout.trim())
+  const repo = await resolveRepoInfo(options, repoPath)
+  const action = await runFzfActionPicker(repo, options)
+  if (!action) {
+    return
+  }
+  await action.run(repo)
 }
 
 function parseListFlags(args: string[]): {
@@ -1028,6 +1070,7 @@ function printHelp(): void {
     "Commands:",
     "  refresh            强制重建 cache",
     "  list               输出 repo 列表（支持过滤/排序/格式）",
+    "  one                在当前 git 仓库中选择 action",
     "  ui                 启动本地 Web UI",
     "  ui stop            停止 Web UI",
     "  ui restart         重启 Web UI",
