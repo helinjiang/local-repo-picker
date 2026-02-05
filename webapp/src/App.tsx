@@ -245,7 +245,6 @@ export default function App() {
             <ActionsBar
               disabled={!selectedRepo}
               onAddTag={() => setTagModalOpen(true)}
-              onRefreshCache={handleRefresh}
               onRunAction={handleRunAction}
               repo={selectedRepo}
             />

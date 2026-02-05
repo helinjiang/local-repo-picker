@@ -1,11 +1,4 @@
-import {
-  CodeOutlined,
-  DesktopOutlined,
-  FolderOpenOutlined,
-  GlobalOutlined,
-  ReloadOutlined,
-  TagsOutlined
-} from "@ant-design/icons"
+import { CodeOutlined, DesktopOutlined, FolderOpenOutlined, GlobalOutlined, TagsOutlined } from "@ant-design/icons"
 import { Button, Card, Space } from "antd"
 import type { RepoItem } from "../types"
 
@@ -13,11 +6,10 @@ type Props = {
   repo: RepoItem | null
   disabled: boolean
   onAddTag: () => void
-  onRefreshCache: () => void
   onRunAction: (actionId: string, path: string) => Promise<void>
 }
 
-export default function ActionsBar({ repo, disabled, onAddTag, onRefreshCache, onRunAction }: Props) {
+export default function ActionsBar({ repo, disabled, onAddTag, onRunAction }: Props) {
   const handleAction = async (actionId: string) => {
     if (!repo) return
     await onRunAction(actionId, repo.path)
@@ -56,9 +48,6 @@ export default function ActionsBar({ repo, disabled, onAddTag, onRefreshCache, o
         </Button>
         <Button icon={<TagsOutlined />} disabled={disabled} onClick={onAddTag}>
           Add Tag
-        </Button>
-        <Button icon={<ReloadOutlined />} disabled={disabled} onClick={onRefreshCache}>
-          Refresh Cache
         </Button>
       </Space>
     </Card>
