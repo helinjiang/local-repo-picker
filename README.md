@@ -66,7 +66,7 @@ asciinema play docs/demo.cast
 
 - 多路径扫描与缓存
 - 交互式列表与搜索
-- Git 预览（origin / branch / status / sync / recent commits / README）
+- Git 预览（origin / site / branch / status / sync / recent commits / README）
 - 标签体系（auto / remote / dirty / manual）
 - LRU 最近访问排序
 - CLI 输出与配置管理
@@ -85,6 +85,8 @@ repo list --dirty --sort lru
 repo status
 repo status --json
 repo ui
+repo ui stop
+repo ui restart
 repo --help
 repo --version
 ```
@@ -93,7 +95,9 @@ repo --version
 - `repo --config`：创建默认配置并输出 config.json 路径
 - `repo refresh`：强制重建 cache
 - `repo list`：输出 repo 列表（支持过滤/排序/格式）
-- `repo ui`：启动本地 Web UI（输出 URL 并尝试自动打开浏览器）
+- `repo ui`：启动本地 Web UI（后台运行，输出 URL 并尝试自动打开浏览器）
+- `repo ui stop`：停止 Web UI
+- `repo ui restart`：重启 Web UI
 - `repo status`：查看 Web UI 状态（输出 URL 或提示）
 
 ## Internal 命令
@@ -136,6 +140,7 @@ repo --version
 - open in VSCode
 - open in iTerm
 - open in Finder
+- open site（从 origin 解析站点并在浏览器打开）
 - add tag（打开 `repo_tags.tsv` 并刷新 cache）
 - refresh cache
 
