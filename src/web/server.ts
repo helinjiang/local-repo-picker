@@ -7,6 +7,7 @@ import { promises as fs } from "node:fs"
 import type { UiState } from "./state"
 import { clearUiState, writeUiState } from "./state"
 import { registerRoutes } from "./routes"
+import { isDebugEnabled, logger } from "../core/logger"
 
 type ServerOptions = {
   scanRoots: string[]
@@ -29,7 +30,22 @@ export async function startWebServer(
   options: ServerOptions,
   config: StartWebServerConfig = {}
 ): Promise<UiState & { apiUrl: string; apiPort: number }> {
+  const debugEnabled = isDebugEnabled()
   const app = fastify({ logger: false })
+  if (debugEnabled) {
+    app.addHook("onRequest", (request, _reply, done) => {
+      ;(request as { startAt?: number }).startAt = Date.now()
+      done()
+    })
+    app.addHook("onResponse", (request, _reply, done) => {
+      const startedAt = (request as { startAt?: number }).startAt
+      if (typeof startedAt === "number" && request.url.startsWith("/api/")) {
+        const cost = Date.now() - startedAt
+        logger.info(`api ${request.method} ${request.url} ${cost}ms`)
+      }
+      done()
+    })
+  }
   await app.register(helmet)
   await app.register(cors, {
     origin: (origin, callback) => {
@@ -59,6 +75,9 @@ export async function startWebServer(
     })
   }
   const { port, url } = await listenWithRetry(app, config.basePort ?? 17333)
+  if (debugEnabled) {
+    logger.info(`web ui server started on ${url} (port ${port})`)
+  }
   state.port = config.uiPort ?? port
   state.url = config.uiUrl ?? url
   await writeUiState(state)

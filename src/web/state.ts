@@ -24,8 +24,15 @@ export async function readUiState(): Promise<UiState | null> {
   const filePath = getStateFile()
   try {
     const content = await fs.readFile(filePath, "utf8")
-    const parsed = JSON.parse(content) as UiState
+    let parsed: UiState | null = null
+    try {
+      parsed = JSON.parse(content) as UiState
+    } catch {
+      await fs.unlink(filePath).catch(() => {})
+      return null
+    }
     if (!parsed || typeof parsed.pid !== "number" || typeof parsed.port !== "number") {
+      await fs.unlink(filePath).catch(() => {})
       return null
     }
     return parsed

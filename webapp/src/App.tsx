@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { App as AntApp, Button, Input, Select, Space, message } from "antd"
 import type { RepoItem, RepoPreviewResult } from "./types"
-import { fetchPreview, fetchRepos, refreshCache, upsertTags } from "./api"
+import { fetchPreview, fetchRepos, refreshCache, runAction, upsertTags } from "./api"
 import RepoList from "./components/RepoList"
 import PreviewPanel from "./components/PreviewPanel"
 import ActionsBar from "./components/ActionsBar"
@@ -24,6 +24,9 @@ export default function App() {
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [query, setQuery] = useState("")
   const [tag, setTag] = useState<string | undefined>()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(200)
+  const [total, setTotal] = useState(0)
   const [tagModalOpen, setTagModalOpen] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
   const [messageApi, contextHolder] = message.useMessage()
@@ -44,11 +47,18 @@ export default function App() {
     async function loadRepos() {
       setLoadingRepos(true)
       try {
-        const data = await fetchRepos({ q: debouncedQuery, tag })
+        const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
         if (cancelled) return
-        setRepos(data)
-        if (!data.find((repo) => repo.path === selectedPath)) {
-          setSelectedPath(data[0]?.path ?? null)
+        if (data.items.length === 0 && page > 1) {
+          setPage(1)
+          return
+        }
+        setRepos(data.items)
+        setTotal(data.total)
+        setPage(data.page)
+        setPageSize(data.pageSize)
+        if (!data.items.find((repo) => repo.path === selectedPath)) {
+          setSelectedPath(data.items[0]?.path ?? null)
         }
       } catch (error) {
         if (!cancelled) {
@@ -62,7 +72,11 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [debouncedQuery, tag, messageApi])
+  }, [debouncedQuery, tag, page, pageSize, messageApi])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedQuery, tag])
 
   useEffect(() => {
     let cancelled = false
@@ -93,8 +107,9 @@ export default function App() {
     try {
       await refreshCache()
       messageApi.success("缓存已刷新")
-      const data = await fetchRepos({ q: debouncedQuery, tag })
-      setRepos(data)
+      const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
+      setRepos(data.items)
+      setTotal(data.total)
     } catch (error) {
       messageApi.error(`刷新缓存失败：${(error as Error).message}`)
     }
@@ -106,10 +121,19 @@ export default function App() {
       await upsertTags(selectedRepo.path, nextTags)
       messageApi.success("标签已更新")
       setTagModalOpen(false)
-      const data = await fetchRepos({ q: debouncedQuery, tag })
-      setRepos(data)
+      const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
+      setRepos(data.items)
+      setTotal(data.total)
     } catch (error) {
       messageApi.error(`更新标签失败：${(error as Error).message}`)
+    }
+  }
+
+  const handleRunAction = async (actionId: string, repoPath: string) => {
+    try {
+      await runAction(actionId, repoPath)
+    } catch (error) {
+      messageApi.error(`执行操作失败：${(error as Error).message}`)
     }
   }
 
@@ -144,6 +168,13 @@ export default function App() {
               repos={repos}
               selectedPath={selectedPath}
               onSelect={setSelectedPath}
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={(nextPage, nextPageSize) => {
+                setPage(nextPage)
+                setPageSize(nextPageSize)
+              }}
             />
           </div>
           <div className="preview-pane">
@@ -151,6 +182,7 @@ export default function App() {
               disabled={!selectedRepo}
               onAddTag={() => setTagModalOpen(true)}
               onRefreshCache={handleRefresh}
+              onRunAction={handleRunAction}
               repo={selectedRepo}
             />
             <PreviewPanel loading={loadingPreview} preview={preview} repo={selectedRepo} />

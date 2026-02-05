@@ -6,10 +6,23 @@ type Props = {
   repos: RepoItem[]
   selectedPath: string | null
   loading: boolean
+  page: number
+  pageSize: number
+  total: number
   onSelect: (path: string) => void
+  onPageChange: (page: number, pageSize: number) => void
 }
 
-export default function RepoList({ repos, selectedPath, loading, onSelect }: Props) {
+export default function RepoList({
+  repos,
+  selectedPath,
+  loading,
+  page,
+  pageSize,
+  total,
+  onSelect,
+  onPageChange
+}: Props) {
   const columns: ColumnsType<RepoItem> = [
     {
       title: "仓库",
@@ -43,7 +56,13 @@ export default function RepoList({ repos, selectedPath, loading, onSelect }: Pro
       columns={columns}
       dataSource={repos}
       loading={loading}
-      pagination={false}
+      pagination={{
+        current: page,
+        pageSize,
+        total,
+        showSizeChanger: true,
+        onChange: onPageChange
+      }}
       rowClassName={(record) => (record.path === selectedPath ? "repo-row-selected" : "")}
       onRow={(record) => ({
         onClick: () => onSelect(record.path)

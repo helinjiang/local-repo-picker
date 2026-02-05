@@ -6,6 +6,20 @@ export type RepoItem = {
   isDirty?: boolean
 }
 
+export type RepoListResult = {
+  items: RepoItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export type RepoListResult = {
+  items: RepoItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export type PreviewSection = {
   title: string
   lines: string[]

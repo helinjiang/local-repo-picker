@@ -1,4 +1,4 @@
-import type { RepoItem, RepoPreviewResult } from "./types"
+import type { RepoListResult, RepoPreviewResult } from "./types"
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api"
 
@@ -14,12 +14,19 @@ async function request<T>(input: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-export async function fetchRepos(params: { q?: string; tag?: string }): Promise<RepoItem[]> {
+export async function fetchRepos(params: {
+  q?: string
+  tag?: string
+  page?: number
+  pageSize?: number
+}): Promise<RepoListResult> {
   const search = new URLSearchParams()
   if (params.q) search.set("q", params.q)
   if (params.tag) search.set("tag", params.tag)
+  if (params.page) search.set("page", String(params.page))
+  if (params.pageSize) search.set("pageSize", String(params.pageSize))
   const suffix = search.toString() ? `?${search.toString()}` : ""
-  return request<RepoItem[]>(`/repos${suffix}`)
+  return request<RepoListResult>(`/repos${suffix}`)
 }
 
 export async function fetchPreview(path: string): Promise<RepoPreviewResult> {

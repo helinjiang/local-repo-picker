@@ -1,18 +1,18 @@
 import { Button, Card, Space } from "antd"
 import type { RepoItem } from "../types"
-import { runAction } from "../api"
 
 type Props = {
   repo: RepoItem | null
   disabled: boolean
   onAddTag: () => void
   onRefreshCache: () => void
+  onRunAction: (actionId: string, path: string) => Promise<void>
 }
 
-export default function ActionsBar({ repo, disabled, onAddTag, onRefreshCache }: Props) {
+export default function ActionsBar({ repo, disabled, onAddTag, onRefreshCache, onRunAction }: Props) {
   const handleAction = async (actionId: string) => {
     if (!repo) return
-    await runAction(actionId, repo.path)
+    await onRunAction(actionId, repo.path)
   }
 
   return (

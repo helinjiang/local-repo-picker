@@ -16,7 +16,7 @@ import { readLru, sortByLru } from "./core/lru"
 import { getRegisteredActions } from "./core/plugins"
 import { registerBuiltInPlugins } from "./plugins/built-in"
 import { startWebServer } from "./web/server"
-import { isProcessAlive, readUiState } from "./web/state"
+import { clearUiState, isProcessAlive, readUiState } from "./web/state"
 
 process.on("unhandledRejection", (reason) => {
   handleFatalError(reason)
@@ -150,11 +150,29 @@ async function main(): Promise<void> {
 async function runStatus(args: string[]): Promise<void> {
   const useJson = args.includes("--json")
   const state = await readUiState()
-  if (!state || !isProcessAlive(state.pid)) {
+  if (!state) {
     if (useJson) {
       console.log(JSON.stringify({ running: false }))
     } else {
       console.log("UI not running, run `repo ui`")
+    }
+    process.exitCode = 1
+    return
+  }
+  if (!isProcessAlive(state.pid)) {
+    await clearUiState()
+    if (useJson) {
+      console.log(
+        JSON.stringify({
+          running: false,
+          crashed: true,
+          lastUrl: state.url,
+          lastPid: state.pid,
+          startedAt: state.startedAt
+        })
+      )
+    } else {
+      console.log("UI not running, run `repo ui` (last run crashed)")
     }
     process.exitCode = 1
     return
