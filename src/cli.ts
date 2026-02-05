@@ -12,7 +12,7 @@ import { isDebugEnabled, logger } from "./core/logger"
 import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "./core/preview"
 import type { RepoInfo } from "./core/types"
 import { normalizeRepoKey } from "./core/path-utils"
-import { updateLru } from "./core/lru"
+import { readLru, sortByLru } from "./core/lru"
 import { getRegisteredActions } from "./core/plugins"
 import { registerBuiltInPlugins } from "./plugins/built-in"
 import { startWebServer } from "./web/server"
@@ -31,12 +31,9 @@ await main()
 async function main(): Promise<void> {
   const args = process.argv.slice(2)
   const command = args[0]
-  let uiFlags: { port?: number; noOpen: boolean; dev: boolean }
-  try {
-    uiFlags = parseUiFlags(args)
-  } catch (error) {
-    logger.error(formatError(error))
-    process.exitCode = 1
+
+  if (args.length === 0) {
+    printHelp()
     return
   }
 
@@ -58,17 +55,19 @@ async function main(): Promise<void> {
   }
 
   if (command === "status") {
-    const state = await readUiState()
-    if (!state || !isProcessAlive(state.pid)) {
-      logger.error("Web UI 未运行")
-      process.exitCode = 1
-      return
-    }
-    console.log(state.url)
+    await runStatus(args)
     return
   }
 
   if (command === "ui") {
+    let uiFlags: { port?: number; noOpen: boolean; dev: boolean }
+    try {
+      uiFlags = parseUiFlags(args)
+    } catch (error) {
+      logger.error(formatError(error))
+      process.exitCode = 1
+      return
+    }
     const state = await readUiState()
     if (state && isProcessAlive(state.pid)) {
       console.log(state.url)
@@ -79,6 +78,7 @@ async function main(): Promise<void> {
   const { cacheFile, manualTagsFile, lruFile, configFile } = getConfigPaths()
   let config = await readConfig()
   const isInternal = typeof command === "string" && command.startsWith("__")
+  const listOnly = command === "list" || args.includes("--list")
 
   if (!config.scanRoots || config.scanRoots.length === 0) {
     if (isInternal) {
@@ -112,11 +112,24 @@ async function main(): Promise<void> {
   }
 
   if (command === "ui") {
+    let uiFlags: { port?: number; noOpen: boolean; dev: boolean }
+    try {
+      uiFlags = parseUiFlags(args)
+    } catch (error) {
+      logger.error(formatError(error))
+      process.exitCode = 1
+      return
+    }
     const state = await runUiServer(options, uiFlags)
     console.log(state.url)
     if (!uiFlags.noOpen) {
       await openBrowserOnMac(state.url)
     }
+    return
+  }
+
+  if (listOnly) {
+    await runListCommand(options, args)
     return
   }
 
@@ -130,34 +143,177 @@ async function main(): Promise<void> {
     return
   }
 
-  const listOnly = command === "list" || args.includes("--list")
-  if (listOnly || !process.stdout.isTTY || !process.stdin.isTTY) {
-    const cached = await loadCache(options)
-    const resolved = cached ?? (await buildCache(options))
-    if (resolved.metadata.warningCount && resolved.metadata.warningCount > 0) {
-      console.error(`部分路径被跳过: ${resolved.metadata.warningCount}`)
+  logger.error("未知命令，请使用 --help 查看用法")
+  process.exitCode = 1
+}
+
+async function runStatus(args: string[]): Promise<void> {
+  const useJson = args.includes("--json")
+  const state = await readUiState()
+  if (!state || !isProcessAlive(state.pid)) {
+    if (useJson) {
+      console.log(JSON.stringify({ running: false }))
+    } else {
+      console.log("UI not running, run `repo ui`")
     }
-    for (const repo of resolved.repos) {
-      console.log(repo.path)
-    }
-    return
-  }
-  const ok = await ensureFzfAvailable()
-  if (!ok) {
     process.exitCode = 1
     return
   }
-  const selected = await runFzfPicker(options, config.fzfTagFilters ?? {})
-  if (selected) {
-    await updateLru(options.lruFile, selected)
-    const picked = await resolveRepoInfo(options, selected)
-    const action = await runFzfActionPicker(picked, options)
-    if (!action) {
-      console.log(selected)
-      return
-    }
-    await action.run(picked)
+  if (useJson) {
+    console.log(
+      JSON.stringify({
+        running: true,
+        url: state.url,
+        pid: state.pid,
+        port: state.port,
+        startedAt: state.startedAt
+      })
+    )
+    return
   }
+  console.log(state.url)
+}
+
+async function runListCommand(
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  },
+  args: string[]
+): Promise<void> {
+  let flags: {
+    format: "text" | "json" | "tsv"
+    query: string
+    tag: string
+    dirtyOnly: boolean
+    sort: "lru" | "name"
+  }
+  try {
+    flags = parseListFlags(args)
+  } catch (error) {
+    logger.error(formatError(error))
+    process.exitCode = 1
+    return
+  }
+  const cached = await loadCache(options)
+  if (!cached) {
+    logger.error("cache 不存在或已过期，请先运行 `repo refresh`")
+    process.exitCode = 1
+    return
+  }
+  let repos = cached.repos.slice()
+  repos = filterListRepos(repos, flags)
+  repos = await sortListRepos(repos, flags.sort, options.lruFile)
+  if (flags.format === "json") {
+    const payload = repos.map((repo) => ({
+      path: repo.path,
+      ownerRepo: repo.ownerRepo || path.basename(repo.path),
+      tags: repo.tags,
+      originUrl: repo.originUrl ?? null,
+      lastScannedAt: repo.lastScannedAt
+    }))
+    console.log(JSON.stringify(payload, null, 2))
+    return
+  }
+  if (flags.format === "tsv") {
+    for (const repo of repos) {
+      const name = repo.ownerRepo || path.basename(repo.path)
+      const tags = repo.tags.join("")
+      console.log(`${name}\t${repo.path}\t${tags}`)
+    }
+    return
+  }
+  for (const repo of repos) {
+    const name = repo.ownerRepo || path.basename(repo.path)
+    const tags = repo.tags.join("")
+    const label = tags ? `${name} ${tags}` : name
+    console.log(`${label}  ${repo.path}`)
+  }
+}
+
+function parseListFlags(args: string[]): {
+  format: "text" | "json" | "tsv"
+  query: string
+  tag: string
+  dirtyOnly: boolean
+  sort: "lru" | "name"
+} {
+  const useJson = args.includes("--json")
+  const useTsv = args.includes("--tsv")
+  if (useJson && useTsv) {
+    throw new Error("--json 与 --tsv 不能同时使用")
+  }
+  const format = useJson ? "json" : useTsv ? "tsv" : "text"
+  const query = readArgValue(args, "--q").trim()
+  const rawTag = readArgValue(args, "--tag").trim()
+  const tag = normalizeTagFilter(rawTag)
+  const dirtyOnly = args.includes("--dirty")
+  const rawSort = readArgValue(args, "--sort").trim()
+  const sort = rawSort ? rawSort : "lru"
+  if (sort !== "lru" && sort !== "name") {
+    throw new Error(`无效排序: ${sort}，仅支持 lru|name`)
+  }
+  return { format, query, tag, dirtyOnly, sort }
+}
+
+function normalizeTagFilter(raw: string): string {
+  if (!raw) {
+    return ""
+  }
+  if (raw.startsWith("[") && raw.endsWith("]")) {
+    return raw
+  }
+  return `[${raw}]`
+}
+
+function filterListRepos(
+  repos: RepoInfo[],
+  flags: { query: string; tag: string; dirtyOnly: boolean }
+): RepoInfo[] {
+  const query = flags.query.toLowerCase()
+  return repos.filter((repo) => {
+    if (flags.dirtyOnly && !repo.tags.includes("[dirty]")) {
+      return false
+    }
+    if (flags.tag && !repo.tags.some((tag) => tag.includes(flags.tag))) {
+      return false
+    }
+    if (query) {
+      const haystack = `${repo.ownerRepo} ${repo.path} ${repo.tags.join(" ")}`.toLowerCase()
+      if (!haystack.includes(query)) {
+        return false
+      }
+    }
+    return true
+  })
+}
+
+async function sortListRepos(
+  repos: RepoInfo[],
+  sort: "lru" | "name",
+  lruFile: string
+): Promise<RepoInfo[]> {
+  if (sort === "name") {
+    return repos
+      .slice()
+      .sort((a, b) => {
+        const nameA = a.ownerRepo || path.basename(a.path)
+        const nameB = b.ownerRepo || path.basename(b.path)
+        const compare = nameA.localeCompare(nameB)
+        if (compare !== 0) {
+          return compare
+        }
+        return a.path.localeCompare(b.path)
+      })
+  }
+  const lruList = await readLru(lruFile)
+  return sortByLru(repos, lruList)
 }
 
 async function runInternalList(
@@ -734,7 +890,7 @@ function printHelp(): void {
     "",
     "Commands:",
     "  refresh            强制重建 cache",
-    "  list               输出 repo 路径列表",
+    "  list               输出 repo 列表（支持过滤/排序/格式）",
     "  ui                 启动本地 Web UI",
     "  status             查看 Web UI 状态",
     "",
@@ -743,7 +899,13 @@ function printHelp(): void {
     "  --no-open          不自动打开浏览器",
     "  --dev              使用前端 dev server",
     "  --config           创建默认配置并输出路径",
-    "  --list             输出 repo 路径列表",
+    "  --json             输出 JSON（用于 repo list/status）",
+    "  --tsv              输出 TSV（用于 repo list）",
+    "  --q <text>         关键词过滤（用于 repo list）",
+    "  --tag <tag>        tag 过滤（用于 repo list）",
+    "  --dirty            仅输出 dirty 仓库（用于 repo list）",
+    "  --sort lru|name    排序方式（用于 repo list）",
+    "  --list             输出 repo 列表（兼容旧参数）",
     "  -h, --help         显示帮助",
     "  -v, --version      显示版本号"
   ]

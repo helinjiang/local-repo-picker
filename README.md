@@ -34,10 +34,10 @@ repo --config
 }
 ```
 
-4) 启动交互选择
+4) 启动 Web UI
 
 ```bash
-repo
+repo ui
 ```
 
 5) 刷新缓存
@@ -75,19 +75,26 @@ asciinema play docs/demo.cast
 ## CLI 使用
 
 ```bash
-repo
 repo --config
 repo refresh
+repo list
+repo list --json
+repo list --tsv --sort name
+repo list --q backend --tag github
+repo list --dirty --sort lru
+repo status
+repo status --json
+repo ui
 repo --help
 repo --version
-repo list
-repo --list
 ```
 
-- `repo`：启动 fzf 选择界面
+- `repo`：显示帮助
 - `repo --config`：创建默认配置并输出 config.json 路径
 - `repo refresh`：强制重建 cache
-- `repo list` / `repo --list`：输出 repo 路径列表
+- `repo list`：输出 repo 列表（支持过滤/排序/格式）
+- `repo ui`：启动本地 Web UI（输出 URL 并尝试自动打开浏览器）
+- `repo status`：查看 Web UI 状态（输出 URL 或提示）
 
 ## Internal 命令
 
@@ -262,6 +269,21 @@ A: 扫描阶段使用受控遍历与并发控制，Git 预览只在选中仓库�
 
 **Q: cache 结构变更或损坏怎么办？**  
 A: 旧 cache 自动失效或重建，不尝试跨版本兼容。
+
+## 手工验证命令
+
+```bash
+repo --help
+repo list
+repo list --json
+repo list --tsv --sort name
+repo list --q repo --tag github
+repo list --dirty
+repo status
+repo status --json
+repo ui
+repo refresh
+```
 
 ## 测试策略
 
