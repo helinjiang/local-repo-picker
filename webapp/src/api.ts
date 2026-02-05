@@ -63,6 +63,16 @@ export async function upsertTags(path: string, tags: string): Promise<void> {
   })
 }
 
+export async function updateTags(
+  path: string,
+  edits: { add?: string[]; remove?: string[] }
+): Promise<void> {
+  await request("/tags", {
+    method: "POST",
+    body: JSON.stringify({ path, tags: edits, refresh: true })
+  })
+}
+
 export async function fetchConfig(): Promise<ConfigResponse> {
   return request<ConfigResponse>("/config")
 }

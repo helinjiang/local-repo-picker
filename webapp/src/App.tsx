@@ -10,6 +10,7 @@ import {
   refreshCache,
   runAction,
   saveConfig,
+  updateTags,
   upsertTags
 } from "./api"
 import RepoList from "./components/RepoList"
@@ -198,9 +199,7 @@ export default function App() {
           setTagModalRepo(null)
           return
         }
-        const base = tagModalRepo.manualTags ?? []
-        const merged = Array.from(new Set([...base, ...parsed]))
-        await upsertTags(tagModalRepo.path, merged.join(" "))
+        await updateTags(tagModalRepo.path, { add: parsed })
         messageApi.success("标签已新增")
       } else {
         await upsertTags(tagModalRepo.path, nextTags)
@@ -223,14 +222,8 @@ export default function App() {
   }
 
   const handleRemoveTag = async (repo: RepoItem, removedTag: string) => {
-    const manualTags = repo.manualTags ?? []
-    if (!manualTags.includes(removedTag)) {
-      messageApi.warning("仅支持删除手动标签")
-      return
-    }
-    const nextTags = manualTags.filter((tag) => tag !== removedTag)
     try {
-      await upsertTags(repo.path, nextTags.join(" "))
+      await updateTags(repo.path, { remove: [removedTag] })
       messageApi.success("标签已删除")
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
       setRepos(data.items)

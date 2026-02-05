@@ -48,7 +48,6 @@ export default function RepoList({
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {repo.tags.map((tag) => {
             const tagKey = `${repo.path}::${tag}`
-            const deletable = Boolean(repo.manualTags?.includes(tag))
             const hovered = hoveredTagKey === tagKey
             return (
               <Tag
@@ -56,39 +55,35 @@ export default function RepoList({
                 key={tagKey}
                 style={{ position: "relative" }}
                 onMouseEnter={() => {
-                  if (deletable) {
-                    setHoveredTagKey(tagKey)
-                  }
+                  setHoveredTagKey(tagKey)
                 }}
                 onMouseLeave={() => setHoveredTagKey(null)}
               >
                 <span>{tag}</span>
-                {deletable ? (
-                  <Popconfirm
-                    title="删除该标签？"
-                    okText="删除"
-                    cancelText="取消"
-                    onConfirm={() => onRemoveTag(repo, tag)}
-                  >
-                    <Button
-                      size="small"
-                      type="text"
-                      icon={<DeleteOutlined />}
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                      }}
-                      style={{
-                        position: "absolute",
-                        right: -6,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        opacity: hovered ? 1 : 0,
-                        pointerEvents: hovered ? "auto" : "none"
-                      }}
-                    />
-                  </Popconfirm>
-                ) : null}
+                <Popconfirm
+                  title="删除该标签？"
+                  okText="删除"
+                  cancelText="取消"
+                  onConfirm={() => onRemoveTag(repo, tag)}
+                >
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                    style={{
+                      position: "absolute",
+                      right: -6,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      opacity: hovered ? 1 : 0,
+                      pointerEvents: hovered ? "auto" : "none"
+                    }}
+                  />
+                </Popconfirm>
               </Tag>
             )
           })}

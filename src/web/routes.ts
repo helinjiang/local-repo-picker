@@ -7,7 +7,7 @@ import type { Action, RepoInfo } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
-import { parseTagList, readManualTags, upsertManualTags } from "../core/tags"
+import { parseTagList, readManualTagEdits, setManualTags, updateManualTagEdits } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
 import { getConfigPaths, readConfig, writeConfig } from "../config/config"
 import type { AppConfig } from "../config/schema"
@@ -139,7 +139,7 @@ export async function registerRoutes(
     }
     const cached = await loadCache(options)
     const resolved = cached ?? (await buildCache(options))
-    const manualTags = await readManualTags(options.manualTagsFile)
+    const manualEdits = await readManualTagEdits(options.manualTagsFile)
     let repos = resolved.repos
     if (query.tag) {
       repos = repos.filter((repo) => repo.tags.includes(query.tag as string))
@@ -163,7 +163,7 @@ export async function registerRoutes(
     const offset = (page - 1) * pageSize
     const items = repos.slice(offset, offset + pageSize).map((repo) => ({
       ...repo,
-      manualTags: manualTags.get(normalizeRepoKey(repo.path)) ?? [],
+      manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
       isDirty: repo.tags.includes("[dirty]")
     }))
     const payload: PaginatedRepos = {
@@ -218,14 +218,24 @@ export async function registerRoutes(
   })
 
   app.post("/api/tags", async (request, reply) => {
-    const body = request.body as { path?: string; tags?: string[] | string; refresh?: boolean }
+    const body = request.body as {
+      path?: string
+      tags?: string[] | string | { add?: string[]; remove?: string[] }
+      refresh?: boolean
+    }
     const allowedPath = resolveAllowedPath(options.scanRoots, body?.path)
     if (!allowedPath || !body.tags) {
       reply.code(400)
       return { error: "invalid path or tags" }
     }
-    const tags = Array.isArray(body.tags) ? parseTagList(body.tags.join(" ")) : parseTagList(body.tags)
-    await upsertManualTags(options.manualTagsFile, allowedPath, tags)
+    if (typeof body.tags === "object" && !Array.isArray(body.tags)) {
+      const add = body.tags.add ? parseTagList(body.tags.add.join(" ")) : []
+      const remove = body.tags.remove ? parseTagList(body.tags.remove.join(" ")) : []
+      await updateManualTagEdits(options.manualTagsFile, allowedPath, { add, remove })
+    } else {
+      const tags = Array.isArray(body.tags) ? parseTagList(body.tags.join(" ")) : parseTagList(body.tags)
+      await setManualTags(options.manualTagsFile, allowedPath, tags)
+    }
     if (body.refresh ?? true) {
       await refreshCache(options)
     }
