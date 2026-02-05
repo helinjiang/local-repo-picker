@@ -9,10 +9,8 @@ import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
 import { parseTagList, upsertManualTags } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
-import { parseOriginToSiteUrl, readOriginValue } from "../core/origin"
 import { getConfigPaths, readConfig, writeConfig } from "../config/config"
 import type { AppConfig } from "../config/schema"
-import { execa } from "execa"
 import type { UiState } from "./state"
 
 type ServerOptions = {
@@ -71,7 +69,7 @@ export async function registerRoutes(
   options: ServerOptions,
   state: UiState
 ): Promise<void> {
-  registerBuiltInPlugins()
+  registerBuiltInPlugins(options)
   app.get("/api/status", async () => {
     const cached = await loadCache(options)
     return {
@@ -126,6 +124,10 @@ export async function registerRoutes(
     }
   })
 
+  app.get("/api/actions", async () => {
+    const actions = getRegisteredActions().filter((action) => isActionAllowed(action, "web"))
+    return actions.map((action) => ({ id: action.id, label: action.label }))
+  })
 
   app.get("/api/repos", async (request) => {
     const query = request.query as {
@@ -196,9 +198,8 @@ export async function registerRoutes(
       return { error: "invalid actionId or path" }
     }
     const repo = await resolveRepoInfo(options, allowedPath)
-    const builtins = getBuiltinActions(repo, options)
     const plugins = getRegisteredActions()
-    const action = [...builtins, ...plugins]
+    const action = plugins
       .filter((item) => isActionAllowed(item, "web"))
       .find((item) => item.id === body.actionId)
     if (!action) {
@@ -254,52 +255,6 @@ function resolveAllowedPath(scanRoots: string[], repoPath?: string | null): stri
   const roots = scanRoots.map((root) => path.resolve(root))
   const allowed = roots.some((root) => resolved === root || resolved.startsWith(`${root}${path.sep}`))
   return allowed ? resolved : null
-}
-
-function getBuiltinActions(repo: RepoInfo, options: ServerOptions) {
-  return [
-    {
-      id: "builtin.open-vscode",
-      label: "open in VSCode",
-      run: async () => {
-        await execa("code", [repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-iterm",
-      label: "open in iTerm",
-      run: async () => {
-        await execa("open", ["-a", "iTerm", repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-finder",
-      label: "open in Finder",
-      run: async () => {
-        await execa("open", [repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-site",
-      label: "open site",
-      run: async () => {
-        const origin = await readOriginValue(repo.path)
-        const siteUrl = parseOriginToSiteUrl(origin)
-        if (!siteUrl) {
-          throw new Error("无法从 origin 解析站点地址")
-        }
-        await execa("open", [siteUrl], { reject: false })
-      }
-    },
-    {
-      id: "builtin.add-tag",
-      label: "add tag",
-      run: async () => {
-        await execa("open", ["-e", options.manualTagsFile], { reject: false })
-        await refreshCache(options)
-      }
-    }
-  ]
 }
 
 function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {

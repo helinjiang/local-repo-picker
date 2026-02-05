@@ -65,3 +65,8 @@ export type SaveConfigResponse = {
   config: AppConfig
   repoCount: number
 }
+
+export type ActionInfo = {
+  id: string
+  label: string
+}

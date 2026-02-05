@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from "react"
 import { CopyOutlined, EditOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons"
 import { App as AntApp, Button, Input, Modal, Select, Space, Tooltip, Tree, message } from "antd"
-import type { AppConfig, ConfigPaths, RepoItem, RepoPreviewResult } from "./types"
-import { fetchConfig, fetchPreview, fetchRepos, refreshCache, runAction, saveConfig, upsertTags } from "./api"
+import type { ActionInfo, AppConfig, ConfigPaths, RepoItem, RepoPreviewResult } from "./types"
+import {
+  fetchActions,
+  fetchConfig,
+  fetchPreview,
+  fetchRepos,
+  refreshCache,
+  runAction,
+  saveConfig,
+  upsertTags
+} from "./api"
 import RepoList from "./components/RepoList"
 import PreviewPanel from "./components/PreviewPanel"
 import ActionsBar from "./components/ActionsBar"
@@ -23,6 +32,7 @@ export default function App() {
   const [preview, setPreview] = useState<RepoPreviewResult | null>(null)
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
+  const [actions, setActions] = useState<ActionInfo[]>([])
   const [query, setQuery] = useState("")
   const [tag, setTag] = useState<string | undefined>()
   const [page, setPage] = useState(1)
@@ -81,6 +91,24 @@ export default function App() {
       cancelled = true
     }
   }, [debouncedQuery, tag, page, pageSize, messageApi])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadActions() {
+      try {
+        const data = await fetchActions()
+        if (!cancelled) setActions(data)
+      } catch (error) {
+        if (!cancelled) {
+          messageApi.error(`获取 Actions 失败：${(error as Error).message}`)
+        }
+      }
+    }
+    void loadActions()
+    return () => {
+      cancelled = true
+    }
+  }, [messageApi])
 
   useEffect(() => {
     setPage(1)
@@ -244,6 +272,7 @@ export default function App() {
           <div className="preview-pane">
             <ActionsBar
               disabled={!selectedRepo}
+              actions={actions}
               onAddTag={() => setTagModalOpen(true)}
               onRunAction={handleRunAction}
               repo={selectedRepo}

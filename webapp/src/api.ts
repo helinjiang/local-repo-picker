@@ -1,4 +1,11 @@
-import type { ConfigResponse, RepoListResult, RepoPreviewResult, SaveConfigResponse, AppConfig } from "./types"
+import type {
+  ActionInfo,
+  AppConfig,
+  ConfigResponse,
+  RepoListResult,
+  RepoPreviewResult,
+  SaveConfigResponse
+} from "./types"
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api"
 
@@ -39,6 +46,10 @@ export async function runAction(actionId: string, path: string): Promise<void> {
     method: "POST",
     body: JSON.stringify({ actionId, path })
   })
+}
+
+export async function fetchActions(): Promise<ActionInfo[]> {
+  return request<ActionInfo[]>("/actions")
 }
 
 export async function refreshCache(): Promise<{ ok: boolean; repoCount: number }> {

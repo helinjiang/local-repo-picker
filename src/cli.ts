@@ -17,7 +17,6 @@ import { normalizeRepoKey } from "./core/path-utils"
 import { readLru, sortByLru } from "./core/lru"
 import { getRegisteredActions } from "./core/plugins"
 import { registerBuiltInPlugins } from "./plugins/built-in"
-import { parseOriginToSiteUrl, readOriginValue } from "./core/origin"
 import { startWebServer } from "./web/server"
 import type { UiState } from "./web/state"
 import { clearUiState, isProcessAlive, readUiState } from "./web/state"
@@ -842,14 +841,12 @@ async function runFzfActionPicker(
     lruFile: string
   }
 ) {
-  registerBuiltInPlugins()
-  const actions = getRegisteredActions()
-  const builtins = getBuiltinActions(repo, options)
-  const merged = [...builtins, ...actions].filter((action) => isActionAllowed(action, "cli"))
-  if (merged.length === 0) {
+  registerBuiltInPlugins(options)
+  const actions = getRegisteredActions().filter((action) => isActionAllowed(action, "cli"))
+  if (actions.length === 0) {
     return null
   }
-  const input = merged.map((item) => `${item.label}\t${item.id}`).join("\n")
+  const input = actions.map((item) => `${item.label}\t${item.id}`).join("\n")
   const result = await execa("fzf", ["--delimiter=\t", "--with-nth=1", "--prompt", "Action> "], {
     input,
     stdout: "pipe",
@@ -864,74 +861,7 @@ async function runFzfActionPicker(
     return null
   }
   const id = line.split("\t")[1]
-  return merged.find((item) => item.id === id) ?? null
-}
-
-function getBuiltinActions(
-  repo: RepoInfo,
-  options: {
-    scanRoots: string[]
-    maxDepth?: number
-    pruneDirs?: string[]
-    cacheTtlMs?: number
-    followSymlinks?: boolean
-    cacheFile: string
-    manualTagsFile: string
-    lruFile: string
-  }
-) {
-  return [
-    {
-      id: "builtin.open-vscode",
-      label: "open in VSCode",
-      run: async () => {
-        await execa("code", [repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-iterm",
-      label: "open in iTerm",
-      run: async () => {
-        await execa("open", ["-a", "iTerm", repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-finder",
-      label: "open in Finder",
-      run: async () => {
-        await execa("open", [repo.path], { reject: false })
-      }
-    },
-    {
-      id: "builtin.open-site",
-      label: "open site",
-      run: async () => {
-        const origin = await readOriginValue(repo.path)
-        const siteUrl = parseOriginToSiteUrl(origin)
-        if (!siteUrl) {
-          logger.error("无法从 origin 解析站点地址")
-          return
-        }
-        await execa("open", [siteUrl], { reject: false })
-      }
-    },
-    {
-      id: "builtin.add-tag",
-      label: "add tag",
-      run: async () => {
-        await execa("open", ["-e", options.manualTagsFile], { reject: false })
-        await refreshCache(options)
-      }
-    },
-    {
-      id: "builtin.refresh-cache",
-      label: "refresh cache",
-      scopes: ["cli"] as Array<"cli" | "web">,
-      run: async () => {
-        await refreshCache(options)
-      }
-    }
-  ]
+  return actions.find((item) => item.id === id) ?? null
 }
 
 function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
