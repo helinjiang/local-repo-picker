@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
-import { App as AntApp, Button, Input, Select, Space, message } from "antd"
-import type { RepoItem, RepoPreviewResult } from "./types"
-import { fetchPreview, fetchRepos, refreshCache, runAction, upsertTags } from "./api"
+import { CopyOutlined, EditOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons"
+import { App as AntApp, Button, Input, Modal, Select, Space, Tooltip, Tree, message } from "antd"
+import type { AppConfig, ConfigPaths, RepoItem, RepoPreviewResult } from "./types"
+import { fetchConfig, fetchPreview, fetchRepos, refreshCache, runAction, saveConfig, upsertTags } from "./api"
 import RepoList from "./components/RepoList"
 import PreviewPanel from "./components/PreviewPanel"
 import ActionsBar from "./components/ActionsBar"
@@ -28,6 +29,13 @@ export default function App() {
   const [pageSize, setPageSize] = useState(200)
   const [total, setTotal] = useState(0)
   const [tagModalOpen, setTagModalOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [configPaths, setConfigPaths] = useState<ConfigPaths | null>(null)
+  const [configText, setConfigText] = useState("")
+  const [loadingConfig, setLoadingConfig] = useState(false)
+  const [savingConfig, setSavingConfig] = useState(false)
+  const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null)
+  const [configEditorOpen, setConfigEditorOpen] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
   const [messageApi, contextHolder] = message.useMessage()
 
@@ -77,6 +85,36 @@ export default function App() {
   useEffect(() => {
     setPage(1)
   }, [debouncedQuery, tag])
+
+  useEffect(() => {
+    if (!settingsOpen) return
+    let cancelled = false
+    async function loadConfig() {
+      setLoadingConfig(true)
+      try {
+        const data = await fetchConfig()
+        if (cancelled) return
+        setConfigPaths(data.paths)
+        setConfigText(JSON.stringify(data.config, null, 2))
+      } catch (error) {
+        if (!cancelled) {
+          messageApi.error(`获取配置失败：${(error as Error).message}`)
+        }
+      } finally {
+        if (!cancelled) setLoadingConfig(false)
+      }
+    }
+    void loadConfig()
+    return () => {
+      cancelled = true
+    }
+  }, [settingsOpen, messageApi])
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      setConfigEditorOpen(false)
+    }
+  }, [settingsOpen])
 
   useEffect(() => {
     let cancelled = false
@@ -137,6 +175,31 @@ export default function App() {
     }
   }
 
+  const handleSaveConfig = async () => {
+    let parsed: AppConfig
+    try {
+      parsed = JSON.parse(configText) as AppConfig
+    } catch (error) {
+      messageApi.error(`配置 JSON 无效：${(error as Error).message}`)
+      return
+    }
+    setSavingConfig(true)
+    try {
+      const result = await saveConfig(parsed)
+      setConfigText(JSON.stringify(result.config, null, 2))
+      messageApi.success(`配置已更新并刷新缓存（${result.repoCount}）`)
+      const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
+      setRepos(data.items)
+      setTotal(data.total)
+      setPage(data.page)
+      setPageSize(data.pageSize)
+    } catch (error) {
+      messageApi.error(`更新配置失败：${(error as Error).message}`)
+    } finally {
+      setSavingConfig(false)
+    }
+  }
+
   return (
     <AntApp>
       {contextHolder}
@@ -158,7 +221,8 @@ export default function App() {
             options={tagOptions.map((item) => ({ label: item, value: item }))}
           />
           <Space>
-            <Button onClick={handleRefresh}>刷新缓存</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新缓存</Button>
+            <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
           </Space>
         </div>
         <div className="content-area">
@@ -194,7 +258,169 @@ export default function App() {
           onCancel={() => setTagModalOpen(false)}
           onSave={handleSaveTags}
         />
+        <Modal
+          title="配置"
+          open={settingsOpen}
+          onCancel={() => setSettingsOpen(false)}
+          onOk={handleSaveConfig}
+          confirmLoading={savingConfig}
+          okText="保存并刷新缓存"
+          cancelText="关闭"
+          width={720}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>可编辑配置</div>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}
+            onMouseEnter={() => setHoveredConfigKey("config.json")}
+            onMouseLeave={() => setHoveredConfigKey(null)}
+          >
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                fontFamily: "monospace"
+              }}
+            >
+              {configPaths?.configFile ?? "-"}
+            </span>
+            {configPaths?.configFile && hoveredConfigKey === "config.json" ? (
+              <Tooltip title="复制路径">
+                <Button
+                  size="small"
+                  type="text"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    void copyPathToClipboard(configPaths.configFile, messageApi)
+                  }}
+                  icon={<CopyOutlined />}
+                >
+                </Button>
+              </Tooltip>
+            ) : null}
+            <Tooltip title={configEditorOpen ? "收起编辑" : "编辑配置"}>
+              <Button
+                size="small"
+                type="text"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setConfigEditorOpen((prev) => !prev)
+                }}
+                icon={<EditOutlined />}
+              >
+              </Button>
+            </Tooltip>
+          </div>
+          {configEditorOpen ? (
+            <div style={{ marginTop: 12 }}>
+              <Input.TextArea
+                value={configText}
+                onChange={(event) => setConfigText(event.target.value)}
+                autoSize={{ minRows: 12, maxRows: 20 }}
+                placeholder={loadingConfig ? "加载配置中..." : "请输入配置 JSON"}
+                style={{ fontFamily: "monospace" }}
+              />
+            </div>
+          ) : null}
+          <div style={{ fontWeight: 600, marginTop: 16, marginBottom: 8 }}>系统配置</div>
+          <Tree
+            blockNode
+            defaultExpandAll
+            treeData={buildConfigTree(configPaths)}
+            titleRender={(node) => (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}
+                onMouseEnter={() => setHoveredConfigKey(node.key)}
+                onMouseLeave={() => setHoveredConfigKey(null)}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  {node.title}
+                </span>
+                {node.path && hoveredConfigKey === node.key ? (
+                  <Tooltip title="复制路径">
+                    <Button
+                      size="small"
+                      type="text"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (!node.path) return
+                        void copyPathToClipboard(node.path, messageApi)
+                      }}
+                      icon={<CopyOutlined />}
+                    >
+                    </Button>
+                  </Tooltip>
+                ) : null}
+              </div>
+            )}
+          />
+        </Modal>
       </div>
     </AntApp>
   )
+}
+
+type ConfigTreeNode = {
+  title: string
+  key: string
+  path?: string
+  isLeaf?: boolean
+  children?: ConfigTreeNode[]
+}
+
+function buildConfigTree(paths: ConfigPaths | null): ConfigTreeNode[] {
+  if (!paths) {
+    return [
+      {
+        title: "加载中",
+        key: "loading"
+      }
+    ]
+  }
+  const cacheFiles = [
+    { title: "cache.json", key: "cache.json", path: paths.cacheFile, isLeaf: true }
+  ]
+  const dataFiles = [
+    { title: "repo_tags.tsv", key: "repo_tags.tsv", path: paths.manualTagsFile, isLeaf: true },
+    { title: "lru.txt", key: "lru.txt", path: paths.lruFile, isLeaf: true }
+  ]
+  return [
+    {
+      title: paths.dataDir,
+      key: paths.dataDir,
+      path: paths.dataDir,
+      children: dataFiles
+    },
+    {
+      title: paths.cacheDir,
+      key: paths.cacheDir,
+      path: paths.cacheDir,
+      children: cacheFiles
+    }
+  ]
+}
+
+async function copyPathToClipboard(path: string, messageApi: ReturnType<typeof message.useMessage>[0]) {
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("clipboard unavailable")
+    }
+    await navigator.clipboard.writeText(path)
+    messageApi.success("路径已复制")
+  } catch (error) {
+    messageApi.error(`复制失败：${(error as Error).message}`)
+  }
 }

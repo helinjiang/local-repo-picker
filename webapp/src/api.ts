@@ -1,4 +1,4 @@
-import type { RepoListResult, RepoPreviewResult } from "./types"
+import type { ConfigResponse, RepoListResult, RepoPreviewResult, SaveConfigResponse, AppConfig } from "./types"
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api"
 
@@ -49,5 +49,16 @@ export async function upsertTags(path: string, tags: string): Promise<void> {
   await request("/tags", {
     method: "POST",
     body: JSON.stringify({ path, tags, refresh: true })
+  })
+}
+
+export async function fetchConfig(): Promise<ConfigResponse> {
+  return request<ConfigResponse>("/config")
+}
+
+export async function saveConfig(config: AppConfig): Promise<SaveConfigResponse> {
+  return request<SaveConfigResponse>("/config", {
+    method: "POST",
+    body: JSON.stringify({ config })
   })
 }

@@ -10,6 +10,8 @@ import { registerBuiltInPlugins } from "../plugins/built-in"
 import { parseTagList, upsertManualTags } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
 import { parseOriginToSiteUrl, readOriginValue } from "../core/origin"
+import { getConfigPaths, readConfig, writeConfig } from "../config/config"
+import type { AppConfig } from "../config/schema"
 import { execa } from "execa"
 import type { UiState } from "./state"
 
@@ -81,6 +83,49 @@ export async function registerRoutes(
       repoCount: cached ? cached.repos.length : 0
     }
   })
+
+  app.get("/api/config", async () => {
+    const config = await readConfig()
+    const paths = getConfigPaths()
+    return { config, paths }
+  })
+
+  app.post("/api/config", async (request, reply) => {
+    const body = request.body as { config?: unknown }
+    let raw = body?.config
+    if (typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw)
+      } catch {
+        reply.code(400)
+        return { error: "invalid config json" }
+      }
+    }
+    if (!raw || typeof raw !== "object") {
+      reply.code(400)
+      return { error: "invalid config" }
+    }
+    try {
+      await writeConfig(raw as AppConfig)
+      const updated = await readConfig()
+      options.scanRoots = updated.scanRoots
+      options.maxDepth = updated.maxDepth
+      options.pruneDirs = updated.pruneDirs
+      options.cacheTtlMs = updated.cacheTtlMs
+      options.followSymlinks = updated.followSymlinks
+      const cache = await refreshCache({
+        ...updated,
+        cacheFile: options.cacheFile,
+        manualTagsFile: options.manualTagsFile,
+        lruFile: options.lruFile
+      })
+      return { ok: true, config: updated, repoCount: cache.repos.length }
+    } catch (error) {
+      reply.code(500)
+      return { error: String(error instanceof Error ? error.message : error) }
+    }
+  })
+
 
   app.get("/api/repos", async (request) => {
     const query = request.query as {
