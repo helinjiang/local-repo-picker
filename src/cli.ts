@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import readline from "node:readline/promises"
+import net from "node:net"
 import { execa } from "execa"
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from "./config/config"
@@ -30,6 +31,14 @@ await main()
 async function main(): Promise<void> {
   const args = process.argv.slice(2)
   const command = args[0]
+  let uiFlags: { port?: number; noOpen: boolean; dev: boolean }
+  try {
+    uiFlags = parseUiFlags(args)
+  } catch (error) {
+    logger.error(formatError(error))
+    process.exitCode = 1
+    return
+  }
 
   if (args.includes("--help") || args.includes("-h")) {
     printHelp()
@@ -57,6 +66,14 @@ async function main(): Promise<void> {
     }
     console.log(state.url)
     return
+  }
+
+  if (command === "ui") {
+    const state = await readUiState()
+    if (state && isProcessAlive(state.pid)) {
+      console.log(state.url)
+      return
+    }
   }
 
   const { cacheFile, manualTagsFile, lruFile, configFile } = getConfigPaths()
@@ -95,8 +112,11 @@ async function main(): Promise<void> {
   }
 
   if (command === "ui") {
-    const state = await startWebServer(options)
+    const state = await runUiServer(options, uiFlags)
     console.log(state.url)
+    if (!uiFlags.noOpen) {
+      await openBrowserOnMac(state.url)
+    }
     return
   }
 
@@ -294,6 +314,96 @@ function readArgValue(args: string[], key: string): string {
     return args[index + 1]
   }
   return ""
+}
+
+function parseUiFlags(args: string[]): { port?: number; noOpen: boolean; dev: boolean } {
+  const noOpen = args.includes("--no-open")
+  const dev = args.includes("--dev")
+  const rawPort = readArgValue(args, "--port")
+  if (!rawPort) {
+    return { noOpen, dev }
+  }
+  const port = Number(rawPort)
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`无效端口: ${rawPort}`)
+  }
+  return { noOpen, dev, port }
+}
+
+async function runUiServer(
+  options: {
+    scanRoots: string[]
+    maxDepth?: number
+    pruneDirs?: string[]
+    cacheTtlMs?: number
+    followSymlinks?: boolean
+    cacheFile: string
+    manualTagsFile: string
+    lruFile: string
+  },
+  flags: { port?: number; noOpen: boolean; dev: boolean }
+): Promise<{ url: string; port: number }> {
+  if (flags.dev) {
+    const uiPort = await findAvailablePort(flags.port ?? 5173, 30)
+    const uiUrl = `http://127.0.0.1:${uiPort}`
+    const server = await startWebServer(options, { basePort: 17333, uiPort, uiUrl })
+    await startViteDevServer(uiPort, server.apiUrl)
+    return { url: uiUrl, port: uiPort }
+  }
+  const basePort = flags.port ?? 17333
+  const server = await startWebServer(options, { basePort })
+  return { url: server.url, port: server.port }
+}
+
+async function startViteDevServer(port: number, apiUrl: string): Promise<void> {
+  const child = execa(
+    "npm",
+    ["--prefix", "webapp", "run", "dev", "--", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+    {
+      env: {
+        ...process.env,
+        VITE_API_BASE: `${apiUrl}/api`
+      },
+      stdio: "ignore",
+      reject: false
+    }
+  )
+  child.catch(() => {})
+}
+
+async function findAvailablePort(basePort: number, attempts: number): Promise<number> {
+  for (let offset = 0; offset < attempts; offset += 1) {
+    const port = basePort + offset
+    const available = await isPortAvailable(port)
+    if (available) {
+      return port
+    }
+  }
+  throw new Error(`未找到可用端口: ${basePort}-${basePort + attempts - 1}`)
+}
+
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer()
+    server.once("error", () => {
+      resolve(false)
+    })
+    server.once("listening", () => {
+      server.close(() => resolve(true))
+    })
+    server.listen(port, "127.0.0.1")
+  })
+}
+
+async function openBrowserOnMac(url: string): Promise<void> {
+  if (process.platform !== "darwin") {
+    return
+  }
+  try {
+    await execa("open", [url], { stdio: "ignore", reject: false })
+  } catch {
+    return
+  }
 }
 
 async function getListRows(
@@ -629,6 +739,9 @@ function printHelp(): void {
     "  status             查看 Web UI 状态",
     "",
     "Options:",
+    "  --port <n>         指定 Web UI 端口（若占用会自动递增）",
+    "  --no-open          不自动打开浏览器",
+    "  --dev              使用前端 dev server",
     "  --config           创建默认配置并输出路径",
     "  --list             输出 repo 路径列表",
     "  -h, --help         显示帮助",

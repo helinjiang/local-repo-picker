@@ -19,7 +19,16 @@ type ServerOptions = {
   lruFile: string
 }
 
-export async function startWebServer(options: ServerOptions): Promise<UiState> {
+type StartWebServerConfig = {
+  basePort?: number
+  uiUrl?: string
+  uiPort?: number
+}
+
+export async function startWebServer(
+  options: ServerOptions,
+  config: StartWebServerConfig = {}
+): Promise<UiState & { apiUrl: string; apiPort: number }> {
   const app = fastify({ logger: false })
   await app.register(helmet)
   await app.register(cors, {
@@ -49,9 +58,9 @@ export async function startWebServer(options: ServerOptions): Promise<UiState> {
       reply.sendFile("index.html")
     })
   }
-  const { port, url } = await listenWithRetry(app, 17333)
-  state.port = port
-  state.url = url
+  const { port, url } = await listenWithRetry(app, config.basePort ?? 17333)
+  state.port = config.uiPort ?? port
+  state.url = config.uiUrl ?? url
   await writeUiState(state)
   const shutdown = async () => {
     await clearUiState()
@@ -60,7 +69,7 @@ export async function startWebServer(options: ServerOptions): Promise<UiState> {
   }
   process.on("SIGINT", shutdown)
   process.on("SIGTERM", shutdown)
-  return state
+  return { ...state, apiPort: port, apiUrl: url }
 }
 
 async function listenWithRetry(app: ReturnType<typeof fastify>, basePort: number): Promise<{ port: number; url: string }> {
