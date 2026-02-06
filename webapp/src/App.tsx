@@ -43,10 +43,12 @@ export default function App() {
   const [tagModalRepo, setTagModalRepo] = useState<RepoItem | null>(null)
   const [tagModalMode, setTagModalMode] = useState<"add" | "edit">("add")
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [repoLinksOpen, setRepoLinksOpen] = useState(false)
   const [configPaths, setConfigPaths] = useState<ConfigPaths | null>(null)
   const [configText, setConfigText] = useState("")
   const [loadingConfig, setLoadingConfig] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
+  const [savingRepoLinks, setSavingRepoLinks] = useState(false)
   const [refreshingCache, setRefreshingCache] = useState(false)
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null)
   const [configEditorOpen, setConfigEditorOpen] = useState(false)
@@ -54,11 +56,44 @@ export default function App() {
   const [repoLinksConfig, setRepoLinksConfig] = useState<
     { id: string; repo: string; links: { id: string; label: string; url: string }[] }[]
   >([])
+  const [pendingRepoLinkKey, setPendingRepoLinkKey] = useState<string | null>(null)
+  const [currentRepoLinkKey, setCurrentRepoLinkKey] = useState<string | null>(null)
   const [configLoadedOnce, setConfigLoadedOnce] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
   const [messageApi, contextHolder] = message.useMessage()
 
   const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`
+
+  const ensureRepoLinksForKey = (
+    current: { id: string; repo: string; links: { id: string; label: string; url: string }[] }[],
+    repoKey: string
+  ) => {
+    const normalized = repoKey.trim()
+    if (!normalized) return current
+    const index = current.findIndex((group) => group.repo.trim() === normalized)
+    if (index === -1) {
+      return [
+        ...current,
+        {
+          id: createId(),
+          repo: normalized,
+          links: [{ id: createId(), label: "", url: "" }]
+        }
+      ]
+    }
+    const group = current[index]
+    if (!group) return current
+    if (group.links.length > 0) return current
+    const next = current.map((item, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...item,
+            links: [{ id: createId(), label: "", url: "" }]
+          }
+        : item
+    )
+    return next
+  }
 
   const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
   const normalizeTagValue = (raw: string) => {
@@ -109,6 +144,18 @@ export default function App() {
       ),
     [repoLinksConfig]
   )
+
+  const currentRepoLinksGroup = useMemo(() => {
+    if (!currentRepoLinkKey) return null
+    const key = currentRepoLinkKey.trim()
+    if (!key) return null
+    return repoLinksConfig.find((group) => group.repo.trim() === key) ?? null
+  }, [repoLinksConfig, currentRepoLinkKey])
+
+  const currentRepoLinksIndex = useMemo(() => {
+    if (!currentRepoLinksGroup) return -1
+    return repoLinksConfig.findIndex((group) => group.id === currentRepoLinksGroup.id)
+  }, [repoLinksConfig, currentRepoLinksGroup])
 
   useEffect(() => {
     let cancelled = false
@@ -191,13 +238,26 @@ export default function App() {
         if (!cancelled) setLoadingConfig(false)
       }
     }
-    if (settingsOpen || !configLoadedOnce) {
+    if (settingsOpen || repoLinksOpen || !configLoadedOnce) {
       void loadConfig()
     }
     return () => {
       cancelled = true
     }
-  }, [settingsOpen, messageApi, configLoadedOnce])
+  }, [settingsOpen, repoLinksOpen, messageApi, configLoadedOnce])
+
+  useEffect(() => {
+    if (!pendingRepoLinkKey || !configLoadedOnce) return
+    const next = ensureRepoLinksForKey(repoLinksConfig, pendingRepoLinkKey)
+    setPendingRepoLinkKey(null)
+    handleRepoLinksChange(next)
+  }, [pendingRepoLinkKey, configLoadedOnce, repoLinksConfig])
+
+  useEffect(() => {
+    if (!repoLinksOpen || !currentRepoLinkKey || !configLoadedOnce) return
+    const next = ensureRepoLinksForKey(repoLinksConfig, currentRepoLinkKey)
+    handleRepoLinksChange(next)
+  }, [repoLinksOpen, currentRepoLinkKey, configLoadedOnce, repoLinksConfig])
 
   useEffect(() => {
     if (!settingsOpen) {
@@ -294,6 +354,19 @@ export default function App() {
   }
 
   const handleRunAction = async (actionId: string, repoPath: string) => {
+    if (actionId === "web.edit-repo-links") {
+      const repo = repos.find((item) => item.path === repoPath)
+      if (!repo) return
+      setRepoLinksOpen(true)
+      setCurrentRepoLinkKey(repo.ownerRepo)
+      if (configLoadedOnce) {
+        const next = ensureRepoLinksForKey(repoLinksConfig, repo.ownerRepo)
+        handleRepoLinksChange(next)
+      } else {
+        setPendingRepoLinkKey(repo.ownerRepo)
+      }
+      return
+    }
     try {
       await runAction(actionId, repoPath)
     } catch (error) {
@@ -347,6 +420,46 @@ export default function App() {
     }
   }
 
+  const handleSaveRepoLinks = async () => {
+    let parsed: AppConfig
+    try {
+      parsed = JSON.parse(configText) as AppConfig
+    } catch (error) {
+      messageApi.error(`配置 JSON 无效：${(error as Error).message}`)
+      return
+    }
+    parsed.webRepoLinks = Object.fromEntries(
+      repoLinksConfig
+        .map((group) => ({
+          repo: group.repo.trim(),
+          links: group.links
+            .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+            .filter((link) => link.label && link.url)
+        }))
+        .filter((group) => group.repo && group.links.length > 0)
+        .map((group) => [group.repo, group.links])
+    )
+    setSavingRepoLinks(true)
+    try {
+      const result = await saveConfig(parsed)
+      setConfigText(JSON.stringify(result.config, null, 2))
+      const repoLinks = result.config.webRepoLinks ?? {}
+      setRepoLinksConfig(
+        Object.entries(repoLinks).map(([repo, links]) => ({
+          id: createId(),
+          repo,
+          links: links.map((link) => ({ id: createId(), label: link.label, url: link.url }))
+        }))
+      )
+      messageApi.success("固定链接已更新")
+      setRepoLinksOpen(false)
+    } catch (error) {
+      messageApi.error(`更新固定链接失败：${(error as Error).message}`)
+    } finally {
+      setSavingRepoLinks(false)
+    }
+  }
+
   const stripTagBrackets = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1").trim()
 
   const handleQuickTagsChange = (values: string[]) => {
@@ -387,13 +500,6 @@ export default function App() {
     }
   }
 
-  const handleRepoKeyUpdate = (index: number, repo: string) => {
-    const next = repoLinksConfig.map((group, current) =>
-      current === index ? { ...group, repo } : group
-    )
-    handleRepoLinksChange(next)
-  }
-
   const handleRepoLinksUpdate = (
     index: number,
     links: { id: string; label: string; url: string }[]
@@ -402,18 +508,6 @@ export default function App() {
       current === index ? { ...group, links } : group
     )
     handleRepoLinksChange(next)
-  }
-
-  const handleRepoLinksRemove = (index: number) => {
-    const next = repoLinksConfig.filter((_, current) => current !== index)
-    handleRepoLinksChange(next)
-  }
-
-  const handleRepoLinksAdd = () => {
-    handleRepoLinksChange([
-      ...repoLinksConfig,
-      { id: createId(), repo: "", links: [] }
-    ])
   }
 
   const handleRepoLinkUpdate = (groupIndex: number, linkIndex: number, patch: Partial<FixedLink>) => {
@@ -553,68 +647,6 @@ export default function App() {
             options={tagOptions.map((item) => ({ label: item.label, value: item.label }))}
             style={{ width: "100%" }}
           />
-          <div style={{ fontWeight: 600, marginTop: 16, marginBottom: 8 }}>仓库固定链接</div>
-          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-            {repoLinksConfig.length === 0 ? (
-              <div style={{ color: "#8c8c8c" }}>未配置仓库固定链接</div>
-            ) : null}
-            {repoLinksConfig.map((group, groupIndex) => (
-              <div key={group.id} style={{ width: "100%", padding: 12, border: "1px solid #f0f0f0", borderRadius: 8 }}>
-                <Space size="middle" style={{ width: "100%" }}>
-                  <Input
-                    placeholder="repo path，如 ee/bear-web"
-                    value={group.repo}
-                    onChange={(event) => handleRepoKeyUpdate(groupIndex, event.target.value)}
-                  />
-                  <Tooltip title="删除仓库">
-                    <Button
-                      icon={<DeleteOutlined />}
-                      type="text"
-                      onClick={() => handleRepoLinksRemove(groupIndex)}
-                    >
-                    </Button>
-                  </Tooltip>
-                </Space>
-                <Space direction="vertical" size="small" style={{ width: "100%", marginTop: 12 }}>
-                  {group.links.length === 0 ? (
-                    <div style={{ color: "#8c8c8c" }}>未配置链接</div>
-                  ) : null}
-                  {group.links.map((link, linkIndex) => (
-                    <Space key={link.id} size="middle" style={{ width: "100%" }}>
-                      <Input
-                        placeholder="名称"
-                        value={link.label}
-                        onChange={(event) => handleRepoLinkUpdate(groupIndex, linkIndex, { label: event.target.value })}
-                        style={{ width: 160 }}
-                      />
-                      <Input
-                        placeholder="https://example.com/{ownerRepo}"
-                        value={link.url}
-                        onChange={(event) => handleRepoLinkUpdate(groupIndex, linkIndex, { url: event.target.value })}
-                      />
-                      <Tooltip title="删除链接">
-                        <Button
-                          icon={<DeleteOutlined />}
-                          type="text"
-                          onClick={() => handleRepoLinkRemove(groupIndex, linkIndex)}
-                        >
-                        </Button>
-                      </Tooltip>
-                    </Space>
-                  ))}
-                  <Button icon={<PlusOutlined />} onClick={() => handleRepoLinkAdd(groupIndex)}>
-                    添加链接
-                  </Button>
-                </Space>
-              </div>
-            ))}
-            <Button icon={<PlusOutlined />} onClick={handleRepoLinksAdd}>
-              添加仓库
-            </Button>
-            <div style={{ color: "#8c8c8c", fontSize: 12 }}>
-              Key 为 repo path（例如 ee/bear-web），匹配后展示。支持占位符：{`{ownerRepo}`}、{`{path}`}、{`{originUrl}`}
-            </div>
-          </Space>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>可编辑配置</div>
           <div
             style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}
@@ -714,6 +746,95 @@ export default function App() {
               </div>
             )}
           />
+        </Modal>
+        <Modal
+          title="固定链接"
+          open={repoLinksOpen}
+          onCancel={() => {
+            setRepoLinksOpen(false)
+            setCurrentRepoLinkKey(null)
+            setPendingRepoLinkKey(null)
+          }}
+          onOk={handleSaveRepoLinks}
+          confirmLoading={savingRepoLinks}
+          okText="保存"
+          cancelText="关闭"
+          width={720}
+        >
+          {currentRepoLinksGroup ? (
+            <div
+              style={{
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #f0f0f0",
+                background: "#fafafa",
+                marginBottom: 12
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>当前仓库</div>
+              <div style={{ fontFamily: "monospace", fontSize: 12, color: "#595959" }}>
+                {currentRepoLinksGroup.repo}
+              </div>
+              <div style={{ fontSize: 12, color: "#8c8c8c" }}>{selectedRepo?.path ?? "-"}</div>
+            </div>
+          ) : null}
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            {!currentRepoLinksGroup ? (
+              <div style={{ color: "#8c8c8c" }}>未选中仓库</div>
+            ) : (
+              <div key={currentRepoLinksGroup.id} style={{ width: "100%", padding: 12, border: "1px solid #f0f0f0", borderRadius: 8 }}>
+                <Space size="middle" style={{ width: "100%" }}>
+                  <Input
+                    placeholder="repo path，如 ee/bear-web"
+                    value={currentRepoLinksGroup.repo}
+                    disabled
+                  />
+                </Space>
+                <Space direction="vertical" size="small" style={{ width: "100%", marginTop: 12 }}>
+                  {currentRepoLinksGroup.links.length === 0 ? (
+                    <div style={{ color: "#8c8c8c" }}>未配置链接</div>
+                  ) : null}
+                  {currentRepoLinksGroup.links.map((link, linkIndex) => (
+                    <Space key={link.id} size="middle" style={{ width: "100%" }}>
+                      <Input
+                        placeholder="名称"
+                        value={link.label}
+                        onChange={(event) =>
+                          handleRepoLinkUpdate(currentRepoLinksIndex, linkIndex, {
+                            label: event.target.value
+                          })
+                        }
+                        style={{ width: 160 }}
+                      />
+                      <Input
+                        placeholder="https://example.com/{ownerRepo}"
+                        value={link.url}
+                        onChange={(event) =>
+                          handleRepoLinkUpdate(currentRepoLinksIndex, linkIndex, {
+                            url: event.target.value
+                          })
+                        }
+                      />
+                      <Tooltip title="删除链接">
+                        <Button
+                          icon={<DeleteOutlined />}
+                          type="text"
+                          onClick={() => handleRepoLinkRemove(currentRepoLinksIndex, linkIndex)}
+                        >
+                        </Button>
+                      </Tooltip>
+                    </Space>
+                  ))}
+                  <Button icon={<PlusOutlined />} onClick={() => handleRepoLinkAdd(currentRepoLinksIndex)}>
+                    添加链接
+                  </Button>
+                </Space>
+              </div>
+            )}
+            <div style={{ color: "#8c8c8c", fontSize: 12 }}>
+              Key 为 repo path（例如 ee/bear-web），匹配后展示。支持占位符：{`{ownerRepo}`}、{`{path}`}、{`{originUrl}`}
+            </div>
+          </Space>
         </Modal>
       </div>
     </AntApp>
