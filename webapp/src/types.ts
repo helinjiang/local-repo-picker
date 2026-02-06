@@ -52,6 +52,7 @@ export type AppConfig = {
   fzfTagFilters?: Record<string, string>
   webQuickTags?: string[]
   webRepoLinks?: Record<string, FixedLink[]>
+  remoteHostTags?: Record<string, string>
 }
 
 export type ConfigPaths = {

@@ -117,6 +117,13 @@ function normalizeConfig(raw: unknown): AppConfig {
             ])
         )
       : {}
+  const remoteHostTags =
+    typeof value.remoteHostTags === "object" && value.remoteHostTags !== null
+      ? (Object.fromEntries(
+          Object.entries(value.remoteHostTags as Record<string, unknown>)
+            .filter(([key, item]) => typeof key === "string" && typeof item === "string")
+        ) as Record<string, string>)
+      : defaultConfig.remoteHostTags
   const fzfTagFilters =
     typeof value.fzfTagFilters === "object" && value.fzfTagFilters !== null
       ? (Object.fromEntries(
@@ -132,6 +139,7 @@ function normalizeConfig(raw: unknown): AppConfig {
     followSymlinks,
     webQuickTags,
     webRepoLinks,
+    remoteHostTags,
     fzfTagFilters
   }
 }

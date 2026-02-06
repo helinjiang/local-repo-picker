@@ -43,7 +43,7 @@ export async function buildCache(
     repoLimit(async () => {
       const originUrl = await readOriginUrl(repo.path)
       const { host, ownerRepo } = parseOriginInfo(originUrl)
-      const remoteTag = getRemoteTag(host)
+      const remoteTag = getRemoteTag(host, normalized.remoteHostTags)
       const manual = manualEdits.get(normalizeRepoKey(repo.path))
       const dirty = await isDirty(repo.path)
       const baseTags = buildTags({
@@ -183,6 +183,7 @@ function normalizeOptions(
   manualTagsFile: string
   lruFile: string
   lruLimit: number
+  remoteHostTags?: Record<string, string>
 } {
   const { cacheFile, manualTagsFile, lruFile } = getConfigPaths()
   return {
@@ -195,6 +196,7 @@ function normalizeOptions(
     manualTagsFile: options.manualTagsFile ?? manualTagsFile,
     lruFile: options.lruFile ?? lruFile,
     lruLimit: options.lruLimit ?? 300,
+    remoteHostTags: options.remoteHostTags,
     onWarning: options.onWarning
   }
 }

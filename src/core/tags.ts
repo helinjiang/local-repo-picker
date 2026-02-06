@@ -82,9 +82,14 @@ export function parseTagList(raw: string): string[] {
   )
 }
 
-export function getRemoteTag(host?: string): string {
+export function getRemoteTag(host?: string, hostTagAliases?: Record<string, string>): string {
   if (!host) {
     return "[noremote]"
+  }
+  const mapped = hostTagAliases?.[host]
+  if (typeof mapped === "string" && mapped.trim()) {
+    const trimmed = mapped.trim()
+    return trimmed.startsWith("[") && trimmed.endsWith("]") ? trimmed : `[${trimmed}]`
   }
   if (host === "github.com") {
     return "[github]"
