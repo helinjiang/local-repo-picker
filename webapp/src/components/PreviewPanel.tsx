@@ -36,9 +36,8 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
   return (
     <Spin spinning={loading}>
       <Card title="预览" size="small" style={{ marginTop: 12 }} className="preview-card">
-        <Descriptions size="small" column={1} className="preview-meta">
+        <Descriptions bordered size="small" column={1} className="preview-meta">
           <Descriptions.Item label="路径">{repo.path}</Descriptions.Item>
-          <Descriptions.Item label="repoPath">{preview?.data.repoPath ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="repoKey">{preview?.data.repoKey ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="Origin">{preview?.data.origin ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="站点">
