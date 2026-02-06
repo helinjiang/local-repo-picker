@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import type { RepoInfo, RepoPreview } from "./types"
-import { checkGitAvailable, isDirty, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "./git"
+import { checkGitAvailable, isDirty, parseOriginInfo, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "./git"
 import { parseOriginToSiteUrl } from "./origin"
 import { resolvePreviewExtensions } from "./plugins"
 
@@ -19,9 +19,11 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
   const gitDir = await resolveGitDir(repoPath)
   if (!gitDir) {
     const readme = await readReadme(repoPath)
+    const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
     return {
       data: {
         path: repoPath,
+        repoPath: repoPathLabel,
         origin: "-",
         siteUrl: "-",
         branch: "-",
@@ -38,9 +40,11 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
   const gitAvailable = await checkGitAvailable()
   if (!gitAvailable) {
     const readme = await readReadme(repoPath)
+    const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
     return {
       data: {
         path: repoPath,
+        repoPath: repoPathLabel,
         origin: "-",
         siteUrl: "-",
         branch: "-",
@@ -68,8 +72,11 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
     sync.errorKind,
     recentCommits.errorKind
   ])
+  const ownerRepo = parseOriginInfo(origin.value).ownerRepo
+  const repoPathLabel = deriveRepoPath(repoPath, ownerRepo || repo.ownerRepo)
   const basePreview: RepoPreview = {
     path: repoPath,
+    repoPath: repoPathLabel,
     origin: origin.value,
     siteUrl: parseOriginToSiteUrl(origin.value) ?? "-",
     branch: branch.value,
@@ -91,6 +98,7 @@ export function buildFallbackPreview(repoPath: string, error: string): RepoPrevi
   return {
     data: {
       path: repoPath,
+      repoPath: deriveRepoPath(repoPath),
       origin: "-",
       siteUrl: "-",
       branch: "-",
@@ -103,6 +111,22 @@ export function buildFallbackPreview(repoPath: string, error: string): RepoPrevi
     },
     error
   }
+}
+
+function deriveRepoPath(repoPath: string, preferred?: string): string {
+  const trimmedPreferred = preferred?.trim()
+  if (trimmedPreferred) {
+    return trimmedPreferred
+  }
+  const normalized = path.resolve(repoPath)
+  const parts = normalized.split(path.sep).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
+  }
+  if (parts.length === 1) {
+    return parts[0]
+  }
+  return "-"
 }
 
 async function getOrigin(repoPath: string): Promise<{ value: string; errorKind?: GitErrorKind }> {
