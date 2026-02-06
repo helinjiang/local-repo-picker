@@ -7,6 +7,7 @@ export const defaultConfig: AppConfig = {
   cacheTtlMs: 12 * 60 * 60 * 1000,
   followSymlinks: false,
   webQuickTags: [],
+  webRepoLinks: {},
   fzfTagFilters: {
     "ctrl-b": "[byted]",
     "ctrl-g": "[github]",

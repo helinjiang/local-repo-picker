@@ -1,16 +1,35 @@
 import { Card, Descriptions, Empty, Spin, Tag, Typography } from "antd"
-import type { RepoItem, RepoPreviewResult } from "../types"
+import type { FixedLink, RepoItem, RepoPreviewResult } from "../types"
 
 type Props = {
   loading: boolean
   preview: RepoPreviewResult | null
   repo: RepoItem | null
+  repoLinks: Record<string, FixedLink[]>
 }
 
-export default function PreviewPanel({ loading, preview, repo }: Props) {
+export default function PreviewPanel({ loading, preview, repo, repoLinks }: Props) {
   if (!repo) {
     return <Empty description="请选择一个仓库" />
   }
+
+  const originUrl =
+    preview?.data.origin && preview.data.origin !== "-" ? preview.data.origin : ""
+  const resolvedFixedLinks = (repoLinks[repo.ownerRepo] ?? [])
+    .map((link) => {
+      const label = link.label.trim()
+      const template = link.url.trim()
+      if (!label || !template) return null
+      if (template.includes("{originUrl}") && !originUrl) return null
+      const url = template.replace(/\{(ownerRepo|path|originUrl)\}/g, (_, key) => {
+        if (key === "ownerRepo") return repo.ownerRepo
+        if (key === "path") return repo.path
+        if (key === "originUrl") return originUrl
+        return ""
+      })
+      return url ? { label, url } : null
+    })
+    .filter((item): item is { label: string; url: string } => Boolean(item))
 
   return (
     <Spin spinning={loading}>
@@ -23,6 +42,19 @@ export default function PreviewPanel({ loading, preview, repo }: Props) {
               <a href={preview.data.siteUrl} target="_blank" rel="noreferrer">
                 {preview.data.siteUrl}
               </a>
+            ) : (
+              "-"
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="固定链接">
+            {resolvedFixedLinks.length ? (
+              <div className="fixed-links">
+                {resolvedFixedLinks.map((item) => (
+                  <a key={`${item.label}-${item.url}`} href={item.url} target="_blank" rel="noreferrer">
+                    {item.label}
+                  </a>
+                ))}
+              </div>
             ) : (
               "-"
             )}

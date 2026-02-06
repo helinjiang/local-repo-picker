@@ -37,6 +37,11 @@ export type RepoPreviewResult = {
   error?: string
 }
 
+export type FixedLink = {
+  label: string
+  url: string
+}
+
 export type AppConfig = {
   scanRoots: string[]
   maxDepth?: number
@@ -45,6 +50,7 @@ export type AppConfig = {
   followSymlinks?: boolean
   fzfTagFilters?: Record<string, string>
   webQuickTags?: string[]
+  webRepoLinks?: Record<string, FixedLink[]>
 }
 
 export type ConfigPaths = {

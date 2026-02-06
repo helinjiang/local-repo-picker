@@ -6,4 +6,5 @@ export type AppConfig = {
   followSymlinks?: boolean
   fzfTagFilters?: Record<string, string>
   webQuickTags?: string[]
+  webRepoLinks?: Record<string, { label: string; url: string }[]>
 }
