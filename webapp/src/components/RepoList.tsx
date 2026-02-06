@@ -46,7 +46,7 @@ export default function RepoList({
       title: "标签",
       dataIndex: "tags",
       render: (_: string[], repo) => (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="repo-tags">
           {repo.tags.map((tag) => {
             const tagKey = `${repo.path}::${tag}`
             const hovered = hoveredTagKey === tagKey
@@ -54,7 +54,7 @@ export default function RepoList({
               <Tag
                 color={tag === "[dirty]" ? "red" : "blue"}
                 key={tagKey}
-                style={{ position: "relative" }}
+                className="repo-tag"
                 onMouseEnter={() => {
                   setHoveredTagKey(tagKey)
                 }}
@@ -107,7 +107,7 @@ export default function RepoList({
 
   return (
     <Table
-      size="small"
+      size="middle"
       rowKey="path"
       columns={columns}
       dataSource={repos}

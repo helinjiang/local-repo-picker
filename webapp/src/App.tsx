@@ -318,39 +318,49 @@ export default function App() {
       {contextHolder}
       <div className="app-shell">
         <div className="toolbar">
-          <Input.Search
-            allowClear
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索 owner/repo、路径或标签"
-            style={{ width: 280 }}
-          />
-          <Select
-            allowClear
-            placeholder="按标签过滤"
-            value={tag}
-            onChange={(value) => setTag(value)}
-            style={{ minWidth: 180 }}
-            options={tagOptions}
-          />
+          <div className="toolbar-group toolbar-group--filters">
+            <Input.Search
+              allowClear
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索 owner/repo、路径或标签"
+              style={{ minWidth: 260, maxWidth: 360, width: "100%" }}
+            />
+            <Select
+              allowClear
+              placeholder="按标签过滤"
+              value={tag}
+              onChange={(value) => setTag(value)}
+              style={{ minWidth: 200 }}
+              options={tagOptions}
+            />
+          </div>
           {quickTagOptions.length > 0 ? (
-            <Space size={[4, 4]} wrap>
-              {quickTagOptions.map((item) => (
-                <Tag
-                  key={item.value}
-                  color={item.value === tag ? "blue" : undefined}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setTag(item.value === tag ? undefined : item.value)}
-                >
-                  {item.label}
-                </Tag>
-              ))}
+            <div className="toolbar-group toolbar-group--quick-tags">
+              <Space size={[6, 6]} wrap>
+                {quickTagOptions.map((item) => (
+                  <Tag
+                    key={item.value}
+                    color={item.value === tag ? "blue" : undefined}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setTag(item.value === tag ? undefined : item.value)}
+                  >
+                    {item.label}
+                  </Tag>
+                ))}
+              </Space>
+            </div>
+          ) : (
+            <div className="toolbar-group toolbar-group--quick-tags toolbar-group--quick-tags-empty">
+              <span className="toolbar-placeholder">暂无快速标签</span>
+            </div>
+          )}
+          <div className="toolbar-group toolbar-group--actions">
+            <Space>
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshingCache}>刷新缓存</Button>
+              <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
             </Space>
-          ) : null}
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshingCache}>刷新缓存</Button>
-            <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
-          </Space>
+          </div>
         </div>
         <div className="content-area">
           <div className="list-pane">

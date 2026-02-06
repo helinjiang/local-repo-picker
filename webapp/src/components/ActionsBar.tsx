@@ -22,7 +22,7 @@ export default function ActionsBar({ repo, disabled, actions, onRunAction }: Pro
   }
 
   return (
-    <Card size="small" title="Actions">
+    <Card size="small" title="Actions" className="actions-card">
       <Space wrap>
         {actions.map((action) => (
           <Button
