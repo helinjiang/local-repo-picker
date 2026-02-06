@@ -790,7 +790,7 @@ export default function App() {
               <div key={currentRepoLinksGroup.id} style={{ width: "100%", padding: 12, border: "1px solid #f0f0f0", borderRadius: 8 }}>
                 <Space size="middle" style={{ width: "100%" }}>
                   <Input
-                    placeholder="repoPath，如 ee/bear-web"
+                    placeholder="repoPath，如 namespace/repo-name"
                     value={currentRepoLinksGroup.repo}
                     disabled
                   />
