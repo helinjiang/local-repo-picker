@@ -38,6 +38,36 @@ export async function readManualTagEdits(
   return map
 }
 
+export async function readManualTags(
+  filePath: string
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>()
+  try {
+    const content = await fs.readFile(filePath, "utf8")
+    const lines = content.split(/\r?\n/)
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue
+      }
+      const [rawPath, rawTags] = line.split("\t")
+      if (!rawPath || !rawTags) {
+        continue
+      }
+      const normalized = normalizeRepoKey(rawPath)
+      if (!normalized) {
+        continue
+      }
+      const edits = parseManualTagEdits(rawTags)
+      if (edits.add.length > 0) {
+        map.set(normalized, edits.add)
+      }
+    }
+  } catch {
+    return map
+  }
+  return map
+}
+
 export function parseTagList(raw: string): string[] {
   const matches = raw.match(/\[[^\]]+\]/g)
   if (matches && matches.length > 0) {

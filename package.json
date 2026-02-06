@@ -56,6 +56,7 @@
     "web:preview": "npm --prefix webapp run preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "demo:cache": "npm run build && node demo/cache.mjs",
     "demo:tui": "npm run build && node demo/tui.mjs",
@@ -74,6 +75,7 @@
     "@types/node": "^20.11.30",
     "@types/react": "^18.3.5",
     "typescript": "^5.5.4",
+    "@vitest/coverage-v8": "^2.1.9",
     "vitest": "^2.1.4"
   },
   "engines": {
