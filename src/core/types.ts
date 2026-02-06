@@ -14,6 +14,7 @@ export type PreviewSection = {
 export type RepoPreview = {
   path: string
   repoPath: string
+  repoKey: string
   origin: string
   siteUrl: string
   branch: string

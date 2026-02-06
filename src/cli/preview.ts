@@ -20,19 +20,26 @@ export async function runInternalPreview(options: CliOptions, args: string[]): P
   }
   const repoPath = path.resolve(rawPath)
   const repo = await resolveRepoInfo(options, repoPath)
-  const result = await buildPreviewWithTimeout(repo, 2000)
+  const result = await buildPreviewWithTimeout(repo, 2000, options.remoteHostTags)
   const lines = formatPreviewLines(result)
   console.log(lines.join("\n"))
 }
 
-async function buildPreviewWithTimeout(repo: RepoInfo, timeoutMs: number): Promise<RepoPreviewResult> {
+async function buildPreviewWithTimeout(
+  repo: RepoInfo,
+  timeoutMs: number,
+  remoteHostTags?: Record<string, string>
+): Promise<RepoPreviewResult> {
   let timer: NodeJS.Timeout | null = null
   const timeout = new Promise<RepoPreviewResult>((resolve) => {
     timer = setTimeout(() => {
       resolve(buildFallbackPreview(repo.path, "preview timed out"))
     }, timeoutMs)
   })
-  const result = await Promise.race([buildRepoPreview(repo), timeout])
+  const result = await Promise.race([
+    buildRepoPreview(repo, { remoteHostTags }),
+    timeout
+  ])
   if (timer) {
     clearTimeout(timer)
   }
@@ -46,6 +53,7 @@ function formatPreviewLines(result: RepoPreviewResult): string[] {
     lines.push("")
   }
   lines.push(`PATH: ${result.data.path}`)
+  lines.push(`KEY: ${result.data.repoKey}`)
   lines.push(`ORIGIN: ${result.data.origin}`)
   lines.push(`BRANCH: ${result.data.branch}`)
   lines.push(`STATUS: ${result.data.status}`)

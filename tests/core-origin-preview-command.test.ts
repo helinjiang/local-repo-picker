@@ -9,7 +9,7 @@ vi.mock("../src/core/git", () => ({
   checkGitAvailable: vi.fn(),
   isDirty: vi.fn(),
   resolveGitDir: vi.fn(),
-  parseOriginInfo: vi.fn(() => ({ ownerRepo: "a/b" }))
+  parseOriginInfo: vi.fn(() => ({ host: "github.com", ownerRepo: "a/b" }))
 }))
 
 vi.mock("../src/core/plugins", () => ({
@@ -89,6 +89,7 @@ describe("core origin/preview/command", () => {
     expect(preview.data.status).toBe("dirty")
     expect(preview.data.siteUrl).toBe("https://github.com/a/b")
     expect(preview.data.repoPath).toBe("a/b")
+    expect(preview.data.repoKey).toBe("github/a/b")
     expect(preview.data.extensions.length).toBe(1)
     await fs.rm(root, { recursive: true, force: true })
   })
@@ -97,6 +98,7 @@ describe("core origin/preview/command", () => {
     const fallback = buildFallbackPreview("/tmp/a", "boom")
     expect(fallback.data.origin).toBe("-")
     expect(fallback.data.repoPath).toBe("tmp/a")
+    expect(fallback.data.repoKey).toBe("noremote/tmp/a")
     expect(fallback.error).toBe("boom")
   })
 

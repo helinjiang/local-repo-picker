@@ -19,6 +19,7 @@ type ServerOptions = {
   pruneDirs?: string[]
   cacheTtlMs?: number
   followSymlinks?: boolean
+  remoteHostTags?: Record<string, string>
   cacheFile: string
   manualTagsFile: string
   lruFile: string
@@ -187,7 +188,9 @@ export async function registerRoutes(
       return cached
     }
     const repo = await resolveRepoInfo(options, allowedPath)
-    const preview = await previewLimit(() => buildRepoPreview(repo))
+    const preview = await previewLimit(() =>
+      buildRepoPreview(repo, { remoteHostTags: options.remoteHostTags })
+    )
     previewCache.set(allowedPath, preview)
     return preview
   })

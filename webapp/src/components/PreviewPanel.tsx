@@ -39,6 +39,7 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
         <Descriptions size="small" column={1} className="preview-meta">
           <Descriptions.Item label="路径">{repo.path}</Descriptions.Item>
           <Descriptions.Item label="repoPath">{preview?.data.repoPath ?? "-"}</Descriptions.Item>
+          <Descriptions.Item label="repoKey">{preview?.data.repoKey ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="Origin">{preview?.data.origin ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="站点">
             {preview?.data.siteUrl && preview.data.siteUrl !== "-" ? (

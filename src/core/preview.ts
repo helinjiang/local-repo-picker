@@ -4,13 +4,17 @@ import type { RepoInfo, RepoPreview } from "./types"
 import { checkGitAvailable, isDirty, parseOriginInfo, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "./git"
 import { parseOriginToSiteUrl } from "./origin"
 import { resolvePreviewExtensions } from "./plugins"
+import { getRemoteTag } from "./tags"
 
 export type RepoPreviewResult = {
   data: RepoPreview
   error?: string
 }
 
-export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResult> {
+export async function buildRepoPreview(
+  repo: RepoInfo,
+  options: { remoteHostTags?: Record<string, string> } = {}
+): Promise<RepoPreviewResult> {
   const repoPath = repo.path
   const accessible = await fs.access(repoPath).then(() => true, () => false)
   if (!accessible) {
@@ -20,10 +24,12 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
   if (!gitDir) {
     const readme = await readReadme(repoPath)
     const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
+    const repoKey = buildRepoKey(getRemoteTag(undefined, options.remoteHostTags), repoPathLabel)
     return {
       data: {
         path: repoPath,
         repoPath: repoPathLabel,
+        repoKey,
         origin: "-",
         siteUrl: "-",
         branch: "-",
@@ -41,10 +47,12 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
   if (!gitAvailable) {
     const readme = await readReadme(repoPath)
     const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
+    const repoKey = buildRepoKey(getRemoteTag(undefined, options.remoteHostTags), repoPathLabel)
     return {
       data: {
         path: repoPath,
         repoPath: repoPathLabel,
+        repoKey,
         origin: "-",
         siteUrl: "-",
         branch: "-",
@@ -72,11 +80,15 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
     sync.errorKind,
     recentCommits.errorKind
   ])
-  const ownerRepo = parseOriginInfo(origin.value).ownerRepo
+  const parsed = parseOriginInfo(origin.value)
+  const ownerRepo = parsed.ownerRepo
+  const remoteTag = getRemoteTag(parsed.host, options.remoteHostTags)
   const repoPathLabel = deriveRepoPath(repoPath, ownerRepo || repo.ownerRepo)
+  const repoKey = buildRepoKey(remoteTag, repoPathLabel)
   const basePreview: RepoPreview = {
     path: repoPath,
     repoPath: repoPathLabel,
+    repoKey,
     origin: origin.value,
     siteUrl: parseOriginToSiteUrl(origin.value) ?? "-",
     branch: branch.value,
@@ -95,10 +107,13 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
 }
 
 export function buildFallbackPreview(repoPath: string, error: string): RepoPreviewResult {
+  const repoPathLabel = deriveRepoPath(repoPath)
+  const repoKey = buildRepoKey(getRemoteTag(), repoPathLabel)
   return {
     data: {
       path: repoPath,
-      repoPath: deriveRepoPath(repoPath),
+      repoPath: repoPathLabel,
+      repoKey,
       origin: "-",
       siteUrl: "-",
       branch: "-",
@@ -127,6 +142,19 @@ function deriveRepoPath(repoPath: string, preferred?: string): string {
     return parts[0]
   }
   return "-"
+}
+
+function buildRepoKey(remoteTag: string, repoPathLabel: string): string {
+  const tagValue = normalizeTagValue(remoteTag)
+  if (!tagValue || repoPathLabel === "-") {
+    return "-"
+  }
+  return `${tagValue}/${repoPathLabel}`
+}
+
+function normalizeTagValue(tag: string): string {
+  const match = tag.match(/^\[(.*)\]$/)
+  return match ? match[1] : tag
 }
 
 async function getOrigin(repoPath: string): Promise<{ value: string; errorKind?: GitErrorKind }> {
