@@ -15,9 +15,9 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
 
   const originUrl =
     preview?.data.origin && preview.data.origin !== "-" ? preview.data.origin : ""
-  const repoPathKey =
-    preview?.data.repoPath && preview.data.repoPath !== "-" ? preview.data.repoPath : repo.ownerRepo
-  const resolvedFixedLinks = (repoLinks[repoPathKey] ?? [])
+  const repoKeyValue =
+    preview?.data.repoKey && preview.data.repoKey !== "-" ? preview.data.repoKey : repo.ownerRepo
+  const resolvedFixedLinks = (repoLinks[repoKeyValue] ?? [])
     .map((link) => {
       const label = link.label.trim()
       const template = link.url.trim()

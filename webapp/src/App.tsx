@@ -357,11 +357,11 @@ export default function App() {
     if (actionId === "web.edit-repo-links") {
       const repo = repos.find((item) => item.path === repoPath)
       if (!repo) return
-      const previewRepoPath =
-        preview?.data.path === repoPath && preview.data.repoPath !== "-"
-          ? preview.data.repoPath
+      const previewRepoKey =
+        preview?.data.path === repoPath && preview.data.repoKey !== "-"
+          ? preview.data.repoKey
           : ""
-      const repoKey = previewRepoPath || repo.ownerRepo
+      const repoKey = previewRepoKey || repo.ownerRepo
       setRepoLinksOpen(true)
       setCurrentRepoLinkKey(repoKey)
       if (configLoadedOnce) {
@@ -790,7 +790,7 @@ export default function App() {
               <div key={currentRepoLinksGroup.id} style={{ width: "100%", padding: 12, border: "1px solid #f0f0f0", borderRadius: 8 }}>
                 <Space size="middle" style={{ width: "100%" }}>
                   <Input
-                    placeholder="repoPath，如 namespace/repo-name"
+                    placeholder="repoKey，如 github/namespace/repo-name"
                     value={currentRepoLinksGroup.repo}
                     disabled
                   />
@@ -837,7 +837,7 @@ export default function App() {
               </div>
             )}
             <div style={{ color: "#8c8c8c", fontSize: 12 }}>
-              Key 为 repoPath（来自 origin 解析），匹配后展示。支持占位符：{`{ownerRepo}`}、{`{path}`}、{`{originUrl}`}
+              Key 为 repoKey（remoteTag/repoPath），匹配后展示。支持占位符：{`{ownerRepo}`}、{`{path}`}、{`{originUrl}`}
             </div>
           </Space>
         </Modal>
