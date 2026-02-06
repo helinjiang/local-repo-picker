@@ -57,6 +57,7 @@ export async function buildCache(
         ownerRepo: ownerRepo || path.basename(repo.path),
         originUrl: originUrl ?? undefined,
         tags: baseTags,
+        isDirty: dirty,
         lastScannedAt: Date.now()
       } satisfies RepoInfo
       const extraTags = await resolveTagExtensions({

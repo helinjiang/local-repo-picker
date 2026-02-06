@@ -44,8 +44,8 @@ const baseCache = {
     scanRoots: ["/"]
   },
   repos: [
-    { path: "/a", ownerRepo: "b", tags: ["[x]"], lastScannedAt: 0 },
-    { path: "/b", ownerRepo: "a", tags: ["[dirty]"], lastScannedAt: 0 }
+    { path: "/a", ownerRepo: "b", tags: ["[x]"], isDirty: false, lastScannedAt: 0 },
+    { path: "/b", ownerRepo: "a", tags: [], isDirty: true, lastScannedAt: 0 }
   ]
 }
 

@@ -60,8 +60,8 @@ const baseCache = {
     scanRoots: ["/root"]
   },
   repos: [
-    { path: "/root/a", ownerRepo: "b", tags: ["[x]"], lastScannedAt: 0 },
-    { path: "/root/b", ownerRepo: "a", tags: ["[dirty]"], lastScannedAt: 0 }
+    { path: "/root/a", ownerRepo: "b", tags: ["[x]"], isDirty: false, lastScannedAt: 0 },
+    { path: "/root/b", ownerRepo: "a", tags: [], isDirty: true, lastScannedAt: 0 }
   ]
 }
 
@@ -155,7 +155,7 @@ describe("web routes", () => {
     })
     expect(reposByName.items.length).toBe(1)
     const reposByLru = await handlers["GET /api/repos"]({
-      query: { sort: "lru", page: "1", pageSize: "2", tag: "[dirty]", q: "dirty" }
+      query: { sort: "lru", page: "1", pageSize: "2", tag: "dirty" }
     })
     expect(reposByLru.items.every((item: any) => item.isDirty)).toBe(true)
   })
@@ -166,6 +166,8 @@ describe("web routes", () => {
     vi.mocked(previewMocks.buildRepoPreview).mockResolvedValue({
       data: {
         path: "/root/a",
+        repoPath: "root/a",
+        repoKey: "noremote/root/a",
         origin: "-",
         siteUrl: "-",
         branch: "-",

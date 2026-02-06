@@ -127,11 +127,15 @@ function filterListRepos(
 ): RepoInfo[] {
   const query = flags.query.toLowerCase()
   return repos.filter((repo) => {
-    if (flags.dirtyOnly && !repo.tags.includes("[dirty]")) {
+    if (flags.dirtyOnly && !repo.isDirty) {
       return false
     }
-    if (flags.tag && !repo.tags.some((tag) => tag.includes(flags.tag))) {
-      return false
+    if (flags.tag) {
+      if (isDirtyFilter(flags.tag)) {
+        if (!repo.isDirty) return false
+      } else if (!repo.tags.some((tag) => tag.includes(flags.tag))) {
+        return false
+      }
     }
     if (query) {
       const haystack = `${repo.ownerRepo} ${repo.path} ${repo.tags.join(" ")}`.toLowerCase()
@@ -172,7 +176,9 @@ async function getListRows(
   const cached = await loadCache(options)
   const resolved = cached ?? (await buildCache(options))
   const rows = filterTag
-    ? resolved.repos.filter((repo) => repo.tags.some((tag) => tag.includes(filterTag)))
+    ? isDirtyFilter(filterTag)
+      ? resolved.repos.filter((repo) => repo.isDirty)
+      : resolved.repos.filter((repo) => repo.tags.some((tag) => tag.includes(filterTag)))
     : resolved.repos
   return rows.map((repo) => ({
     display: buildListDisplay(repo),
@@ -192,4 +198,8 @@ function buildListDisplay(repo: RepoInfo): string {
 
 function applyAnsiTag(input: string): string {
   return `\u001b[36m${input}\u001b[0m`
+}
+
+function isDirtyFilter(tag: string): boolean {
+  return tag === "dirty" || tag === "[dirty]"
 }

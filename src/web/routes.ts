@@ -143,7 +143,11 @@ export async function registerRoutes(
     const manualEdits = await readManualTagEdits(options.manualTagsFile)
     let repos = resolved.repos
     if (query.tag) {
-      repos = repos.filter((repo) => repo.tags.includes(query.tag as string))
+      if (query.tag === "[dirty]" || query.tag === "dirty") {
+        repos = repos.filter((repo) => repo.isDirty)
+      } else {
+        repos = repos.filter((repo) => repo.tags.includes(query.tag ?? ""))
+      }
     }
     if (query.q) {
       const keyword = query.q.toLowerCase()
@@ -165,7 +169,7 @@ export async function registerRoutes(
     const items = repos.slice(offset, offset + pageSize).map((repo) => ({
       ...repo,
       manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
-      isDirty: repo.tags.includes("[dirty]")
+      isDirty: Boolean(repo.isDirty)
     }))
     const payload: PaginatedRepos = {
       items,

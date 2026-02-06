@@ -26,7 +26,7 @@ describe("tags", () => {
         manualTags: ["[manual]"],
         dirty: true
       })
-    ).toEqual(["[github]", "[manual]", "[dirty]"])
+    ).toEqual(["[github]", "[manual]"])
     expect(
       buildTags({
         remoteTag: "[github]",

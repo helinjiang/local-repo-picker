@@ -62,6 +62,8 @@ describe("cli preview/one", () => {
     vi.mocked(previewMocks.buildRepoPreview).mockResolvedValue({
       data: {
         path: root,
+        repoPath: "a/b",
+        repoKey: "noremote/a/b",
         origin: "-",
         siteUrl: "-",
         branch: "-",

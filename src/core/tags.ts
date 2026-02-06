@@ -125,8 +125,7 @@ export function buildTags(options: {
       : options.autoTag
         ? [options.remoteTag, options.autoTag]
         : [options.remoteTag]
-  const tags = options.dirty ? [...base, "[dirty]"] : base
-  return uniqueTags(tags)
+  return uniqueTags(base)
 }
 
 export async function setManualTags(

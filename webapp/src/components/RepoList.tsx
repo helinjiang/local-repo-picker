@@ -52,7 +52,7 @@ export default function RepoList({
             const hovered = hoveredTagKey === tagKey
             return (
               <Tag
-                color={tag === "[dirty]" ? "red" : "blue"}
+                color="blue"
                 key={tagKey}
                 className="repo-tag"
                 onMouseEnter={() => {
@@ -101,6 +101,14 @@ export default function RepoList({
             />
           </Tooltip>
         </div>
+      )
+    },
+    {
+      title: "状态",
+      dataIndex: "isDirty",
+      width: 90,
+      render: (_: boolean | undefined, repo) => (
+        <Tag color={repo.isDirty ? "red" : "green"}>{repo.isDirty ? "dirty" : "clean"}</Tag>
       )
     }
   ]

@@ -3,6 +3,7 @@ export type RepoInfo = {
   ownerRepo: string
   originUrl?: string
   tags: string[]
+  isDirty?: boolean
   lastScannedAt: number
 }
 
