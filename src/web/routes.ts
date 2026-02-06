@@ -26,7 +26,15 @@ type ServerOptions = {
 }
 
 type PaginatedRepos = {
-  items: Array<RepoInfo & { isDirty?: boolean }>
+  items: Array<{
+    folderRelativePath: string
+    folderFullPath: string
+    key: string
+    tags: string[]
+    manualTags: string[]
+    lastScannedAt: number
+    isDirty?: boolean
+  }>
   total: number
   page: number
   pageSize: number
@@ -166,11 +174,20 @@ export async function registerRoutes(
     const page = Math.max(1, Number(query.page) || 1)
     const pageSize = Math.min(Math.max(1, Number(query.pageSize) || 200), 500)
     const offset = (page - 1) * pageSize
-    const items = repos.slice(offset, offset + pageSize).map((repo) => ({
-      ...repo,
-      manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
-      isDirty: Boolean(repo.isDirty)
-    }))
+    const items = repos.slice(offset, offset + pageSize).map((repo) => {
+      const folderRelativePath = repo.ownerRepo || path.basename(repo.path)
+      const folderFullPath = repo.path
+      const key = buildRepoKeyFromTags(repo.tags, folderRelativePath)
+      return {
+        folderRelativePath,
+        folderFullPath,
+        key,
+        tags: repo.tags,
+        manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
+        lastScannedAt: repo.lastScannedAt,
+        isDirty: Boolean(repo.isDirty)
+      }
+    })
     const payload: PaginatedRepos = {
       items,
       total,
@@ -281,4 +298,28 @@ function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
     return true
   }
   return action.scopes.includes(scope)
+}
+
+function buildRepoKeyFromTags(tags: string[], folderRelativePath: string): string {
+  const tagValue = normalizeTagValue(resolveRemoteTagFromTags(tags))
+  if (!tagValue || !folderRelativePath || folderRelativePath === "-") {
+    return "-"
+  }
+  return `${tagValue}/${folderRelativePath}`
+}
+
+function resolveRemoteTagFromTags(tags: string[]): string {
+  const remoteTag = tags.find(
+    (tag) =>
+      tag === "[github]" ||
+      tag === "[gitee]" ||
+      tag === "[noremote]" ||
+      tag.startsWith("[internal:")
+  )
+  return remoteTag ?? tags[0] ?? ""
+}
+
+function normalizeTagValue(tag: string): string {
+  const match = tag.match(/^\[(.*)\]$/)
+  return match ? match[1] : tag
 }

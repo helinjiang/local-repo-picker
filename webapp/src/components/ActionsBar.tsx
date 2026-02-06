@@ -19,7 +19,7 @@ type Props = {
 export default function ActionsBar({ repo, disabled, actions, onRunAction }: Props) {
   const handleAction = async (actionId: string) => {
     if (!repo) return
-    await onRunAction(actionId, repo.path)
+    await onRunAction(actionId, repo.folderFullPath)
   }
 
   return (

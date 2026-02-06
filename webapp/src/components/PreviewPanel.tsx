@@ -16,7 +16,11 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
   const originUrl =
     preview?.data.origin && preview.data.origin !== "-" ? preview.data.origin : ""
   const repoKeyValue =
-    preview?.data.repoKey && preview.data.repoKey !== "-" ? preview.data.repoKey : repo.ownerRepo
+    preview?.data.repoKey && preview.data.repoKey !== "-"
+      ? preview.data.repoKey
+      : repo.key && repo.key !== "-"
+        ? repo.key
+        : repo.folderRelativePath
   const resolvedFixedLinks = (repoLinks[repoKeyValue] ?? [])
     .map((link) => {
       const label = link.label.trim()
@@ -24,8 +28,8 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
       if (!label || !template) return null
       if (template.includes("{originUrl}") && !originUrl) return null
       const url = template.replace(/\{(ownerRepo|path|originUrl)\}/g, (_, key) => {
-        if (key === "ownerRepo") return repo.ownerRepo
-        if (key === "path") return repo.path
+        if (key === "ownerRepo") return repo.folderRelativePath
+        if (key === "path") return repo.folderFullPath
         if (key === "originUrl") return originUrl
         return ""
       })
@@ -37,7 +41,7 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
     <Spin spinning={loading}>
       <Card title="预览" size="small" style={{ marginTop: 12 }} className="preview-card">
         <Descriptions bordered size="small" column={1} className="preview-meta">
-          <Descriptions.Item label="路径">{repo.path}</Descriptions.Item>
+          <Descriptions.Item label="路径">{repo.folderFullPath}</Descriptions.Item>
           <Descriptions.Item label="repoKey">{preview?.data.repoKey ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="Origin">{preview?.data.origin ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="站点">

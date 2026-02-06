@@ -125,7 +125,7 @@ export default function App() {
   )
 
   const selectedRepo = useMemo(
-    () => repos.find((repo) => repo.path === selectedPath) ?? null,
+    () => repos.find((repo) => repo.folderFullPath === selectedPath) ?? null,
     [repos, selectedPath]
   )
 
@@ -172,8 +172,8 @@ export default function App() {
         setTotal(data.total)
         setPage(data.page)
         setPageSize(data.pageSize)
-        if (!data.items.find((repo) => repo.path === selectedPath)) {
-          setSelectedPath(data.items[0]?.path ?? null)
+        if (!data.items.find((repo) => repo.folderFullPath === selectedPath)) {
+          setSelectedPath(data.items[0]?.folderFullPath ?? null)
         }
       } catch (error) {
         if (!cancelled) {
@@ -319,10 +319,10 @@ export default function App() {
           setTagModalRepo(null)
           return
         }
-        await updateTags(tagModalRepo.path, { add: parsed })
+        await updateTags(tagModalRepo.folderFullPath, { add: parsed })
         messageApi.success("标签已新增")
       } else {
-        await upsertTags(tagModalRepo.path, nextTags)
+        await upsertTags(tagModalRepo.folderFullPath, nextTags)
         messageApi.success("标签已更新")
       }
       setTagModalOpen(false)
@@ -343,7 +343,7 @@ export default function App() {
 
   const handleRemoveTag = async (repo: RepoItem, removedTag: string) => {
     try {
-      await updateTags(repo.path, { remove: [removedTag] })
+      await updateTags(repo.folderFullPath, { remove: [removedTag] })
       messageApi.success("标签已删除")
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
       setRepos(data.items)
@@ -355,13 +355,14 @@ export default function App() {
 
   const handleRunAction = async (actionId: string, repoPath: string) => {
     if (actionId === "web.edit-repo-links") {
-      const repo = repos.find((item) => item.path === repoPath)
+      const repo = repos.find((item) => item.folderFullPath === repoPath)
       if (!repo) return
       const previewRepoKey =
         preview?.data.path === repoPath && preview.data.repoKey !== "-"
           ? preview.data.repoKey
           : ""
-      const repoKey = previewRepoKey || repo.ownerRepo
+      const repoKey =
+        previewRepoKey || (repo.key && repo.key !== "-" ? repo.key : repo.folderRelativePath)
       setRepoLinksOpen(true)
       setCurrentRepoLinkKey(repoKey)
       if (configLoadedOnce) {
@@ -786,7 +787,9 @@ export default function App() {
               <div style={{ fontFamily: "monospace", fontSize: 12, color: "#595959" }}>
                 {currentRepoLinksGroup.repo}
               </div>
-              <div style={{ fontSize: 12, color: "#8c8c8c" }}>{selectedRepo?.path ?? "-"}</div>
+              <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+                {selectedRepo?.folderFullPath ?? "-"}
+              </div>
             </div>
           ) : null}
           <Space direction="vertical" size="middle" style={{ width: "100%" }}>

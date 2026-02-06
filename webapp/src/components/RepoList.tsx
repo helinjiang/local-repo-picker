@@ -34,11 +34,11 @@ export default function RepoList({
   const columns: ColumnsType<RepoItem> = [
     {
       title: "仓库",
-      dataIndex: "ownerRepo",
+      dataIndex: "folderRelativePath",
       render: (_, repo) => (
         <div>
-          <Typography.Text strong>{repo.ownerRepo}</Typography.Text>
-          <div style={{ color: "#8c8c8c", fontSize: 12 }}>{repo.path}</div>
+          <Typography.Text strong>{repo.folderRelativePath}</Typography.Text>
+          <div style={{ color: "#8c8c8c", fontSize: 12 }}>{repo.key}</div>
         </div>
       )
     },
@@ -48,7 +48,7 @@ export default function RepoList({
       render: (_: string[], repo) => (
         <div className="repo-tags">
           {repo.tags.map((tag) => {
-            const tagKey = `${repo.path}::${tag}`
+            const tagKey = `${repo.folderFullPath}::${tag}`
             const hovered = hoveredTagKey === tagKey
             return (
               <Tag
@@ -116,7 +116,7 @@ export default function RepoList({
   return (
     <Table
       size="middle"
-      rowKey="path"
+      rowKey="folderFullPath"
       columns={columns}
       dataSource={repos}
       loading={loading}
@@ -127,9 +127,11 @@ export default function RepoList({
         showSizeChanger: true,
         onChange: onPageChange
       }}
-      rowClassName={(record) => (record.path === selectedPath ? "repo-row-selected" : "")}
+      rowClassName={(record) =>
+        record.folderFullPath === selectedPath ? "repo-row-selected" : ""
+      }
       onRow={(record) => ({
-        onClick: () => onSelect(record.path)
+        onClick: () => onSelect(record.folderFullPath)
       })}
     />
   )

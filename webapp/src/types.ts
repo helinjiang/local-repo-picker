@@ -1,6 +1,7 @@
 export type RepoItem = {
-  path: string
-  ownerRepo: string
+  folderFullPath: string
+  folderRelativePath: string
+  key: string
   tags: string[]
   manualTags?: string[]
   lastScannedAt: number
