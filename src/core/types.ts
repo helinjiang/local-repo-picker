@@ -8,6 +8,30 @@ export type RepoInfo = {
   lastScannedAt: number
 }
 
+export type GitProvider = "github" | "gitee" | "gitlab" | "bitbucket" | "azure" | "unknown"
+
+export type GitRepository = {
+  provider: GitProvider
+  namespace: string
+  repo: string
+  fullName: string
+  baseUrl: string
+  originUrl: string
+  isValid: boolean
+}
+
+export type RepositoryRecord = {
+  fullPath: string
+  scanRoot: string
+  relativePath: string
+  recordKey: string
+  git?: GitRepository
+  isDirty: boolean
+  manualTags: string[]
+  autoTags: string[]
+  lastScannedAt: number
+}
+
 export type PreviewSection = {
   title: string
   lines: string[]

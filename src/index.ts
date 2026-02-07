@@ -1,9 +1,12 @@
 import type {
   Action,
   CacheMetadata,
+  GitProvider,
+  GitRepository,
   PluginModule,
   PreviewPlugin,
   PreviewSection,
+  RepositoryRecord,
   RepoInfo,
   RepoPreview,
   ScanOptions,
@@ -12,6 +15,12 @@ import type {
 import { buildCache, loadCache, refreshCache } from "./core/cache"
 import { readLru, sortByLru, updateLru } from "./core/lru"
 import { scanRepos } from "./core/scan"
+import {
+  buildGitRepository,
+  buildRecordKey,
+  buildRepositoryRecord,
+  deriveRelativePath
+} from "./core/domain"
 import {
   clearPlugins,
   getRegisteredActions,
@@ -50,6 +59,12 @@ export {
   writeConfig,
   ensureConfigFile
 }
+export {
+  buildGitRepository,
+  buildRecordKey,
+  buildRepositoryRecord,
+  deriveRelativePath
+}
 export type {
   RepoInfo,
   ScanOptions,
@@ -60,7 +75,10 @@ export type {
   PreviewPlugin,
   PreviewSection,
   RepoPreview,
-  PluginModule
+  PluginModule,
+  GitProvider,
+  GitRepository,
+  RepositoryRecord
 }
 
 export default async function pickRepo(
