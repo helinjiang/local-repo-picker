@@ -2,6 +2,7 @@ export type RepoItem = {
   folderFullPath: string
   folderRelativePath: string
   key: string
+  displayName: string
   codePlatform?: string
   tags: string[]
   manualTags?: string[]

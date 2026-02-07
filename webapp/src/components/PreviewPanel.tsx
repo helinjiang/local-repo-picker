@@ -28,7 +28,7 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
       if (!label || !template) return null
       if (template.includes("{originUrl}") && !originUrl) return null
       const url = template.replace(/\{(ownerRepo|path|originUrl)\}/g, (_, key) => {
-        if (key === "ownerRepo") return repo.folderRelativePath
+        if (key === "ownerRepo") return repo.displayName || repo.folderRelativePath
         if (key === "path") return repo.folderFullPath
         if (key === "originUrl") return originUrl
         return ""

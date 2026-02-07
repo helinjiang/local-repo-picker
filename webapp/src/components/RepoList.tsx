@@ -38,7 +38,7 @@ export default function RepoList({
       render: (_, repo) => (
         <div>
           <Space size="small" wrap>
-            <Typography.Text strong>{repo.folderRelativePath}</Typography.Text>
+            <Typography.Text strong>{repo.displayName}</Typography.Text>
             {repo.codePlatform ? <Tag color="blue">{repo.codePlatform}</Tag> : null}
             <Tag color={repo.isDirty ? "red" : "green"}>{repo.isDirty ? "dirty" : "clean"}</Tag>
           </Space>

@@ -184,11 +184,13 @@ export async function registerRoutes(
       const folderRelativePath = repo.relativePath
       const folderFullPath = repo.fullPath
       const key = repo.recordKey
+      const displayName = repoDisplayName(repo)
       const codePlatform = normalizeCodePlatform(repoCodePlatform(repo))
       return {
         folderRelativePath,
         folderFullPath,
         key,
+        displayName,
         codePlatform,
         tags: recordTags(repo),
         manualTags: repo.manualTags,
