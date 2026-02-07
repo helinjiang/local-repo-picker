@@ -42,6 +42,26 @@ export type RepoPreviewResult = {
   error?: string
 }
 
+export type RepositoryRecord = {
+  fullPath: string
+  scanRoot: string
+  relativePath: string
+  recordKey: string
+  git?: {
+    provider: string
+    namespace: string
+    repo: string
+    fullName: string
+    baseUrl: string
+    originUrl: string
+    isValid: boolean
+  }
+  isDirty: boolean
+  manualTags: string[]
+  autoTags: string[]
+  lastScannedAt: number
+}
+
 export type FixedLink = {
   label: string
   url: string

@@ -1,5 +1,8 @@
-import { Card, Descriptions, Empty, Spin, Tag, Typography } from "antd"
-import type { FixedLink, RepoItem, RepoPreviewResult } from "../types"
+import { InfoCircleOutlined } from "@ant-design/icons"
+import { Button, Card, Descriptions, Empty, Modal, Space, Spin, Tabs, Tag, Tooltip, Typography } from "antd"
+import { useEffect, useState } from "react"
+import { fetchRecord } from "../api"
+import type { FixedLink, RepoItem, RepoPreviewResult, RepositoryRecord } from "../types"
 
 type Props = {
   loading: boolean
@@ -9,6 +12,30 @@ type Props = {
 }
 
 export default function PreviewPanel({ loading, preview, repo, repoLinks }: Props) {
+  const [infoOpen, setInfoOpen] = useState(false)
+  const [recordLoading, setRecordLoading] = useState(false)
+  const [recordError, setRecordError] = useState<string | null>(null)
+  const [record, setRecord] = useState<RepositoryRecord | null>(null)
+  useEffect(() => {
+    if (!repo) return
+    if (!infoOpen) return
+    let cancelled = false
+    setRecordLoading(true)
+    setRecordError(null)
+    fetchRecord(repo.folderFullPath)
+      .then((data) => {
+        if (!cancelled) setRecord(data)
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setRecordError(error.message)
+      })
+      .finally(() => {
+        if (!cancelled) setRecordLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [infoOpen, repo?.folderFullPath])
   if (!repo) {
     return <Empty description="请选择一个仓库" />
   }
@@ -39,7 +66,24 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
 
   return (
     <Spin spinning={loading}>
-      <Card title="预览" size="small" style={{ marginTop: 12 }} className="preview-card">
+      <Card
+        title={
+          <Space size="small">
+            <span>预览</span>
+            <Tooltip title="查看原始数据">
+              <Button
+                type="text"
+                size="small"
+                icon={<InfoCircleOutlined />}
+                onClick={() => setInfoOpen(true)}
+              />
+            </Tooltip>
+          </Space>
+        }
+        size="small"
+        style={{ marginTop: 12 }}
+        className="preview-card"
+      >
         <Descriptions bordered size="small" column={1} className="preview-meta">
           <Descriptions.Item label="路径">{repo.folderFullPath}</Descriptions.Item>
           <Descriptions.Item label="repoKey">{preview?.data.repoKey ?? "-"}</Descriptions.Item>
@@ -104,6 +148,51 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
           </div>
         ))}
       </Card>
+      <Modal
+        title="Record JSON"
+        open={infoOpen}
+        onCancel={() => setInfoOpen(false)}
+        footer={null}
+        width={720}
+      >
+        <Spin spinning={recordLoading}>
+          {recordError ? (
+            <Typography.Text type="warning">{recordError}</Typography.Text>
+          ) : (
+            <Tabs
+              items={[
+                {
+                  key: "record",
+                  label: "RepositoryRecord",
+                  children: (
+                    <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                      {record ? JSON.stringify(record, null, 2) : "-"}
+                    </pre>
+                  )
+                },
+                {
+                  key: "preview",
+                  label: "Preview",
+                  children: (
+                    <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                      {preview ? JSON.stringify(preview, null, 2) : "-"}
+                    </pre>
+                  )
+                },
+                {
+                  key: "list",
+                  label: "ListItem",
+                  children: (
+                    <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                      {repo ? JSON.stringify(repo, null, 2) : "-"}
+                    </pre>
+                  )
+                }
+              ]}
+            />
+          )}
+        </Spin>
+      </Modal>
     </Spin>
   )
 }

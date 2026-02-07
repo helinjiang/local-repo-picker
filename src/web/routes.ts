@@ -234,6 +234,16 @@ export async function registerRoutes(
     return preview
   })
 
+  app.get("/api/record", async (request, reply) => {
+    const query = request.query as { path?: string }
+    const allowedPath = resolveAllowedPath(options.scanRoots, query.path)
+    if (!allowedPath) {
+      reply.code(400)
+      return { error: "path must be absolute and under scanRoots" }
+    }
+    return resolveRepoInfo(options, allowedPath)
+  })
+
   app.post("/api/action", async (request, reply) => {
     const body = request.body as { actionId?: string; path?: string }
     const allowedPath = resolveAllowedPath(options.scanRoots, body?.path)

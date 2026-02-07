@@ -2,6 +2,7 @@ import type {
   ActionInfo,
   AppConfig,
   ConfigResponse,
+  RepositoryRecord,
   RepoListResult,
   RepoPreviewResult,
   SaveConfigResponse
@@ -43,6 +44,11 @@ export async function fetchRepos(params: {
 export async function fetchPreview(path: string): Promise<RepoPreviewResult> {
   const search = new URLSearchParams({ path })
   return request<RepoPreviewResult>(`/preview?${search.toString()}`)
+}
+
+export async function fetchRecord(path: string): Promise<RepositoryRecord> {
+  const search = new URLSearchParams({ path })
+  return request<RepositoryRecord>(`/record?${search.toString()}`)
 }
 
 export async function runAction(actionId: string, path: string): Promise<void> {
