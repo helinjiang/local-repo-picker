@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify"
 import pLimit from "p-limit"
 import { buildCache, loadCache, refreshCache } from "../core/cache"
 import { buildRepoPreview } from "../core/preview"
+import { buildGitRepository, buildRecordKey, deriveRelativePath } from "../core/domain"
 import type { Action, RepoInfo } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
@@ -181,15 +182,12 @@ export async function registerRoutes(
     const pageSize = Math.min(Math.max(1, Number(query.pageSize) || 200), 500)
     const offset = (page - 1) * pageSize
     const items = repos.slice(offset, offset + pageSize).map((repo) => {
-      const folderRelativePath = deriveFolderRelativePath(
-        repo.path,
-        options.scanRoots,
-        repo.ownerRepo || path.basename(repo.path)
-      )
+      const scanRoot = resolveScanRoot(repo.path, options.scanRoots)
+      const folderRelativePath = deriveRelativePath(repo.path, scanRoot)
       const folderFullPath = repo.path
+      const git = buildGitRepository(repo.originUrl, repo.ownerRepo)
+      const key = buildRecordKey({ git, relativePath: folderRelativePath })
       const codePlatform = normalizeCodePlatform(repoCodePlatform(repo))
-      const repoPathLabel = deriveRepoPath(repo.path, repo.ownerRepo)
-      const key = buildRepoKeyFromPlatform(codePlatform, repoPathLabel)
       return {
         folderRelativePath,
         folderFullPath,
@@ -222,9 +220,7 @@ export async function registerRoutes(
       return cached
     }
     const repo = await resolveRepoInfo(options, allowedPath)
-    const preview = await previewLimit(() =>
-      buildRepoPreview(repo, { remoteHostTags: options.remoteHostTags })
-    )
+    const preview = await previewLimit(() => buildRepoPreview(repo))
     previewCache.set(allowedPath, preview)
     return preview
   })
@@ -325,49 +321,15 @@ function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
   return normalizedPlatform !== "" && normalizedPlatform === normalizedFilter
 }
 
-function deriveFolderRelativePath(
-  fullPath: string,
-  scanRoots: string[],
-  fallback: string
-): string {
+function resolveScanRoot(fullPath: string, scanRoots: string[]): string {
   const resolvedPath = path.resolve(fullPath)
   const rootMatches = scanRoots
     .map((root) => path.resolve(root))
     .filter((root) => resolvedPath === root || resolvedPath.startsWith(`${root}${path.sep}`))
-  for (const root of rootMatches) {
-    const relative = path.relative(root, resolvedPath)
-    if (!relative || relative === ".") {
-      return path.basename(resolvedPath)
-    }
-    if (!relative.startsWith("..")) {
-      return relative
-    }
+  if (rootMatches.length > 0) {
+    return rootMatches[0]
   }
-  return fallback
-}
-
-function deriveRepoPath(repoPath: string, preferred?: string): string {
-  const trimmedPreferred = preferred?.trim()
-  if (trimmedPreferred) {
-    return trimmedPreferred
-  }
-  const normalized = path.resolve(repoPath)
-  const parts = normalized.split(path.sep).filter(Boolean)
-  if (parts.length >= 2) {
-    return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
-  }
-  if (parts.length === 1) {
-    return parts[0]
-  }
-  return "-"
-}
-
-function buildRepoKeyFromPlatform(codePlatform: string, repoPathLabel: string): string {
-  const platformValue = normalizeCodePlatform(codePlatform)
-  if (!platformValue || !repoPathLabel || repoPathLabel === "-") {
-    return "-"
-  }
-  return `${platformValue}/${repoPathLabel}`
+  return scanRoots[0] ? path.resolve(scanRoots[0]) : path.dirname(resolvedPath)
 }
 
 function resolveCodePlatformFromTags(tags: string[]): string {

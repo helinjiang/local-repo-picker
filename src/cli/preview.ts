@@ -20,15 +20,14 @@ export async function runInternalPreview(options: CliOptions, args: string[]): P
   }
   const repoPath = path.resolve(rawPath)
   const repo = await resolveRepoInfo(options, repoPath)
-  const result = await buildPreviewWithTimeout(repo, 2000, options.remoteHostTags)
+  const result = await buildPreviewWithTimeout(repo, 2000)
   const lines = formatPreviewLines(result)
   console.log(lines.join("\n"))
 }
 
 async function buildPreviewWithTimeout(
   repo: RepoInfo,
-  timeoutMs: number,
-  remoteHostTags?: Record<string, string>
+  timeoutMs: number
 ): Promise<RepoPreviewResult> {
   let timer: NodeJS.Timeout | null = null
   const timeout = new Promise<RepoPreviewResult>((resolve) => {
@@ -36,10 +35,7 @@ async function buildPreviewWithTimeout(
       resolve(buildFallbackPreview(repo.path, "preview timed out"))
     }, timeoutMs)
   })
-  const result = await Promise.race([
-    buildRepoPreview(repo, { remoteHostTags }),
-    timeout
-  ])
+  const result = await Promise.race([buildRepoPreview(repo), timeout])
   if (timer) {
     clearTimeout(timer)
   }

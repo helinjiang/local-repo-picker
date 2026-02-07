@@ -63,7 +63,7 @@ describe("cli preview/one", () => {
       data: {
         path: root,
         repoPath: "a/b",
-        repoKey: "noremote/a/b",
+        repoKey: "local:a/b",
         origin: "-",
         siteUrl: "-",
         branch: "-",

@@ -1,20 +1,17 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import type { RepoInfo, RepoPreview } from "./types"
-import { checkGitAvailable, isDirty, parseOriginInfo, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "./git"
+import { checkGitAvailable, isDirty, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "./git"
 import { parseOriginToSiteUrl } from "./origin"
 import { resolvePreviewExtensions } from "./plugins"
-import { getCodePlatform } from "./tags"
+import { buildGitRepository, buildRecordKey } from "./domain"
 
 export type RepoPreviewResult = {
   data: RepoPreview
   error?: string
 }
 
-export async function buildRepoPreview(
-  repo: RepoInfo,
-  options: { remoteHostTags?: Record<string, string> } = {}
-): Promise<RepoPreviewResult> {
+export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResult> {
   const repoPath = repo.path
   const accessible = await fs.access(repoPath).then(() => true, () => false)
   if (!accessible) {
@@ -24,7 +21,7 @@ export async function buildRepoPreview(
   if (!gitDir) {
     const readme = await readReadme(repoPath)
     const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
-    const repoKey = buildRepoKey(getCodePlatform(undefined, options.remoteHostTags), repoPathLabel)
+    const repoKey = buildRecordKey({ relativePath: repoPathLabel })
     return {
       data: {
         path: repoPath,
@@ -47,7 +44,7 @@ export async function buildRepoPreview(
   if (!gitAvailable) {
     const readme = await readReadme(repoPath)
     const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
-    const repoKey = buildRepoKey(getCodePlatform(undefined, options.remoteHostTags), repoPathLabel)
+    const repoKey = buildRecordKey({ relativePath: repoPathLabel })
     return {
       data: {
         path: repoPath,
@@ -80,11 +77,9 @@ export async function buildRepoPreview(
     sync.errorKind,
     recentCommits.errorKind
   ])
-  const parsed = parseOriginInfo(origin.value)
-  const ownerRepo = parsed.ownerRepo
-  const codePlatform = getCodePlatform(parsed.host, options.remoteHostTags)
-  const repoPathLabel = deriveRepoPath(repoPath, ownerRepo || repo.ownerRepo)
-  const repoKey = buildRepoKey(codePlatform, repoPathLabel)
+  const git = buildGitRepository(origin.value, repo.ownerRepo)
+  const repoPathLabel = deriveRepoPath(repoPath, git?.fullName || repo.ownerRepo)
+  const repoKey = buildRecordKey({ git, relativePath: repoPathLabel })
   const basePreview: RepoPreview = {
     path: repoPath,
     repoPath: repoPathLabel,
@@ -108,7 +103,7 @@ export async function buildRepoPreview(
 
 export function buildFallbackPreview(repoPath: string, error: string): RepoPreviewResult {
   const repoPathLabel = deriveRepoPath(repoPath)
-  const repoKey = buildRepoKey(getCodePlatform(), repoPathLabel)
+  const repoKey = buildRecordKey({ relativePath: repoPathLabel })
   return {
     data: {
       path: repoPath,
@@ -144,22 +139,6 @@ function deriveRepoPath(repoPath: string, preferred?: string): string {
   return "-"
 }
 
-function buildRepoKey(codePlatform: string, repoPathLabel: string): string {
-  const platformValue = normalizeCodePlatform(codePlatform)
-  if (!platformValue || repoPathLabel === "-") {
-    return "-"
-  }
-  return `${platformValue}/${repoPathLabel}`
-}
-
-function normalizeCodePlatform(platform: string): string {
-  const trimmed = platform.trim()
-  if (!trimmed) {
-    return ""
-  }
-  const match = trimmed.match(/^\[(.*)\]$/)
-  return match ? match[1] : trimmed
-}
 
 async function getOrigin(repoPath: string): Promise<{ value: string; errorKind?: GitErrorKind }> {
   const fromConfig = await readOriginUrl(repoPath)
