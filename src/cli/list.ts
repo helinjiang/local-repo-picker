@@ -135,10 +135,11 @@ function filterListRepos(
       if (isDirtyFilter(flags.tag)) {
         if (!repo.isDirty) return false
       } else {
+        const normalizedTag = normalizeTagFilterValue(flags.tag)
         const codePlatform = repoCodePlatform(repo)
         if (
-          !isCodePlatformMatch(codePlatform, flags.tag) &&
-          !recordTags(repo).some((tag) => tag.includes(flags.tag))
+          !isCodePlatformMatch(codePlatform, normalizedTag) &&
+          !recordTags(repo).includes(normalizedTag)
         ) {
           return false
         }
@@ -183,13 +184,14 @@ async function getListRows(
 ): Promise<Array<{ display: string; path: string; rawTags: string }>> {
   const cached = await loadCache(options)
   const resolved = cached ?? (await buildCache(options))
-  const rows = filterTag
-    ? isDirtyFilter(filterTag)
+  const normalizedFilter = normalizeTagFilterValue(filterTag ?? "")
+  const rows = normalizedFilter
+    ? isDirtyFilter(normalizedFilter)
       ? resolved.repos.filter((repo) => repo.isDirty)
       : resolved.repos.filter(
           (repo) =>
-            isCodePlatformMatch(repoCodePlatform(repo), filterTag) ||
-            recordTags(repo).some((tag) => tag.includes(filterTag))
+            isCodePlatformMatch(repoCodePlatform(repo), normalizedFilter) ||
+            recordTags(repo).includes(normalizedFilter)
         )
     : resolved.repos
   return rows.map((repo) => ({
@@ -214,6 +216,16 @@ function applyAnsiTag(input: string): string {
 
 function isDirtyFilter(tag: string): boolean {
   return tag === "dirty" || tag === "[dirty]"
+}
+
+function normalizeTagFilterValue(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return ""
+  if (isDirtyFilter(trimmed)) return trimmed
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    return trimmed
+  }
+  return `[${trimmed}]`
 }
 
 function repoCodePlatform(repo: RepositoryRecord): string {

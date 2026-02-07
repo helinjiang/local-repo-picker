@@ -152,13 +152,14 @@ export async function registerRoutes(
     const resolved = cached ?? (await buildCache(options))
     let repos = resolved.repos
     if (query.tag) {
-      if (query.tag === "[dirty]" || query.tag === "dirty") {
+      const normalizedTag = normalizeTagFilterValue(query.tag)
+      if (isDirtyFilter(normalizedTag)) {
         repos = repos.filter((repo) => repo.isDirty)
       } else {
         repos = repos.filter(
           (repo) =>
-            isCodePlatformMatch(repoCodePlatform(repo), query.tag ?? "") ||
-            recordTags(repo).includes(query.tag ?? "")
+            isCodePlatformMatch(repoCodePlatform(repo), normalizedTag) ||
+            recordTags(repo).includes(normalizedTag)
         )
       }
     }
@@ -166,13 +167,22 @@ export async function registerRoutes(
       const keyword = query.q.toLowerCase()
       repos = repos.filter((repo) => {
         const hay =
-          `${repoDisplayName(repo)} ${repo.fullPath} ${repoCodePlatform(repo)} ${recordTags(repo).join("")}`.toLowerCase()
+          `${repoDisplayName(repo)} ${repo.fullPath} ${repoCodePlatform(repo)} ${recordTags(repo).join(" ")}`.toLowerCase()
         return hay.includes(keyword)
       })
     }
-    if (query.sort === "name") {
-      repos = repos.slice().sort((a, b) => repoDisplayName(a).localeCompare(repoDisplayName(b)))
-    } else if (query.sort === "lru") {
+    const sort = query.sort ?? "lru"
+    if (sort === "name") {
+      repos = repos
+        .slice()
+        .sort((a, b) => {
+          const compare = repoDisplayName(a).localeCompare(repoDisplayName(b))
+          if (compare !== 0) {
+            return compare
+          }
+          return a.fullPath.localeCompare(b.fullPath)
+        })
+    } else if (sort === "lru") {
       const lruList = await readLru(options.lruFile)
       repos = sortByLru(repos, lruList)
     }
@@ -339,6 +349,20 @@ function repoDisplayName(repo: RepositoryRecord): string {
     return repo.relativePath
   }
   return path.basename(repo.fullPath)
+}
+
+function isDirtyFilter(tag: string): boolean {
+  return tag === "dirty" || tag === "[dirty]"
+}
+
+function normalizeTagFilterValue(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return ""
+  if (isDirtyFilter(trimmed)) return trimmed
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    return trimmed
+  }
+  return `[${trimmed}]`
 }
 
 function normalizeCodePlatform(platform: string): string {
