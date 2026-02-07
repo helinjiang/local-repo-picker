@@ -149,7 +149,7 @@ function buildRepoKey(codePlatform: string, repoPathLabel: string): string {
   if (!platformValue || repoPathLabel === "-") {
     return "-"
   }
-  return `${platformValue}:${repoPathLabel}`
+  return `${platformValue}/${repoPathLabel}`
 }
 
 function normalizeCodePlatform(platform: string): string {

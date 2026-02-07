@@ -188,7 +188,8 @@ export async function registerRoutes(
       )
       const folderFullPath = repo.path
       const codePlatform = normalizeCodePlatform(repoCodePlatform(repo))
-      const key = buildRepoKeyFromPlatform(codePlatform, folderRelativePath)
+      const repoPathLabel = deriveRepoPath(repo.path, repo.ownerRepo)
+      const key = buildRepoKeyFromPlatform(codePlatform, repoPathLabel)
       return {
         folderRelativePath,
         folderFullPath,
@@ -345,12 +346,28 @@ function deriveFolderRelativePath(
   return fallback
 }
 
-function buildRepoKeyFromPlatform(codePlatform: string, folderRelativePath: string): string {
+function deriveRepoPath(repoPath: string, preferred?: string): string {
+  const trimmedPreferred = preferred?.trim()
+  if (trimmedPreferred) {
+    return trimmedPreferred
+  }
+  const normalized = path.resolve(repoPath)
+  const parts = normalized.split(path.sep).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
+  }
+  if (parts.length === 1) {
+    return parts[0]
+  }
+  return "-"
+}
+
+function buildRepoKeyFromPlatform(codePlatform: string, repoPathLabel: string): string {
   const platformValue = normalizeCodePlatform(codePlatform)
-  if (!platformValue || !folderRelativePath || folderRelativePath === "-") {
+  if (!platformValue || !repoPathLabel || repoPathLabel === "-") {
     return "-"
   }
-  return `${platformValue}/${folderRelativePath}`
+  return `${platformValue}/${repoPathLabel}`
 }
 
 function resolveCodePlatformFromTags(tags: string[]): string {
