@@ -1,6 +1,7 @@
 import { Modal, Input, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import type { RepoItem } from '../types';
+import { formatTagLabel } from '../utils/tagUtils';
 
 type Props = {
   open: boolean;
@@ -12,7 +13,6 @@ type Props = {
 
 export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) {
   const [value, setValue] = useState('');
-  const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, '$1');
 
   useEffect(() => {
     if (!repo) {
