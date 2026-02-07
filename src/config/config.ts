@@ -119,6 +119,14 @@ function normalizeConfig(raw: unknown): AppConfig {
           ),
         ) as Record<string, string>)
       : defaultConfig.remoteHostTags;
+  const remoteHostProviders =
+    typeof value.remoteHostProviders === 'object' && value.remoteHostProviders !== null
+      ? (Object.fromEntries(
+          Object.entries(value.remoteHostProviders as Record<string, unknown>).filter(
+            ([key, item]) => typeof key === 'string' && typeof item === 'string',
+          ),
+        ) as Record<string, string>)
+      : defaultConfig.remoteHostProviders;
   const fzfTagFilters =
     typeof value.fzfTagFilters === 'object' && value.fzfTagFilters !== null
       ? (Object.fromEntries(
@@ -136,6 +144,7 @@ function normalizeConfig(raw: unknown): AppConfig {
     webQuickTags,
     webRepoLinks,
     remoteHostTags,
+    remoteHostProviders,
     fzfTagFilters,
   };
 }

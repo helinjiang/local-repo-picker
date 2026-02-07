@@ -8,7 +8,14 @@ export type RepoInfo = {
   lastScannedAt: number;
 };
 
-export type GitProvider = 'github' | 'gitee' | 'gitlab' | 'bitbucket' | 'azure' | 'unknown';
+export type GitProvider =
+  | 'github'
+  | 'gitee'
+  | 'gitlab'
+  | 'bitbucket'
+  | 'azure'
+  | 'unknown'
+  | (string & {});
 
 export type GitRepository = {
   provider: GitProvider;
@@ -59,6 +66,7 @@ export type ScanOptions = {
   cacheTtlMs?: number;
   followSymlinks?: boolean;
   remoteHostTags?: Record<string, string>;
+  remoteHostProviders?: Record<string, string>;
   cacheFile?: string;
   manualTagsFile?: string;
   lruFile?: string;

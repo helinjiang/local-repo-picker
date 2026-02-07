@@ -21,6 +21,7 @@ type ServerOptions = {
   cacheTtlMs?: number;
   followSymlinks?: boolean;
   remoteHostTags?: Record<string, string>;
+  remoteHostProviders?: Record<string, string>;
   cacheFile: string;
   manualTagsFile: string;
   lruFile: string;
@@ -122,6 +123,7 @@ export async function registerRoutes(
       options.pruneDirs = updated.pruneDirs;
       options.cacheTtlMs = updated.cacheTtlMs;
       options.followSymlinks = updated.followSymlinks;
+      options.remoteHostProviders = updated.remoteHostProviders;
       const cache = await refreshCache({
         ...updated,
         cacheFile: options.cacheFile,
@@ -227,7 +229,9 @@ export async function registerRoutes(
       return cached;
     }
     const repo = await resolveRepoInfo(options, allowedPath);
-    const preview = await previewLimit(() => buildRepoPreview(repo));
+    const preview = await previewLimit(() =>
+      buildRepoPreview(repo, { remoteHostProviders: options.remoteHostProviders }),
+    );
     previewCache.set(allowedPath, preview);
     return preview;
   });

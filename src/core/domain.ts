@@ -7,6 +7,7 @@ type GitProviderInfo = { provider: GitProvider; baseUrl: string };
 export function buildGitRepository(
   originUrl?: string | null,
   fallbackFullName?: string,
+  remoteHostProviders?: Record<string, string>,
 ): GitRepository | undefined {
   if (!originUrl) {
     return undefined;
@@ -16,7 +17,7 @@ export function buildGitRepository(
     return undefined;
   }
   const fullName = ownerRepo || (fallbackFullName?.trim() ?? '');
-  const providerInfo = resolveProviderInfo(host);
+  const providerInfo = resolveProviderInfo(host, remoteHostProviders);
   const { namespace, repo } = splitFullName(fullName);
   const isValid = Boolean(fullName && namespace && repo);
   return {
@@ -90,7 +91,14 @@ function splitFullName(fullName: string): { namespace: string; repo: string } {
   return { namespace: '', repo: parts[0] ?? '' };
 }
 
-function resolveProviderInfo(host: string): GitProviderInfo {
+function resolveProviderInfo(
+  host: string,
+  remoteHostProviders?: Record<string, string>,
+): GitProviderInfo {
+  const custom = resolveCustomProvider(host, remoteHostProviders);
+  if (custom) {
+    return custom;
+  }
   if (host === 'github.com') {
     return { provider: 'github', baseUrl: 'https://github.com' };
   }
@@ -107,4 +115,46 @@ function resolveProviderInfo(host: string): GitProviderInfo {
     return { provider: 'azure', baseUrl: `https://${host}` };
   }
   return { provider: 'unknown', baseUrl: `https://${host}` };
+}
+
+function resolveCustomProvider(
+  host: string,
+  remoteHostProviders?: Record<string, string>,
+): GitProviderInfo | null {
+  if (!remoteHostProviders) {
+    return null;
+  }
+  const normalizedHost = normalizeHostPattern(host);
+  if (!normalizedHost) {
+    return null;
+  }
+  for (const [rawPattern, rawProvider] of Object.entries(remoteHostProviders)) {
+    const pattern = normalizeHostPattern(rawPattern);
+    const provider = rawProvider.trim();
+    if (!pattern || !provider) {
+      continue;
+    }
+    if (normalizedHost === pattern || normalizedHost.endsWith(`.${pattern}`)) {
+      return { provider, baseUrl: `https://${normalizedHost}` };
+    }
+  }
+  return null;
+}
+
+function normalizeHostPattern(raw: string): string {
+  const trimmed = raw.trim().toLowerCase();
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed.includes('://')) {
+    try {
+      const url = new URL(trimmed);
+      return url.hostname.toLowerCase();
+    } catch {
+      return '';
+    }
+  }
+  const slashIndex = trimmed.indexOf('/');
+  const hostOnly = slashIndex === -1 ? trimmed : trimmed.slice(0, slashIndex);
+  return hostOnly.replace(/\/+$/, '').toLowerCase();
 }

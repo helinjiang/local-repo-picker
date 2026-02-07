@@ -18,7 +18,10 @@ export type RepoPreviewResult = {
   error?: string;
 };
 
-export async function buildRepoPreview(repo: RepositoryRecord): Promise<RepoPreviewResult> {
+export async function buildRepoPreview(
+  repo: RepositoryRecord,
+  options?: { remoteHostProviders?: Record<string, string> },
+): Promise<RepoPreviewResult> {
   const repoPath = repo.fullPath;
   const accessible = await fs.access(repoPath).then(
     () => true,
@@ -87,7 +90,11 @@ export async function buildRepoPreview(repo: RepositoryRecord): Promise<RepoPrev
     sync.errorKind,
     recentCommits.errorKind,
   ]);
-  const git = buildGitRepository(origin.value, repo.git?.fullName ?? repo.relativePath);
+  const git = buildGitRepository(
+    origin.value,
+    repo.git?.fullName ?? repo.relativePath,
+    options?.remoteHostProviders,
+  );
   const repoPathLabel = deriveRepoPath(repoPath, git?.fullName || repo.relativePath);
   const repoKey = buildRecordKey({ git, relativePath: repoPathLabel });
   const basePreview: RepoPreview = {

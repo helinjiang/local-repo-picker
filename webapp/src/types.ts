@@ -77,6 +77,7 @@ export type AppConfig = {
   webQuickTags?: string[];
   webRepoLinks?: Record<string, FixedLink[]>;
   remoteHostTags?: Record<string, string>;
+  remoteHostProviders?: Record<string, string>;
 };
 
 export type ConfigPaths = {

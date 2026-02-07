@@ -9,6 +9,7 @@ export const defaultConfig: AppConfig = {
   webQuickTags: [],
   webRepoLinks: {},
   remoteHostTags: {},
+  remoteHostProviders: {},
   fzfTagFilters: {
     'ctrl-b': '[byted]',
     'ctrl-g': '[github]',

@@ -20,7 +20,7 @@ export async function runInternalPreview(options: CliOptions, args: string[]): P
   }
   const repoPath = path.resolve(rawPath);
   const repo = await resolveRepoInfo(options, repoPath);
-  const result = await buildPreviewWithTimeout(repo, 2000);
+  const result = await buildPreviewWithTimeout(repo, 2000, options.remoteHostProviders);
   const lines = formatPreviewLines(result);
   console.log(lines.join('\n'));
 }
@@ -28,6 +28,7 @@ export async function runInternalPreview(options: CliOptions, args: string[]): P
 async function buildPreviewWithTimeout(
   repo: RepositoryRecord,
   timeoutMs: number,
+  remoteHostProviders?: Record<string, string>,
 ): Promise<RepoPreviewResult> {
   let timer: NodeJS.Timeout | null = null;
   const timeout = new Promise<RepoPreviewResult>((resolve) => {
@@ -35,7 +36,7 @@ async function buildPreviewWithTimeout(
       resolve(buildFallbackPreview(repo.fullPath, 'preview timed out'));
     }, timeoutMs);
   });
-  const result = await Promise.race([buildRepoPreview(repo), timeout]);
+  const result = await Promise.race([buildRepoPreview(repo, { remoteHostProviders }), timeout]);
   if (timer) {
     clearTimeout(timer);
   }

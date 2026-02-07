@@ -8,4 +8,5 @@ export type AppConfig = {
   webQuickTags?: string[];
   webRepoLinks?: Record<string, { label: string; url: string }[]>;
   remoteHostTags?: Record<string, string>;
+  remoteHostProviders?: Record<string, string>;
 };

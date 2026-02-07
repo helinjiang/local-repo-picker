@@ -43,7 +43,7 @@ export async function buildCache(
   const repoTasks = found.map((repo) =>
     repoLimit(async () => {
       const originUrl = await readOriginUrl(repo.path);
-      const git = buildGitRepository(originUrl);
+      const git = buildGitRepository(originUrl, undefined, normalized.remoteHostProviders);
       const manual = manualEdits.get(normalizeRepoKey(repo.path));
       const dirty = await isDirty(repo.path);
       const baseTags = buildTags({
@@ -178,6 +178,7 @@ function normalizeOptions(options: ScanOptions): ScanOptions & {
   lruFile: string;
   lruLimit: number;
   remoteHostTags?: Record<string, string>;
+  remoteHostProviders?: Record<string, string>;
 } {
   const { cacheFile, manualTagsFile, lruFile } = getConfigPaths();
   return {
@@ -191,6 +192,7 @@ function normalizeOptions(options: ScanOptions): ScanOptions & {
     lruFile: options.lruFile ?? lruFile,
     lruLimit: options.lruLimit ?? 300,
     remoteHostTags: options.remoteHostTags,
+    remoteHostProviders: options.remoteHostProviders,
     onWarning: options.onWarning,
   };
 }
