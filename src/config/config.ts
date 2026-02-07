@@ -118,7 +118,7 @@ function normalizeConfig(raw: unknown): AppConfig {
             ([key, item]) => typeof key === 'string' && typeof item === 'string',
           ),
         ) as Record<string, string>)
-      : defaultConfig.remoteHostTags;
+      : defaultConfig.remoteHostTags ?? {};
   const remoteHostProviders =
     typeof value.remoteHostProviders === 'object' && value.remoteHostProviders !== null
       ? (Object.fromEntries(
@@ -126,7 +126,12 @@ function normalizeConfig(raw: unknown): AppConfig {
             ([key, item]) => typeof key === 'string' && typeof item === 'string',
           ),
         ) as Record<string, string>)
-      : defaultConfig.remoteHostProviders;
+      : defaultConfig.remoteHostProviders ?? {};
+  const normalizedRemoteHostProviders = normalizeHostProviders(remoteHostProviders);
+  const fallbackRemoteHostProviders =
+    Object.keys(normalizedRemoteHostProviders).length > 0
+      ? normalizedRemoteHostProviders
+      : normalizeHostProviders(remoteHostTags ?? {});
   const fzfTagFilters =
     typeof value.fzfTagFilters === 'object' && value.fzfTagFilters !== null
       ? (Object.fromEntries(
@@ -144,9 +149,28 @@ function normalizeConfig(raw: unknown): AppConfig {
     webQuickTags,
     webRepoLinks,
     remoteHostTags,
-    remoteHostProviders,
+    remoteHostProviders: fallbackRemoteHostProviders,
     fzfTagFilters,
   };
+}
+
+function normalizeHostProviders(input: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(input)
+      .map(([host, provider]) => [host, normalizeProviderValue(provider)])
+      .filter(([host, provider]) => host.length > 0 && provider.length > 0),
+  );
+}
+
+function normalizeProviderValue(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
 }
 
 function buildPathsFromEnv(paths: { config: string; data: string; cache: string }): ConfigPaths {

@@ -46,4 +46,25 @@ describe('config', () => {
     const paths = getConfigPaths();
     expect(path.dirname(paths.configFile)).toContain('config');
   });
+
+  it('remoteHostTags 可回退为 remoteHostProviders', async () => {
+    const { ensureConfigFile, readConfig } = await import('../src/config/config');
+    const configFile = await ensureConfigFile();
+    await fs.writeFile(
+      configFile,
+      JSON.stringify({
+        scanRoots: ['/tmp/workspace'],
+        remoteHostTags: {
+          'code.youdomain.org': 'youdomain',
+          'code.demo.org': '[demo]',
+        },
+      }),
+      'utf8',
+    );
+    const config = await readConfig();
+    expect(config.remoteHostProviders).toEqual({
+      'code.youdomain.org': 'youdomain',
+      'code.demo.org': 'demo',
+    });
+  });
 });
