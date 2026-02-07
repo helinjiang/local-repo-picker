@@ -175,7 +175,11 @@ export async function registerRoutes(
     const pageSize = Math.min(Math.max(1, Number(query.pageSize) || 200), 500)
     const offset = (page - 1) * pageSize
     const items = repos.slice(offset, offset + pageSize).map((repo) => {
-      const folderRelativePath = repo.ownerRepo || path.basename(repo.path)
+      const folderRelativePath = deriveFolderRelativePath(
+        repo.path,
+        options.scanRoots,
+        repo.ownerRepo || path.basename(repo.path)
+      )
       const folderFullPath = repo.path
       const key = buildRepoKeyFromTags(repo.tags, folderRelativePath)
       return {
@@ -298,6 +302,27 @@ function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
     return true
   }
   return action.scopes.includes(scope)
+}
+
+function deriveFolderRelativePath(
+  fullPath: string,
+  scanRoots: string[],
+  fallback: string
+): string {
+  const resolvedPath = path.resolve(fullPath)
+  const rootMatches = scanRoots
+    .map((root) => path.resolve(root))
+    .filter((root) => resolvedPath === root || resolvedPath.startsWith(`${root}${path.sep}`))
+  for (const root of rootMatches) {
+    const relative = path.relative(root, resolvedPath)
+    if (!relative || relative === ".") {
+      return path.basename(resolvedPath)
+    }
+    if (!relative.startsWith("..")) {
+      return relative
+    }
+  }
+  return fallback
 }
 
 function buildRepoKeyFromTags(tags: string[], folderRelativePath: string): string {
