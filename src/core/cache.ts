@@ -177,7 +177,6 @@ function normalizeOptions(options: ScanOptions): ScanOptions & {
   manualTagsFile: string;
   lruFile: string;
   lruLimit: number;
-  remoteHostTags?: Record<string, string>;
   remoteHostProviders?: Record<string, string>;
 } {
   const { cacheFile, manualTagsFile, lruFile } = getConfigPaths();
@@ -191,7 +190,6 @@ function normalizeOptions(options: ScanOptions): ScanOptions & {
     manualTagsFile: options.manualTagsFile ?? manualTagsFile,
     lruFile: options.lruFile ?? lruFile,
     lruLimit: options.lruLimit ?? 300,
-    remoteHostTags: options.remoteHostTags,
     remoteHostProviders: options.remoteHostProviders,
     onWarning: options.onWarning,
   };

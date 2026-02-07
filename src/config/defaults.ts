@@ -8,7 +8,6 @@ export const defaultConfig: AppConfig = {
   followSymlinks: false,
   webQuickTags: [],
   webRepoLinks: {},
-  remoteHostTags: {},
   remoteHostProviders: {},
   fzfTagFilters: {
     'ctrl-b': '[byted]',

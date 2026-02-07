@@ -78,24 +78,6 @@ export function parseTagList(raw: string): string[] {
   );
 }
 
-export function getCodePlatform(host?: string, hostTagAliases?: Record<string, string>): string {
-  if (!host) {
-    return 'noremote';
-  }
-  const mapped = hostTagAliases?.[host];
-  if (typeof mapped === 'string' && mapped.trim()) {
-    const trimmed = mapped.trim();
-    return trimmed.startsWith('[') && trimmed.endsWith(']') ? trimmed.slice(1, -1) : trimmed;
-  }
-  if (host === 'github.com') {
-    return 'github';
-  }
-  if (host === 'gitee.com') {
-    return 'gitee';
-  }
-  return `internal:${host}`;
-}
-
 export function uniqueTags(tags: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];

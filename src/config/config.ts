@@ -111,14 +111,6 @@ function normalizeConfig(raw: unknown): AppConfig {
             ]),
         )
       : {};
-  const remoteHostTags =
-    typeof value.remoteHostTags === 'object' && value.remoteHostTags !== null
-      ? (Object.fromEntries(
-          Object.entries(value.remoteHostTags as Record<string, unknown>).filter(
-            ([key, item]) => typeof key === 'string' && typeof item === 'string',
-          ),
-        ) as Record<string, string>)
-      : defaultConfig.remoteHostTags ?? {};
   const remoteHostProviders =
     typeof value.remoteHostProviders === 'object' && value.remoteHostProviders !== null
       ? (Object.fromEntries(
@@ -128,10 +120,6 @@ function normalizeConfig(raw: unknown): AppConfig {
         ) as Record<string, string>)
       : defaultConfig.remoteHostProviders ?? {};
   const normalizedRemoteHostProviders = normalizeHostProviders(remoteHostProviders);
-  const fallbackRemoteHostProviders =
-    Object.keys(normalizedRemoteHostProviders).length > 0
-      ? normalizedRemoteHostProviders
-      : normalizeHostProviders(remoteHostTags ?? {});
   const fzfTagFilters =
     typeof value.fzfTagFilters === 'object' && value.fzfTagFilters !== null
       ? (Object.fromEntries(
@@ -148,8 +136,7 @@ function normalizeConfig(raw: unknown): AppConfig {
     followSymlinks,
     webQuickTags,
     webRepoLinks,
-    remoteHostTags,
-    remoteHostProviders: fallbackRemoteHostProviders,
+    remoteHostProviders: normalizedRemoteHostProviders,
     fzfTagFilters,
   };
 }

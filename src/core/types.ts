@@ -65,7 +65,6 @@ export type ScanOptions = {
   pruneDirs?: string[];
   cacheTtlMs?: number;
   followSymlinks?: boolean;
-  remoteHostTags?: Record<string, string>;
   remoteHostProviders?: Record<string, string>;
   cacheFile?: string;
   manualTagsFile?: string;

@@ -47,14 +47,14 @@ describe('config', () => {
     expect(path.dirname(paths.configFile)).toContain('config');
   });
 
-  it('remoteHostTags 可回退为 remoteHostProviders', async () => {
+  it('remoteHostProviders 应保持原样', async () => {
     const { ensureConfigFile, readConfig } = await import('../src/config/config');
     const configFile = await ensureConfigFile();
     await fs.writeFile(
       configFile,
       JSON.stringify({
         scanRoots: ['/tmp/workspace'],
-        remoteHostTags: {
+        remoteHostProviders: {
           'code.youdomain.org': 'youdomain',
           'code.demo.org': '[demo]',
         },

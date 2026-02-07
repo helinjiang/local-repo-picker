@@ -2,20 +2,13 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { buildTags, getCodePlatform, parseTagList, readManualTags } from '../src/core/tags';
+import { buildTags, parseTagList, readManualTags } from '../src/core/tags';
 import { normalizeRepoKey } from '../src/core/path-utils';
 
 describe('tags', () => {
   it('解析 tag 列表', () => {
     expect(parseTagList('[a][b]')).toEqual(['[a]', '[b]']);
     expect(parseTagList('foo bar')).toEqual(['[foo]', '[bar]']);
-  });
-
-  it('生成 codePlatform', () => {
-    expect(getCodePlatform('github.com')).toBe('github');
-    expect(getCodePlatform('gitee.com')).toBe('gitee');
-    expect(getCodePlatform('custom.local')).toBe('internal:custom.local');
-    expect(getCodePlatform()).toBe('noremote');
   });
 
   it('构建最终 tags', () => {
