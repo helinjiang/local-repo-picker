@@ -12,6 +12,7 @@ const nodeTagPlugin: TagPlugin = {
   label: 'Node 项目标记',
   apply: async ({ repoPath }) => {
     const packageJson = await readPackageJson(repoPath);
+
     return packageJson ? ['[node]'] : [];
   },
 };
@@ -22,14 +23,17 @@ const nodePreviewPlugin: PreviewPlugin = {
   label: 'Node 预览扩展',
   render: async ({ repo }) => {
     const packageJson = await readPackageJson(repo.fullPath);
+
     if (!packageJson) {
       return null;
     }
+
     const name = typeof packageJson.name === 'string' ? packageJson.name : '-';
     const scripts =
       packageJson.scripts && typeof packageJson.scripts === 'object'
         ? Object.keys(packageJson.scripts).length
         : 0;
+
     return {
       title: 'NODE',
       lines: [`NAME: ${name}`, `SCRIPTS: ${scripts}`],
@@ -96,9 +100,11 @@ function buildCoreActions(): Action[] {
       run: async (repo) => {
         const origin = await readOriginValue(repo.fullPath);
         const siteUrl = parseOriginToSiteUrl(origin);
+
         if (!siteUrl) {
           throw new Error('无法从 origin 解析站点地址');
         }
+
         await execa('open', [siteUrl], { reject: false });
       },
     },
@@ -130,6 +136,7 @@ function buildBuiltInPlugins(options?: BuiltInActionOptions): PluginModule[] {
   const actions = options
     ? [...buildCoreActions(), ...buildCliActions(options)]
     : buildCoreActions();
+
   return [
     {
       id: 'builtin.node',
@@ -150,9 +157,11 @@ export function registerBuiltInPlugins(options?: BuiltInActionOptions): void {
 
 async function readPackageJson(repoPath: string): Promise<Record<string, unknown> | null> {
   const filePath = path.join(repoPath, 'package.json');
+
   try {
     const content = await fs.readFile(filePath, 'utf8');
     const data = JSON.parse(content) as Record<string, unknown>;
+
     return data;
   } catch {
     return null;

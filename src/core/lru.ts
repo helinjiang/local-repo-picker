@@ -5,6 +5,7 @@ import { normalizeRepoKey } from './path-utils';
 export async function readLru(filePath: string): Promise<string[]> {
   try {
     const content = await fs.readFile(filePath, 'utf8');
+
     return content
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -27,6 +28,7 @@ export async function updateLru(
   const trimmed = next.slice(0, limit);
   await fs.mkdir(path.dirname(filePath), { recursive: true }).catch(() => {});
   await fs.writeFile(filePath, `${trimmed.join('\n')}\n`, 'utf8');
+
   return trimmed;
 }
 
@@ -37,20 +39,26 @@ export function sortByLru<T extends { path?: string; fullPath?: string }>(
   if (lruList.length === 0) {
     return items.slice().sort((a, b) => getRepoPath(a).localeCompare(getRepoPath(b)));
   }
+
   const order = new Map<string, number>();
   lruList.forEach((item, index) => order.set(item, index));
+
   return items.slice().sort((a, b) => {
     const ai = order.get(normalizeRepoKey(getRepoPath(a)));
     const bi = order.get(normalizeRepoKey(getRepoPath(b)));
+
     if (ai === undefined && bi === undefined) {
       return getRepoPath(a).localeCompare(getRepoPath(b));
     }
+
     if (ai === undefined) {
       return 1;
     }
+
     if (bi === undefined) {
       return -1;
     }
+
     return ai - bi;
   });
 }
@@ -59,5 +67,6 @@ function getRepoPath(item: { path?: string; fullPath?: string }): string {
   if (item.fullPath) {
     return item.fullPath;
   }
+
   return item.path ?? '';
 }

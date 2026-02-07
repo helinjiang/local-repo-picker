@@ -115,9 +115,18 @@ describe('core origin/preview/command', () => {
       { title: 'EXT', lines: ['ok'] },
     ]);
     vi.mocked(gitMocks.runGit).mockImplementation(async (args) => {
-      if (args[0] === 'rev-parse') return { ok: true, stdout: 'main' };
-      if (args[0] === 'rev-list') return { ok: true, stdout: '1 2' };
-      if (args[0] === 'log') return { ok: true, stdout: '2020-01-01 abc msg' };
+      if (args[0] === 'rev-parse') {
+        return { ok: true, stdout: 'main' };
+      }
+
+      if (args[0] === 'rev-list') {
+        return { ok: true, stdout: '1 2' };
+      }
+
+      if (args[0] === 'log') {
+        return { ok: true, stdout: '2020-01-01 abc msg' };
+      }
+
       return { ok: true, stdout: 'https://github.com/a/b.git' };
     });
     const preview = await buildRepoPreview({

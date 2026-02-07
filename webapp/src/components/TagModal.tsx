@@ -15,11 +15,16 @@ export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) 
   const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, '$1');
 
   useEffect(() => {
-    if (!repo) return;
-    if (mode === 'edit') {
-      setValue((repo.manualTags ?? []).map(formatTagLabel).join(' '));
+    if (!repo) {
       return;
     }
+
+    if (mode === 'edit') {
+      setValue((repo.manualTags ?? []).map(formatTagLabel).join(' '));
+
+      return;
+    }
+
     setValue('');
   }, [repo, mode]);
 

@@ -8,6 +8,7 @@ export type AppPaths = {
 
 export function getPaths(): AppPaths {
   const paths = envPaths('local-repo-picker');
+
   return {
     configDir: paths.config,
     dataDir: paths.data,

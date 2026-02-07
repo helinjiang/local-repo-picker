@@ -74,12 +74,17 @@ export default async function pickRepo(
 ): Promise<RepositoryRecord[]> {
   if (options.refresh) {
     const cache = await refreshCache(options);
+
     return cache.repos;
   }
+
   const cached = await loadCache(options);
+
   if (cached) {
     return cached.repos;
   }
+
   const cache = await buildCache(options);
+
   return cache.repos;
 }

@@ -223,12 +223,14 @@ describe('cli ui', () => {
     let count = 0;
     createServer.mockImplementation(() => {
       const handlers: Record<string, Function> = {};
+
       return {
         once: (event: string, cb: Function) => {
           handlers[event] = cb;
         },
         listen: () => {
           count += 1;
+
           if (count === 1) {
             handlers.error?.(new Error('inuse'));
           } else {

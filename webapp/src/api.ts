@@ -12,17 +12,21 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
+
   if (init?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
+
   const response = await fetch(`${API_BASE}${input}`, {
     headers,
     ...init,
   });
+
   if (!response.ok) {
     const text = await response.text();
     throw new Error(text || response.statusText);
   }
+
   return (await response.json()) as T;
 }
 
@@ -33,21 +37,37 @@ export async function fetchRepos(params: {
   pageSize?: number;
 }): Promise<RepoListResult> {
   const search = new URLSearchParams();
-  if (params.q) search.set('q', params.q);
-  if (params.tag) search.set('tag', params.tag);
-  if (params.page) search.set('page', String(params.page));
-  if (params.pageSize) search.set('pageSize', String(params.pageSize));
+
+  if (params.q) {
+    search.set('q', params.q);
+  }
+
+  if (params.tag) {
+    search.set('tag', params.tag);
+  }
+
+  if (params.page) {
+    search.set('page', String(params.page));
+  }
+
+  if (params.pageSize) {
+    search.set('pageSize', String(params.pageSize));
+  }
+
   const suffix = search.toString() ? `?${search.toString()}` : '';
+
   return request<RepoListResult>(`/repos${suffix}`);
 }
 
 export async function fetchPreview(path: string): Promise<RepoPreviewResult> {
   const search = new URLSearchParams({ path });
+
   return request<RepoPreviewResult>(`/preview?${search.toString()}`);
 }
 
 export async function fetchRecord(path: string): Promise<RepositoryRecord> {
   const search = new URLSearchParams({ path });
+
   return request<RepositoryRecord>(`/record?${search.toString()}`);
 }
 

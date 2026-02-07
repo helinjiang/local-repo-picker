@@ -11,6 +11,7 @@ export type UiState = {
 
 function getStateFile(): string {
   const { dataDir } = getConfigPaths();
+
   return path.join(dataDir, 'ui-state.json');
 }
 
@@ -22,19 +23,25 @@ export async function writeUiState(state: UiState): Promise<void> {
 
 export async function readUiState(): Promise<UiState | null> {
   const filePath = getStateFile();
+
   try {
     const content = await fs.readFile(filePath, 'utf8');
     let parsed: UiState | null = null;
+
     try {
       parsed = JSON.parse(content) as UiState;
     } catch {
       await fs.unlink(filePath).catch(() => {});
+
       return null;
     }
+
     if (!parsed || typeof parsed.pid !== 'number' || typeof parsed.port !== 'number') {
       await fs.unlink(filePath).catch(() => {});
+
       return null;
     }
+
     return parsed;
   } catch {
     return null;
@@ -43,6 +50,7 @@ export async function readUiState(): Promise<UiState | null> {
 
 export async function clearUiState(): Promise<void> {
   const filePath = getStateFile();
+
   try {
     await fs.unlink(filePath);
   } catch {
@@ -53,6 +61,7 @@ export async function clearUiState(): Promise<void> {
 export function isProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
+
     return true;
   } catch {
     return false;

@@ -32,9 +32,11 @@ describe('cli fzf', () => {
       if (command === 'repo') {
         return { exitCode: 0, stdout: 'a\t/path\t[tag]' };
       }
+
       if (command === 'fzf') {
         return { exitCode: 0, stdout: 'a\t/selected\t[tag]' };
       }
+
       return { exitCode: 1, stdout: '' };
     });
     const selected = await runFzfPicker(

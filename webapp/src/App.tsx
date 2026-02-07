@@ -47,8 +47,10 @@ function useDebounce(value: string, delayMs: number) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(value), delayMs);
+
     return () => window.clearTimeout(timer);
   }, [value, delayMs]);
+
   return debounced;
 }
 
@@ -87,60 +89,81 @@ export default function App() {
   const debouncedQuery = useDebounce(query, 300);
   const [messageApi, contextHolder] = message.useMessage();
 
-  const createId = useCallback(
-    () => `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    [],
-  );
+  const createId = useCallback(() => `${Date.now()}-${Math.random().toString(16).slice(2)}`, []);
 
   const configTextRef = useRef(configText);
   useEffect(() => {
     configTextRef.current = configText;
   }, [configText]);
 
-  const ensureRepoLinksForKey = useCallback((
-    current: { id: string; repo: string; links: { id: string; label: string; url: string }[] }[],
-    repoKey: string,
-  ) => {
-    const normalized = repoKey.trim();
-    if (!normalized) return current;
-    const index = current.findIndex((group) => group.repo.trim() === normalized);
-    if (index === -1) {
-      return [
-        ...current,
-        {
-          id: createId(),
-          repo: normalized,
-          links: [{ id: createId(), label: '', url: '' }],
-        },
-      ];
-    }
-    const group = current[index];
-    if (!group) return current;
-    if (group.links.length > 0) return current;
-    const next = current.map((item, currentIndex) =>
-      currentIndex === index
-        ? {
-            ...item,
+  const ensureRepoLinksForKey = useCallback(
+    (
+      current: { id: string; repo: string; links: { id: string; label: string; url: string }[] }[],
+      repoKey: string,
+    ) => {
+      const normalized = repoKey.trim();
+
+      if (!normalized) {
+        return current;
+      }
+
+      const index = current.findIndex((group) => group.repo.trim() === normalized);
+
+      if (index === -1) {
+        return [
+          ...current,
+          {
+            id: createId(),
+            repo: normalized,
             links: [{ id: createId(), label: '', url: '' }],
-          }
-        : item,
-    );
-    return next;
-  }, [createId]);
+          },
+        ];
+      }
+
+      const group = current[index];
+
+      if (!group) {
+        return current;
+      }
+
+      if (group.links.length > 0) {
+        return current;
+      }
+
+      const next = current.map((item, currentIndex) =>
+        currentIndex === index
+          ? {
+              ...item,
+              links: [{ id: createId(), label: '', url: '' }],
+            }
+          : item,
+      );
+
+      return next;
+    },
+    [createId],
+  );
 
   const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, '$1');
+
   const normalizeTagValue = (raw: string) => {
     const trimmed = raw.trim();
-    if (!trimmed) return '';
+
+    if (!trimmed) {
+      return '';
+    }
+
     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
       return trimmed;
     }
+
     return `[${trimmed}]`;
   };
 
   const tagOptions = useMemo(() => {
     const tagSet = new Set<string>();
     repos.forEach((repo) => repo.tags.forEach((item) => tagSet.add(item)));
+
     return Array.from(tagSet)
       .sort((a, b) => a.localeCompare(b))
       .map((item) => ({ label: formatTagLabel(item), value: item }));
@@ -179,14 +202,24 @@ export default function App() {
   );
 
   const currentRepoLinksGroup = useMemo(() => {
-    if (!currentRepoLinkKey) return null;
+    if (!currentRepoLinkKey) {
+      return null;
+    }
+
     const key = currentRepoLinkKey.trim();
-    if (!key) return null;
+
+    if (!key) {
+      return null;
+    }
+
     return repoLinksConfig.find((group) => group.repo.trim() === key) ?? null;
   }, [repoLinksConfig, currentRepoLinkKey]);
 
   const currentRepoLinksIndex = useMemo(() => {
-    if (!currentRepoLinksGroup) return -1;
+    if (!currentRepoLinksGroup) {
+      return -1;
+    }
+
     return repoLinksConfig.findIndex((group) => group.id === currentRepoLinksGroup.id);
   }, [repoLinksConfig, currentRepoLinksGroup]);
 
@@ -195,6 +228,7 @@ export default function App() {
   const handleQuickTagsChange = (values: string[]) => {
     const next = values.map(stripTagBrackets).filter(Boolean);
     setQuickTagsConfig(next);
+
     try {
       const parsed = JSON.parse(configTextRef.current) as AppConfig;
       const updated = { ...parsed, webQuickTags: next };
@@ -207,6 +241,7 @@ export default function App() {
   const handleRepoLinksChange = useCallback(
     (next: { id: string; repo: string; links: { id: string; label: string; url: string }[] }[]) => {
       setRepoLinksConfig(next);
+
       try {
         const parsed = JSON.parse(configTextRef.current) as AppConfig;
         const updated = {
@@ -247,7 +282,11 @@ export default function App() {
     patch: Partial<FixedLink>,
   ) => {
     const group = repoLinksConfig[groupIndex];
-    if (!group) return;
+
+    if (!group) {
+      return;
+    }
+
     const nextLinks = group.links.map((link, current) =>
       current === linkIndex ? { ...link, ...patch } : link,
     );
@@ -256,32 +295,49 @@ export default function App() {
 
   const handleRepoLinkRemove = (groupIndex: number, linkIndex: number) => {
     const group = repoLinksConfig[groupIndex];
-    if (!group) return;
+
+    if (!group) {
+      return;
+    }
+
     const nextLinks = group.links.filter((_, current) => current !== linkIndex);
     handleRepoLinksUpdate(groupIndex, nextLinks);
   };
 
   const handleRepoLinkAdd = (groupIndex: number) => {
     const group = repoLinksConfig[groupIndex];
-    if (!group) return;
+
+    if (!group) {
+      return;
+    }
+
     handleRepoLinksUpdate(groupIndex, [...group.links, { id: createId(), label: '', url: '' }]);
   };
 
   useEffect(() => {
     let cancelled = false;
+
     async function loadRepos() {
       setLoadingRepos(true);
+
       try {
         const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize });
-        if (cancelled) return;
-        if (data.items.length === 0 && page > 1) {
-          setPage(1);
+
+        if (cancelled) {
           return;
         }
+
+        if (data.items.length === 0 && page > 1) {
+          setPage(1);
+
+          return;
+        }
+
         setRepos(data.items);
         setTotal(data.total);
         setPage(data.page);
         setPageSize(data.pageSize);
+
         if (!data.items.find((repo) => repo.folderFullPath === selectedPath)) {
           setSelectedPath(data.items[0]?.folderFullPath ?? null);
         }
@@ -293,7 +349,9 @@ export default function App() {
         if (!cancelled) setLoadingRepos(false);
       }
     }
+
     void loadRepos();
+
     return () => {
       cancelled = true;
     };
@@ -301,9 +359,11 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+
     async function loadActions() {
       try {
         const data = await fetchActions();
+
         if (!cancelled) setActions(data);
       } catch (error) {
         if (!cancelled) {
@@ -311,7 +371,9 @@ export default function App() {
         }
       }
     }
+
     void loadActions();
+
     return () => {
       cancelled = true;
     };
@@ -323,11 +385,17 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+
     async function loadConfig() {
       setLoadingConfig(true);
+
       try {
         const data = await fetchConfig();
-        if (cancelled) return;
+
+        if (cancelled) {
+          return;
+        }
+
         setConfigPaths(data.paths);
         setConfigText(JSON.stringify(data.config, null, 2));
         setQuickTagsConfig(data.config.webQuickTags ?? []);
@@ -348,23 +416,37 @@ export default function App() {
         if (!cancelled) setLoadingConfig(false);
       }
     }
+
     if (settingsOpen || repoLinksOpen || !configLoadedOnce) {
       void loadConfig();
     }
+
     return () => {
       cancelled = true;
     };
   }, [settingsOpen, repoLinksOpen, messageApi, configLoadedOnce, createId]);
 
   useEffect(() => {
-    if (!pendingRepoLinkKey || !configLoadedOnce) return;
+    if (!pendingRepoLinkKey || !configLoadedOnce) {
+      return;
+    }
+
     const next = ensureRepoLinksForKey(repoLinksConfig, pendingRepoLinkKey);
     setPendingRepoLinkKey(null);
     handleRepoLinksChange(next);
-  }, [pendingRepoLinkKey, configLoadedOnce, repoLinksConfig, ensureRepoLinksForKey, handleRepoLinksChange]);
+  }, [
+    pendingRepoLinkKey,
+    configLoadedOnce,
+    repoLinksConfig,
+    ensureRepoLinksForKey,
+    handleRepoLinksChange,
+  ]);
 
   useEffect(() => {
-    if (!repoLinksOpen || !currentRepoLinkKey || !configLoadedOnce) return;
+    if (!repoLinksOpen || !currentRepoLinkKey || !configLoadedOnce) {
+      return;
+    }
+
     const next = ensureRepoLinksForKey(repoLinksConfig, currentRepoLinkKey);
     handleRepoLinksChange(next);
   }, [
@@ -384,14 +466,19 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+
     async function loadPreview() {
       if (!selectedPath) {
         setPreview(null);
+
         return;
       }
+
       setLoadingPreview(true);
+
       try {
         const data = await fetchPreview(selectedPath);
+
         if (!cancelled) setPreview(data);
       } catch (error) {
         if (!cancelled) {
@@ -401,15 +488,21 @@ export default function App() {
         if (!cancelled) setLoadingPreview(false);
       }
     }
+
     void loadPreview();
+
     return () => {
       cancelled = true;
     };
   }, [selectedPath, messageApi]);
 
   const handleRefresh = async () => {
-    if (refreshingCache) return;
+    if (refreshingCache) {
+      return;
+    }
+
     setRefreshingCache(true);
+
     try {
       await refreshCache();
       messageApi.success('缓存已刷新');
@@ -424,24 +517,31 @@ export default function App() {
   };
 
   const handleSaveTags = async (nextTags: string) => {
-    if (!tagModalRepo) return;
+    if (!tagModalRepo) {
+      return;
+    }
+
     try {
       if (tagModalMode === 'add') {
         const parsed = nextTags
           .split(/[\s,]+/)
           .map(stripTagBrackets)
           .filter(Boolean);
+
         if (parsed.length === 0) {
           setTagModalOpen(false);
           setTagModalRepo(null);
+
           return;
         }
+
         await updateTags(tagModalRepo.folderFullPath, { add: parsed });
         messageApi.success('标签已新增');
       } else {
         await upsertTags(tagModalRepo.folderFullPath, nextTags);
         messageApi.success('标签已更新');
       }
+
       setTagModalOpen(false);
       setTagModalRepo(null);
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize });
@@ -473,21 +573,28 @@ export default function App() {
   const handleRunAction = async (actionId: string, repoPath: string) => {
     if (actionId === 'web.edit-repo-links') {
       const repo = repos.find((item) => item.folderFullPath === repoPath);
-      if (!repo) return;
+
+      if (!repo) {
+        return;
+      }
+
       const previewRepoKey =
         preview?.data.path === repoPath && preview.data.repoKey !== '-' ? preview.data.repoKey : '';
       const repoKey =
         previewRepoKey || (repo.key && repo.key !== '-' ? repo.key : repo.folderRelativePath);
       setRepoLinksOpen(true);
       setCurrentRepoLinkKey(repoKey);
+
       if (configLoadedOnce) {
         const next = ensureRepoLinksForKey(repoLinksConfig, repoKey);
         handleRepoLinksChange(next);
       } else {
         setPendingRepoLinkKey(repoKey);
       }
+
       return;
     }
+
     try {
       await runAction(actionId, repoPath);
     } catch (error) {
@@ -497,12 +604,15 @@ export default function App() {
 
   const handleSaveConfig = async () => {
     let parsed: AppConfig;
+
     try {
       parsed = JSON.parse(configText) as AppConfig;
     } catch (error) {
       messageApi.error(`配置 JSON 无效：${(error as Error).message}`);
+
       return;
     }
+
     parsed.webQuickTags = quickTagsConfig;
     parsed.webRepoLinks = Object.fromEntries(
       repoLinksConfig
@@ -516,6 +626,7 @@ export default function App() {
         .map((group) => [group.repo, group.links]),
     );
     setSavingConfig(true);
+
     try {
       const result = await saveConfig(parsed);
       setConfigText(JSON.stringify(result.config, null, 2));
@@ -543,12 +654,15 @@ export default function App() {
 
   const handleSaveRepoLinks = async () => {
     let parsed: AppConfig;
+
     try {
       parsed = JSON.parse(configText) as AppConfig;
     } catch (error) {
       messageApi.error(`配置 JSON 无效：${(error as Error).message}`);
+
       return;
     }
+
     parsed.webRepoLinks = Object.fromEntries(
       repoLinksConfig
         .map((group) => ({
@@ -561,6 +675,7 @@ export default function App() {
         .map((group) => [group.repo, group.links]),
     );
     setSavingRepoLinks(true);
+
     try {
       const result = await saveConfig(parsed);
       setConfigText(JSON.stringify(result.config, null, 2));
@@ -789,7 +904,11 @@ export default function App() {
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
-                        if (!node.path) return;
+
+                        if (!node.path) {
+                          return;
+                        }
+
                         void copyPathToClipboard(node.path, messageApi);
                       }}
                       icon={<CopyOutlined />}
@@ -919,6 +1038,7 @@ function buildConfigTree(paths: ConfigPaths | null): ConfigTreeNode[] {
       },
     ];
   }
+
   const cacheFiles = [
     { title: 'cache.json', key: 'cache.json', path: paths.cacheFile, isLeaf: true },
   ];
@@ -926,6 +1046,7 @@ function buildConfigTree(paths: ConfigPaths | null): ConfigTreeNode[] {
     { title: 'repo_tags.tsv', key: 'repo_tags.tsv', path: paths.manualTagsFile, isLeaf: true },
     { title: 'lru.txt', key: 'lru.txt', path: paths.lruFile, isLeaf: true },
   ];
+
   return [
     {
       title: paths.dataDir,
@@ -950,6 +1071,7 @@ async function copyPathToClipboard(
     if (!navigator.clipboard?.writeText) {
       throw new Error('clipboard unavailable');
     }
+
     await navigator.clipboard.writeText(path);
     messageApi.success('路径已复制');
   } catch (error) {

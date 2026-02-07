@@ -15,6 +15,7 @@ afterEach(async () => {
 async function makeTempDir(): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'lrp-'));
   createdDirs.push(dir);
+
   return dir;
 }
 

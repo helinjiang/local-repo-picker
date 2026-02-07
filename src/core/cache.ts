@@ -28,6 +28,7 @@ export async function buildCache(
     ...normalized,
     onWarning: (warning) => {
       warningCount += 1;
+
       if (warningSamples.length < 5) {
         warningSamples.push(`${warning.reason}: ${warning.path}`);
       }
@@ -68,6 +69,7 @@ export async function buildCache(
         (tag) => !removed.has(tag),
       );
       const manualTags = baseManualTags.filter((tag) => !removed.has(tag));
+
       return buildRepositoryRecord({
         fullPath: repo.path,
         scanRoot: repo.scanRoot,
@@ -102,30 +104,40 @@ export async function buildCache(
   };
   await ensureDir(path.dirname(normalized.cacheFile));
   await fs.writeFile(normalized.cacheFile, JSON.stringify(cache, null, 2), 'utf8');
+
   return cache;
 }
 
 export async function loadCache(options: ScanOptions): Promise<CacheData | null> {
   const normalized = normalizeOptions(options);
+
   try {
     const content = await fs.readFile(normalized.cacheFile, 'utf8');
     let data: Partial<CacheData>;
+
     try {
       data = JSON.parse(content) as Partial<CacheData>;
     } catch {
       await handleCorruptedCache(normalized.cacheFile);
+
       return null;
     }
+
     if (!data || !Array.isArray(data.repos)) {
       await handleCorruptedCache(normalized.cacheFile);
+
       return null;
     }
+
     const ttlMs = data.ttlMs ?? normalized.cacheTtlMs;
     const savedAt = data.savedAt ?? 0;
+
     if (Date.now() - savedAt > ttlMs) {
       logger.debug('cache expired');
+
       return null;
     }
+
     const repos = Array.isArray(data.repos) ? normalizeCacheRepos(data.repos) : [];
     const existing = await filterExistingRepos(
       repos.map((repo) => ({ ...repo, fullPath: path.resolve(repo.fullPath) })),
@@ -136,6 +148,7 @@ export async function loadCache(options: ScanOptions): Promise<CacheData | null>
       normalized.scanRoots,
       sorted.length,
     );
+
     if (existing.prunedCount > 0) {
       metadata.prunedAt = Date.now();
       metadata.prunedRepoCount = existing.prunedCount;
@@ -146,7 +159,9 @@ export async function loadCache(options: ScanOptions): Promise<CacheData | null>
         repos: sorted,
       });
     }
+
     logger.debug(`cache hit: ${sorted.length} repos`);
+
     return { savedAt, ttlMs, metadata, repos: sorted };
   } catch {
     return null;
@@ -164,7 +179,9 @@ async function applyLruIfNeeded(
   if (!lruFile) {
     return repos;
   }
+
   const lruList = await readLru(lruFile);
+
   return sortByLru(repos, lruList);
 }
 
@@ -180,6 +197,7 @@ function normalizeOptions(options: ScanOptions): ScanOptions & {
   remoteHostProviders?: Record<string, string>;
 } {
   const { cacheFile, manualTagsFile, lruFile } = getConfigPaths();
+
   return {
     scanRoots: options.scanRoots,
     maxDepth: options.maxDepth ?? 7,
@@ -205,12 +223,14 @@ async function filterExistingRepos(
   if (repos.length === 0) {
     return { repos, prunedCount: 0 };
   }
+
   const limit = pLimit(8);
   const checks = await Promise.all(
     repos.map((repo) =>
       limit(async () => {
         try {
           await fs.access(repo.fullPath);
+
           return true;
         } catch {
           return false;
@@ -219,6 +239,7 @@ async function filterExistingRepos(
     ),
   );
   const filtered = repos.filter((_repo, index) => checks[index]);
+
   return { repos: filtered, prunedCount: repos.length - filtered.length };
 }
 
@@ -230,11 +251,14 @@ function normalizeCacheRepos(
       if (isRepositoryRecord(item)) {
         return item;
       }
+
       const legacy = item as { path?: string; lastScannedAt?: number };
       const fullPath = typeof legacy.path === 'string' ? legacy.path : '';
+
       if (!fullPath) {
         return null;
       }
+
       return buildRepositoryRecord({
         fullPath,
         scanRoot: path.dirname(fullPath),
@@ -253,7 +277,9 @@ function isRepositoryRecord(value: unknown): value is RepositoryRecord {
   if (!value || typeof value !== 'object') {
     return false;
   }
+
   const record = value as RepositoryRecord;
+
   return typeof record.fullPath === 'string' && typeof record.recordKey === 'string';
 }
 
@@ -265,6 +291,7 @@ function buildCacheMetadataFromCache(
   if (data.metadata) {
     return { ...data.metadata, repoCount, scanRoots };
   }
+
   return {
     cacheVersion: 1,
     scanStartedAt: data.savedAt,

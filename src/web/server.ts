@@ -33,6 +33,7 @@ export async function startWebServer(
 ): Promise<UiState & { apiUrl: string; apiPort: number }> {
   const debugEnabled = isDebugEnabled();
   const app = fastify({ logger: false });
+
   if (debugEnabled) {
     app.addHook('onRequest', (request, _reply, done) => {
       (request as { startAt?: number }).startAt = Date.now();
@@ -40,19 +41,23 @@ export async function startWebServer(
     });
     app.addHook('onResponse', (request, _reply, done) => {
       const startedAt = (request as { startAt?: number }).startAt;
+
       if (typeof startedAt === 'number' && request.url.startsWith('/api/')) {
         const cost = Date.now() - startedAt;
         logger.info(`api ${request.method} ${request.url} ${cost}ms`);
       }
+
       done();
     });
   }
+
   await app.register(helmet);
   await app.register(cors, {
     origin: (origin, callback) => {
       if (!origin) {
         return callback(null, true);
       }
+
       const allowed = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
       callback(null, allowed);
     },
@@ -65,30 +70,39 @@ export async function startWebServer(
     .stat(distRoot)
     .then(() => true)
     .catch(() => false);
+
   if (distExists) {
     await app.register(fastifyStatic, { root: distRoot, prefix: '/' });
     app.setNotFoundHandler((request, reply) => {
       if (request.url.startsWith('/api/')) {
         reply.code(404).send({ error: 'Not Found' });
+
         return;
       }
+
       reply.sendFile('index.html');
     });
   }
+
   const { port, url } = await listenWithRetry(app, config.basePort ?? 17333);
+
   if (debugEnabled) {
     logger.info(`web ui server started on ${url} (port ${port})`);
   }
+
   state.port = config.uiPort ?? port;
   state.url = config.uiUrl ?? url;
   await writeUiState(state);
+
   const shutdown = async () => {
     await clearUiState();
     await app.close();
     process.exit(0);
   };
+
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+
   return { ...state, apiPort: port, apiUrl: url };
 }
 
@@ -98,16 +112,21 @@ async function listenWithRetry(
 ): Promise<{ port: number; url: string }> {
   for (let offset = 0; offset < 50; offset += 1) {
     const port = basePort + offset;
+
     try {
       const url = await app.listen({ port, host: '127.0.0.1' });
+
       return { port, url };
     } catch (error) {
       const err = error as NodeJS.ErrnoException;
+
       if (err?.code === 'EADDRINUSE') {
         continue;
       }
+
       throw error;
     }
   }
+
   throw new Error('No available port');
 }

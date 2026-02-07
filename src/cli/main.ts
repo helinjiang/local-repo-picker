@@ -15,33 +15,39 @@ export async function runCli(): Promise<void> {
 
   if (args.length === 0) {
     printHelp();
+
     return;
   }
 
   if (args.includes('--help') || args.includes('-h')) {
     printHelp();
+
     return;
   }
 
   if (args.includes('--version') || args.includes('-v')) {
     const version = await readPackageVersion();
     console.log(version || '0.0.0');
+
     return;
   }
 
   if (args.includes('--config')) {
     const configFile = await ensureConfigFile();
     console.log(configFile);
+
     return;
   }
 
   if (command === 'status') {
     await runStatus(args);
+
     return;
   }
 
   if (command === 'ui') {
     await runUiCommand(args);
+
     return;
   }
 
@@ -54,14 +60,19 @@ export async function runCli(): Promise<void> {
     if (isInternal) {
       logger.error(`请在 ${configFile} 配置 scanRoots`);
       process.exitCode = 1;
+
       return;
     }
+
     const updated = await runSetupWizard(configFile);
+
     if (!updated) {
       logger.error(`请在 ${configFile} 配置 scanRoots`);
       process.exitCode = 1;
+
       return;
     }
+
     config = updated;
   }
 
@@ -74,43 +85,54 @@ export async function runCli(): Promise<void> {
 
   if (command === 'refresh') {
     const cache = await refreshCache(options);
+
     if (cache.metadata.warningCount && cache.metadata.warningCount > 0) {
       console.error(`部分路径被跳过: ${cache.metadata.warningCount}`);
     }
+
     console.log(`refresh: ${cache.repos.length}`);
+
     return;
   }
 
   if (command === '__ui-serve') {
     let uiFlags;
+
     try {
       uiFlags = parseUiFlags(args);
     } catch (error) {
       logger.error(formatError(error));
       process.exitCode = 1;
+
       return;
     }
+
     await runUiServer(options, uiFlags);
+
     return;
   }
 
   if (listOnly) {
     await runListCommand(options, args);
+
     return;
   }
 
   if (command === 'one') {
     await runOneCommand(options);
+
     return;
   }
 
   if (command === '__list') {
     await runInternalList(options, args);
+
     return;
   }
 
   if (command === '__preview') {
     await runInternalPreview(options, args);
+
     return;
   }
 

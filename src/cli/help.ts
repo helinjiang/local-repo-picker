@@ -34,9 +34,11 @@ export function printHelp(): void {
 
 export async function readPackageVersion(): Promise<string> {
   const packageFile = path.resolve(process.cwd(), 'package.json');
+
   try {
     const content = await fs.readFile(packageFile, 'utf8');
     const data = JSON.parse(content) as { version?: string };
+
     return typeof data.version === 'string' ? data.version : '';
   } catch {
     return '';

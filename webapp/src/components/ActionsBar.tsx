@@ -18,7 +18,10 @@ type Props = {
 
 export default function ActionsBar({ repo, disabled, actions, onRunAction }: Props) {
   const handleAction = async (actionId: string) => {
-    if (!repo) return;
+    if (!repo) {
+      return;
+    }
+
     await onRunAction(actionId, repo.folderFullPath);
   };
 
@@ -41,10 +44,25 @@ export default function ActionsBar({ repo, disabled, actions, onRunAction }: Pro
 }
 
 function getActionIcon(actionId: string) {
-  if (actionId === 'builtin.open-vscode') return <CodeOutlined />;
-  if (actionId === 'builtin.open-iterm') return <DesktopOutlined />;
-  if (actionId === 'builtin.open-finder') return <FolderOpenOutlined />;
-  if (actionId === 'builtin.open-site') return <GlobalOutlined />;
-  if (actionId === 'web.edit-repo-links') return <LinkOutlined />;
+  if (actionId === 'builtin.open-vscode') {
+    return <CodeOutlined />;
+  }
+
+  if (actionId === 'builtin.open-iterm') {
+    return <DesktopOutlined />;
+  }
+
+  if (actionId === 'builtin.open-finder') {
+    return <FolderOpenOutlined />;
+  }
+
+  if (actionId === 'builtin.open-site') {
+    return <GlobalOutlined />;
+  }
+
+  if (actionId === 'web.edit-repo-links') {
+    return <LinkOutlined />;
+  }
+
   return <QuestionCircleOutlined />;
 }

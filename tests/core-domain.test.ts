@@ -20,4 +20,3 @@ describe('core domain', () => {
     expect(git?.baseUrl).toBe('https://a.code.yourdomain.org');
   });
 });
-

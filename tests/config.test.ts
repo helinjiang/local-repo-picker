@@ -16,7 +16,9 @@ afterEach(async () => {
   if (tempDir) {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
+
   tempDir = null;
+
   if (prevEnv === undefined) {
     delete process.env.LOCAL_REPO_PICKER_DIR;
   } else {

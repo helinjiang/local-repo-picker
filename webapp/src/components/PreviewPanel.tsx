@@ -30,8 +30,14 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
   const [record, setRecord] = useState<RepositoryRecord | null>(null);
   const repoPath = repo?.folderFullPath;
   useEffect(() => {
-    if (!repoPath) return;
-    if (!infoOpen) return;
+    if (!repoPath) {
+      return;
+    }
+
+    if (!infoOpen) {
+      return;
+    }
+
     let cancelled = false;
     setRecordLoading(true);
     setRecordError(null);
@@ -45,10 +51,12 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
       .finally(() => {
         if (!cancelled) setRecordLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
   }, [infoOpen, repoPath]);
+
   if (!repo) {
     return <Empty description="请选择一个仓库" />;
   }
@@ -64,14 +72,31 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
     .map((link) => {
       const label = link.label.trim();
       const template = link.url.trim();
-      if (!label || !template) return null;
-      if (template.includes('{originUrl}') && !originUrl) return null;
+
+      if (!label || !template) {
+        return null;
+      }
+
+      if (template.includes('{originUrl}') && !originUrl) {
+        return null;
+      }
+
       const url = template.replace(/\{(ownerRepo|path|originUrl)\}/g, (_, key) => {
-        if (key === 'ownerRepo') return repo.displayName || repo.folderRelativePath;
-        if (key === 'path') return repo.folderFullPath;
-        if (key === 'originUrl') return originUrl;
+        if (key === 'ownerRepo') {
+          return repo.displayName || repo.folderRelativePath;
+        }
+
+        if (key === 'path') {
+          return repo.folderFullPath;
+        }
+
+        if (key === 'originUrl') {
+          return originUrl;
+        }
+
         return '';
       });
+
       return url ? { label, url } : null;
     })
     .filter((item): item is { label: string; url: string } => Boolean(item));

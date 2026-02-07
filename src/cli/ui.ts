@@ -19,6 +19,7 @@ export async function runStatus(args: string[]): Promise<void> {
   const paths = getConfigPaths();
   const fzfAvailable = await checkFzfAvailable();
   const state = await readUiState();
+
   if (!state) {
     if (useJson) {
       console.log(
@@ -33,11 +34,15 @@ export async function runStatus(args: string[]): Promise<void> {
       console.log(`fzf: ${fzfAvailable ? 'available' : 'missing'}`);
       printConfigPaths(paths);
     }
+
     process.exitCode = 1;
+
     return;
   }
+
   if (!isProcessAlive(state.pid)) {
     await clearUiState();
+
     if (useJson) {
       console.log(
         JSON.stringify({
@@ -55,9 +60,12 @@ export async function runStatus(args: string[]): Promise<void> {
       console.log(`fzf: ${fzfAvailable ? 'available' : 'missing'}`);
       printConfigPaths(paths);
     }
+
     process.exitCode = 1;
+
     return;
   }
+
   if (useJson) {
     console.log(
       JSON.stringify({
@@ -70,8 +78,10 @@ export async function runStatus(args: string[]): Promise<void> {
         startedAt: state.startedAt,
       }),
     );
+
     return;
   }
+
   console.log(state.url);
   console.log(`fzf: ${fzfAvailable ? 'available' : 'missing'}`);
   printConfigPaths(paths);
@@ -79,55 +89,77 @@ export async function runStatus(args: string[]): Promise<void> {
 
 export async function runUiCommand(args: string[]): Promise<void> {
   const subcommand = args[1];
+
   if (subcommand === 'stop') {
     await stopUiServer({ allowMissing: false });
+
     return;
   }
+
   if (subcommand === 'restart') {
     await stopUiServer({ allowMissing: true });
     const restartArgs = ['ui', ...args.slice(2)];
     let uiFlags: UiFlags;
+
     try {
       uiFlags = parseUiFlags(restartArgs);
     } catch (error) {
       logger.error(formatError(error));
       process.exitCode = 1;
+
       return;
     }
+
     await startUiInBackground(args.slice(2));
     const startedState = await waitForUiState(8000);
+
     if (!startedState) {
       logger.error('启动 Web UI 失败');
       process.exitCode = 1;
+
       return;
     }
+
     console.log(startedState.url);
+
     if (!uiFlags.noOpen) {
       await openBrowserOnMac(startedState.url);
     }
+
     return;
   }
+
   let uiFlags: UiFlags;
+
   try {
     uiFlags = parseUiFlags(args);
   } catch (error) {
     logger.error(formatError(error));
     process.exitCode = 1;
+
     return;
   }
+
   const state = await readUiState();
+
   if (state && isProcessAlive(state.pid)) {
     console.log(state.url);
+
     return;
   }
+
   await startUiInBackground(args.slice(1));
   const startedState = await waitForUiState(8000);
+
   if (!startedState) {
     logger.error('启动 Web UI 失败');
     process.exitCode = 1;
+
     return;
   }
+
   console.log(startedState.url);
+
   if (!uiFlags.noOpen) {
     await openBrowserOnMac(startedState.url);
   }
@@ -137,13 +169,17 @@ export function parseUiFlags(args: string[]): UiFlags {
   const noOpen = args.includes('--no-open');
   const dev = args.includes('--dev');
   const rawPort = readArgValue(args, '--port');
+
   if (!rawPort) {
     return { noOpen, dev };
   }
+
   const port = Number(rawPort);
+
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new Error(`无效端口: ${rawPort}`);
   }
+
   return { noOpen, dev, port };
 }
 
@@ -156,10 +192,13 @@ export async function runUiServer(
     const uiUrl = `http://127.0.0.1:${uiPort}`;
     const server = await startWebServer(options, { basePort: 17333, uiPort, uiUrl });
     await startViteDevServer(uiPort, server.apiUrl);
+
     return { url: uiUrl, port: uiPort };
   }
+
   const basePort = flags.port ?? 17333;
   const server = await startWebServer(options, { basePort });
+
   return { url: server.url, port: server.port };
 }
 
@@ -176,68 +215,89 @@ function printConfigPaths(paths: ConfigPaths): void {
 
 async function stopUiServer(options: { allowMissing: boolean }): Promise<void> {
   const state = await readUiState();
+
   if (!state) {
     if (!options.allowMissing) {
       console.log('UI not running, run `repo ui`');
       process.exitCode = 1;
     }
+
     return;
   }
+
   if (!isProcessAlive(state.pid)) {
     await clearUiState();
+
     if (!options.allowMissing) {
       console.log('UI not running, run `repo ui` (last run crashed)');
       process.exitCode = 1;
     }
+
     return;
   }
+
   try {
     process.kill(state.pid, 'SIGTERM');
   } catch (error) {
     logger.error(formatError(error));
     process.exitCode = 1;
+
     return;
   }
+
   const stopped = await waitForProcessExit(state.pid, 4000);
+
   if (!stopped) {
     try {
       process.kill(state.pid, 'SIGKILL');
     } catch (error) {
       logger.error(formatError(error));
       process.exitCode = 1;
+
       return;
     }
+
     const forced = await waitForProcessExit(state.pid, 2000);
+
     if (!forced) {
       logger.error('无法停止 Web UI 进程');
       process.exitCode = 1;
+
       return;
     }
   }
+
   await clearUiState();
   console.log('Web UI stopped');
 }
 
 async function waitForProcessExit(pid: number, timeoutMs: number): Promise<boolean> {
   const startedAt = Date.now();
+
   while (Date.now() - startedAt < timeoutMs) {
     if (!isProcessAlive(pid)) {
       return true;
     }
+
     await delay(200);
   }
+
   return false;
 }
 
 async function waitForUiState(timeoutMs: number): Promise<UiState | null> {
   const startedAt = Date.now();
+
   while (Date.now() - startedAt < timeoutMs) {
     const state = await readUiState();
+
     if (state && isProcessAlive(state.pid)) {
       return state;
     }
+
     await delay(200);
   }
+
   return null;
 }
 
@@ -286,10 +346,12 @@ async function findAvailablePort(basePort: number, attempts: number): Promise<nu
   for (let offset = 0; offset < attempts; offset += 1) {
     const port = basePort + offset;
     const available = await isPortAvailable(port);
+
     if (available) {
       return port;
     }
   }
+
   throw new Error(`未找到可用端口: ${basePort}-${basePort + attempts - 1}`);
 }
 
@@ -310,6 +372,7 @@ async function openBrowserOnMac(url: string): Promise<void> {
   if (process.platform !== 'darwin') {
     return;
   }
+
   try {
     await execa('open', [url], { stdio: 'ignore', reject: false });
   } catch {

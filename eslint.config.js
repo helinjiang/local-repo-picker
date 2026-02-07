@@ -42,6 +42,7 @@ export default [
   {
     files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
     rules: {
+      curly: ['error', 'all'],
       'lines-around-comment': [
         'error',
         {
@@ -52,6 +53,14 @@ export default [
           allowArrayStart: true,
           allowClassStart: true,
         },
+      ],
+      'padding-line-between-statements': [
+        'error',
+        { blankLine: 'always', prev: '*', next: 'if' },
+        { blankLine: 'always', prev: 'if', next: '*' },
+        { blankLine: 'always', prev: '*', next: 'return' },
+        { blankLine: 'always', prev: '*', next: 'multiline-block-like' },
+        { blankLine: 'always', prev: 'multiline-block-like', next: '*' },
       ],
     },
   },

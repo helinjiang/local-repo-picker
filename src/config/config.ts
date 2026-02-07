@@ -20,17 +20,23 @@ export function getConfigPaths(): ConfigPaths {
   if (overridePaths) {
     return overridePaths;
   }
+
   const customBase = process.env.LOCAL_REPO_PICKER_DIR;
+
   if (customBase && customBase.trim()) {
     overridePaths = buildPathsFromBase(customBase.trim());
+
     return overridePaths;
   }
+
   const paths = envPaths('local-repo-picker');
+
   return buildPathsFromEnv(paths);
 }
 
 export async function ensureConfigFile(): Promise<string> {
   let { configDir, configFile } = getConfigPaths();
+
   try {
     await fs.mkdir(configDir, { recursive: true });
   } catch {
@@ -38,25 +44,31 @@ export async function ensureConfigFile(): Promise<string> {
     ({ configDir, configFile } = overridePaths);
     await fs.mkdir(configDir, { recursive: true });
   }
+
   if (!(await exists(configFile))) {
     await fs.writeFile(configFile, JSON.stringify(defaultConfig, null, 2), 'utf8');
   }
+
   return configFile;
 }
 
 export async function readConfig(): Promise<AppConfig> {
   const { configFile } = getConfigPaths();
+
   try {
     const content = await fs.readFile(configFile, 'utf8');
+
     return normalizeConfig(JSON.parse(content));
   } catch {
     await ensureConfigFile();
+
     return { ...defaultConfig };
   }
 }
 
 export async function writeConfig(config: AppConfig): Promise<void> {
   let { configDir, configFile } = getConfigPaths();
+
   try {
     await fs.mkdir(configDir, { recursive: true });
   } catch {
@@ -64,6 +76,7 @@ export async function writeConfig(config: AppConfig): Promise<void> {
     ({ configDir, configFile } = overridePaths);
     await fs.mkdir(configDir, { recursive: true });
   }
+
   const normalized = normalizeConfig(config);
   await fs.writeFile(configFile, JSON.stringify(normalized, null, 2), 'utf8');
 }
@@ -71,6 +84,7 @@ export async function writeConfig(config: AppConfig): Promise<void> {
 async function exists(filePath: string): Promise<boolean> {
   try {
     await fs.access(filePath);
+
     return true;
   } catch {
     return false;
@@ -118,7 +132,7 @@ function normalizeConfig(raw: unknown): AppConfig {
             ([key, item]) => typeof key === 'string' && typeof item === 'string',
           ),
         ) as Record<string, string>)
-      : defaultConfig.remoteHostProviders ?? {};
+      : (defaultConfig.remoteHostProviders ?? {});
   const normalizedRemoteHostProviders = normalizeHostProviders(remoteHostProviders);
   const fzfTagFilters =
     typeof value.fzfTagFilters === 'object' && value.fzfTagFilters !== null
@@ -128,6 +142,7 @@ function normalizeConfig(raw: unknown): AppConfig {
           ),
         ) as Record<string, string>)
       : defaultConfig.fzfTagFilters;
+
   return {
     scanRoots,
     maxDepth,
@@ -151,12 +166,15 @@ function normalizeHostProviders(input: Record<string, string>): Record<string, s
 
 function normalizeProviderValue(raw: string): string {
   const trimmed = raw.trim();
+
   if (!trimmed) {
     return '';
   }
+
   if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
     return trimmed.slice(1, -1).trim();
   }
+
   return trimmed;
 }
 
@@ -176,6 +194,7 @@ function buildPathsFromBase(baseDir: string): ConfigPaths {
   const configDir = path.join(baseDir, 'config');
   const dataDir = path.join(baseDir, 'data');
   const cacheDir = path.join(baseDir, 'cache');
+
   return {
     configDir,
     dataDir,

@@ -12,13 +12,17 @@ export async function scanRepos(options: ScanOptions): Promise<FoundRepo[]> {
   const followSymlinks = options.followSymlinks ?? false;
   const onWarning = options.onWarning;
   const results: FoundRepo[] = [];
+
   for (const root of scanRoots) {
     const rootStat = await resolveRootStat(root, followSymlinks, onWarning);
+
     if (!rootStat) {
       continue;
     }
+
     await walkRoot(root, root, 0, maxDepth, pruneDirs, results, followSymlinks, onWarning);
   }
+
   return results;
 }
 
@@ -35,7 +39,9 @@ async function walkRoot(
   if (depth > maxDepth) {
     return;
   }
+
   let entries;
+
   try {
     entries = await fs.readdir(current, { withFileTypes: true });
   } catch (error) {
@@ -43,31 +49,42 @@ async function walkRoot(
       path: current,
       reason: mapFsErrorReason(error, 'readdir_failed'),
     });
+
     return;
   }
+
   const hasGit = entries.some((entry) => entry.name === '.git');
+
   if (hasGit) {
     const autoTag = getAutoTag(root, current);
     results.push({ path: current, scanRoot: root, autoTag });
+
     return;
   }
+
   for (const entry of entries) {
     if (entry.name === '.git') {
       continue;
     }
+
     if (entry.name.startsWith('.') || entry.name.startsWith('_')) {
       continue;
     }
+
     if (pruneDirs.has(entry.name)) {
       continue;
     }
+
     const next = path.join(current, entry.name);
+
     if (entry.isSymbolicLink()) {
       if (!followSymlinks) {
         recordWarning(onWarning, { path: next, reason: 'symlink_skipped' });
         continue;
       }
+
       const statResult = await safeStat(next);
+
       if (!statResult.stat) {
         recordWarning(onWarning, {
           path: next,
@@ -75,10 +92,12 @@ async function walkRoot(
         });
         continue;
       }
+
       if (!statResult.stat.isDirectory()) {
         recordWarning(onWarning, { path: next, reason: 'not_directory' });
         continue;
       }
+
       await walkRoot(
         root,
         next,
@@ -91,22 +110,28 @@ async function walkRoot(
       );
       continue;
     }
+
     if (!entry.isDirectory()) {
       continue;
     }
+
     await walkRoot(root, next, depth + 1, maxDepth, pruneDirs, results, followSymlinks, onWarning);
   }
 }
 
 function getAutoTag(scanRoot: string, repoPath: string): string | undefined {
   const rel = path.relative(scanRoot, repoPath);
+
   if (!rel || rel === '') {
     return undefined;
   }
+
   const first = rel.split(path.sep).filter(Boolean)[0];
+
   if (!first) {
     return undefined;
   }
+
   return `[${first}]`;
 }
 
@@ -116,6 +141,7 @@ async function resolveRootStat(
   onWarning?: (warning: ScanWarning) => void,
 ): Promise<import('node:fs').Stats | null> {
   let stat;
+
   try {
     stat = await fs.lstat(root);
   } catch (error) {
@@ -123,27 +149,37 @@ async function resolveRootStat(
       path: root,
       reason: mapFsErrorReason(error, 'not_found'),
     });
+
     return null;
   }
+
   if (stat.isSymbolicLink()) {
     if (!followSymlinks) {
       recordWarning(onWarning, { path: root, reason: 'symlink_skipped' });
+
       return null;
     }
+
     const linked = await safeStat(root);
+
     if (!linked.stat) {
       recordWarning(onWarning, {
         path: root,
         reason: linked.reason ?? 'not_found',
       });
+
       return null;
     }
+
     stat = linked.stat;
   }
+
   if (!stat.isDirectory()) {
     recordWarning(onWarning, { path: root, reason: 'not_directory' });
+
     return null;
   }
+
   return stat;
 }
 
@@ -167,11 +203,14 @@ function recordWarning(
 
 function mapFsErrorReason(error: unknown, fallback: ScanWarning['reason']): ScanWarning['reason'] {
   const err = error as NodeJS.ErrnoException;
+
   if (err?.code === 'EACCES' || err?.code === 'EPERM') {
     return 'no_permission';
   }
+
   if (err?.code === 'ENOENT') {
     return 'not_found';
   }
+
   return fallback;
 }

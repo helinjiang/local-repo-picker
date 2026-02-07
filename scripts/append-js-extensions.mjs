@@ -10,15 +10,20 @@ async function processDir(dir) {
   await Promise.all(
     entries.map(async (entry) => {
       const fullPath = path.join(dir, entry.name);
+
       if (entry.isDirectory()) {
         await processDir(fullPath);
+
         return;
       }
+
       if (!entry.isFile() || !entry.name.endsWith('.js')) {
         return;
       }
+
       const content = await fs.readFile(fullPath, 'utf8');
       const updated = rewriteImports(content);
+
       if (updated !== content) {
         await fs.writeFile(fullPath, updated, 'utf8');
       }
@@ -31,10 +36,13 @@ function rewriteImports(content) {
   const dynamicRegex = /\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g;
   const replacedFrom = content.replace(fromRegex, (match, specifier) => {
     const next = appendJsIfNeeded(specifier);
+
     return next === specifier ? match : match.replace(specifier, next);
   });
+
   return replacedFrom.replace(dynamicRegex, (match, specifier) => {
     const next = appendJsIfNeeded(specifier);
+
     return next === specifier ? match : match.replace(specifier, next);
   });
 }
@@ -43,9 +51,12 @@ function appendJsIfNeeded(specifier) {
   if (!specifier.startsWith('.') && !specifier.startsWith('..')) {
     return specifier;
   }
+
   const ext = path.extname(specifier);
+
   if (ext) {
     return specifier;
   }
+
   return `${specifier}.js`;
 }

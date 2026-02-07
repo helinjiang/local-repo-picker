@@ -54,6 +54,7 @@ export default function RepoList({
           {repo.tags.map((tag) => {
             const tagKey = `${repo.folderFullPath}::${tag}`;
             const hovered = hoveredTagKey === tagKey;
+
             return (
               <Tag
                 color="blue"

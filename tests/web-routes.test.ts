@@ -31,6 +31,7 @@ vi.mock('../src/config/config', () => ({
 
 vi.mock('../src/core/tags', async () => {
   const actual = await vi.importActual<typeof import('../src/core/tags')>('../src/core/tags');
+
   return {
     ...actual,
     readManualTagEdits: vi.fn(),
@@ -103,6 +104,7 @@ function createApp() {
       handlers[`POST ${route}`] = handler;
     },
   };
+
   return { app, handlers };
 }
 

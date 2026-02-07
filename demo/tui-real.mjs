@@ -37,6 +37,7 @@ const { waitUntilExit } = render(
   { patchConsole: false },
 );
 await waitUntilExit();
+
 if (result?.type === 'select') {
   console.log(JSON.stringify(result.repo, null, 2));
 } else {

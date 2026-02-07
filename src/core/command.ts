@@ -31,17 +31,21 @@ export async function runCommand(
     windowsHide: true,
     encoding: 'utf8',
   });
+
   return { stdout, stderr: stderr ?? '' };
 }
 
 function normalizeCommand(command: string): string {
   const trimmed = command.trim();
+
   if (!trimmed) {
     throw new Error('command required');
   }
+
   if (trimmed.includes('\0')) {
     throw new Error('invalid command');
   }
+
   return trimmed;
 }
 
@@ -49,6 +53,7 @@ function normalizeArg(arg: string): string {
   if (arg.includes('\0')) {
     throw new Error('invalid argument');
   }
+
   return arg;
 }
 
@@ -56,5 +61,6 @@ function normalizePath(input: string): string {
   if (input.includes('\0')) {
     throw new Error('invalid path');
   }
+
   return path.resolve(input);
 }
