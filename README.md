@@ -4,13 +4,13 @@
 
 ## 5 分钟上手
 
-1) 安装
+1. 安装
 
 ```bash
 npm i -g local-repo-picker
 ```
 
-2) 生成配置并填写扫描路径
+2. 生成配置并填写扫描路径
 
 ```bash
 repo --config
@@ -29,13 +29,13 @@ repo --config
 }
 ```
 
-3) 启动 Web UI（推荐）
+3. 启动 Web UI（推荐）
 
 ```bash
 repo ui
 ```
 
-4) 刷新缓存
+4. 刷新缓存
 
 ```bash
 repo refresh
@@ -215,47 +215,43 @@ Tag 由 auto 与 manual 组成：
 支持 action / tag / preview 扩展，必须显式注册，插件失败不会影响主流程。
 
 ```ts
-import {
-  registerPlugins,
-  registerBuiltInPlugins,
-  type PluginModule
-} from "local-repo-picker"
+import { registerPlugins, registerBuiltInPlugins, type PluginModule } from 'local-repo-picker';
 
-registerBuiltInPlugins()
+registerBuiltInPlugins();
 
 const myPlugin: PluginModule = {
-  id: "acme.demo",
-  label: "Demo",
+  id: 'acme.demo',
+  label: 'Demo',
   actions: [
     {
-      id: "print-path",
-      label: "打印路径",
+      id: 'print-path',
+      label: '打印路径',
       run: async (repo) => {
-        console.log(repo.path)
-      }
-    }
+        console.log(repo.path);
+      },
+    },
   ],
   tags: [
     {
-      id: "custom-tag",
-      label: "自定义标签",
+      id: 'custom-tag',
+      label: '自定义标签',
       apply: async ({ repoPath }) => {
-        return repoPath.includes("demo") ? ["[demo]"] : []
-      }
-    }
+        return repoPath.includes('demo') ? ['[demo]'] : [];
+      },
+    },
   ],
   previews: [
     {
-      id: "custom-preview",
-      label: "预览扩展",
+      id: 'custom-preview',
+      label: '预览扩展',
       render: async ({ repo }) => {
-        return { title: "EXTRA", lines: [repo.ownerRepo] }
-      }
-    }
-  ]
-}
+        return { title: 'EXTRA', lines: [repo.ownerRepo] };
+      },
+    },
+  ],
+};
 
-registerPlugins([myPlugin])
+registerPlugins([myPlugin]);
 ```
 
 内置插件：

@@ -103,7 +103,8 @@ body,
   color: #d6e4ff;
   padding: 14px 16px;
   border-radius: 8px;
-  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   white-space: pre-wrap;
 }
 

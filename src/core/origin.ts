@@ -1,48 +1,48 @@
-import { readOriginUrl, runGit } from "./git"
+import { readOriginUrl, runGit } from './git';
 
 export async function readOriginValue(repoPath: string): Promise<string | null> {
-  const fromConfig = await readOriginUrl(repoPath)
+  const fromConfig = await readOriginUrl(repoPath);
   if (fromConfig) {
-    return fromConfig
+    return fromConfig;
   }
-  const result = await runGit(["config", "--get", "remote.origin.url"], {
+  const result = await runGit(['config', '--get', 'remote.origin.url'], {
     cwd: repoPath,
-    timeoutMs: 1500
-  })
+    timeoutMs: 1500,
+  });
   if (!result.ok) {
-    return null
+    return null;
   }
-  const value = result.stdout.trim()
-  return value ? value : null
+  const value = result.stdout.trim();
+  return value ? value : null;
 }
 
 export function parseOriginToSiteUrl(origin: string | null | undefined): string | null {
-  if (!origin || origin === "-") {
-    return null
+  if (!origin || origin === '-') {
+    return null;
   }
-  if (origin.includes("://")) {
+  if (origin.includes('://')) {
     try {
-      const url = new URL(origin)
-      const repoPath = normalizeRepoPath(url.pathname)
+      const url = new URL(origin);
+      const repoPath = normalizeRepoPath(url.pathname);
       if (!repoPath || !url.hostname) {
-        return null
+        return null;
       }
-      return `https://${url.hostname}/${repoPath}`
+      return `https://${url.hostname}/${repoPath}`;
     } catch {
-      return null
+      return null;
     }
   }
-  const scpMatch = origin.match(/^(?:.+@)?([^:]+):(.+)$/)
+  const scpMatch = origin.match(/^(?:.+@)?([^:]+):(.+)$/);
   if (!scpMatch) {
-    return null
+    return null;
   }
-  const repoPath = normalizeRepoPath(scpMatch[2])
+  const repoPath = normalizeRepoPath(scpMatch[2]);
   if (!repoPath) {
-    return null
+    return null;
   }
-  return `https://${scpMatch[1]}/${repoPath}`
+  return `https://${scpMatch[1]}/${repoPath}`;
 }
 
 function normalizeRepoPath(input: string): string {
-  return input.replace(/^\/+/, "").replace(/\.git$/i, "")
+  return input.replace(/^\/+/, '').replace(/\.git$/i, '');
 }

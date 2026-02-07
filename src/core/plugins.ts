@@ -1,5 +1,5 @@
-import { logger } from "./logger"
-import { uniqueTags } from "./tags"
+import { logger } from './logger';
+import { uniqueTags } from './tags';
 import type {
   Action,
   PluginModule,
@@ -7,149 +7,144 @@ import type {
   PreviewPluginInput,
   PreviewSection,
   TagPlugin,
-  TagPluginInput
-} from "./types"
+  TagPluginInput,
+} from './types';
 
-const plugins = new Map<string, PluginModule>()
+const plugins = new Map<string, PluginModule>();
 
 export function registerPlugin(plugin: PluginModule): void {
   if (!plugin || !plugin.id) {
-    logger.warn("插件注册失败: 缺少 id")
-    return
+    logger.warn('插件注册失败: 缺少 id');
+    return;
   }
-  plugins.set(plugin.id, plugin)
+  plugins.set(plugin.id, plugin);
 }
 
 export function registerPlugins(input: PluginModule[]): void {
   for (const plugin of input) {
-    registerPlugin(plugin)
+    registerPlugin(plugin);
   }
 }
 
 export async function loadPlugins(
-  loaders: Array<() => Promise<PluginModule | PluginModule[]>>
+  loaders: Array<() => Promise<PluginModule | PluginModule[]>>,
 ): Promise<void> {
   for (const loader of loaders) {
     try {
-      const result = await loader()
+      const result = await loader();
       if (Array.isArray(result)) {
-        registerPlugins(result)
+        registerPlugins(result);
       } else if (result) {
-        registerPlugin(result)
+        registerPlugin(result);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "未知错误"
-      logger.warn(`插件加载失败: ${message}`)
+      const message = error instanceof Error ? error.message : '未知错误';
+      logger.warn(`插件加载失败: ${message}`);
     }
   }
 }
 
 export function getRegisteredPlugins(): PluginModule[] {
-  return Array.from(plugins.values())
+  return Array.from(plugins.values());
 }
 
 export function getRegisteredActions(): Action[] {
-  const actions: Action[] = []
+  const actions: Action[] = [];
   for (const plugin of plugins.values()) {
     if (plugin.actions && plugin.actions.length > 0) {
-      actions.push(...plugin.actions)
+      actions.push(...plugin.actions);
     }
   }
-  return actions
+  return actions;
 }
 
-export async function resolveTagExtensions(
-  input: TagPluginInput
-): Promise<string[]> {
-  const tags: string[] = []
+export async function resolveTagExtensions(input: TagPluginInput): Promise<string[]> {
+  const tags: string[] = [];
   for (const plugin of collectTagPlugins()) {
-    const result = await safeApplyTagPlugin(plugin, input)
+    const result = await safeApplyTagPlugin(plugin, input);
     if (result.length > 0) {
-      tags.push(...result)
+      tags.push(...result);
     }
   }
-  return uniqueTags(tags)
+  return uniqueTags(tags);
 }
 
 export async function resolvePreviewExtensions(
-  input: PreviewPluginInput
+  input: PreviewPluginInput,
 ): Promise<PreviewSection[]> {
-  const sections: PreviewSection[] = []
+  const sections: PreviewSection[] = [];
   for (const plugin of collectPreviewPlugins()) {
-    const section = await safeApplyPreviewPlugin(plugin, input)
+    const section = await safeApplyPreviewPlugin(plugin, input);
     if (section && section.lines.length > 0) {
-      sections.push(section)
+      sections.push(section);
     }
   }
-  return sections
+  return sections;
 }
 
 export function clearPlugins(): void {
-  plugins.clear()
+  plugins.clear();
 }
 
 function collectTagPlugins(): TagPlugin[] {
-  const result: TagPlugin[] = []
+  const result: TagPlugin[] = [];
   for (const plugin of plugins.values()) {
     if (plugin.tags && plugin.tags.length > 0) {
-      result.push(...plugin.tags)
+      result.push(...plugin.tags);
     }
   }
-  return result
+  return result;
 }
 
 function collectPreviewPlugins(): PreviewPlugin[] {
-  const result: PreviewPlugin[] = []
+  const result: PreviewPlugin[] = [];
   for (const plugin of plugins.values()) {
     if (plugin.previews && plugin.previews.length > 0) {
-      result.push(...plugin.previews)
+      result.push(...plugin.previews);
     }
   }
-  return result
+  return result;
 }
 
-async function safeApplyTagPlugin(
-  plugin: TagPlugin,
-  input: TagPluginInput
-): Promise<string[]> {
+async function safeApplyTagPlugin(plugin: TagPlugin, input: TagPluginInput): Promise<string[]> {
   try {
-    const result = await plugin.apply(input)
+    const result = await plugin.apply(input);
     if (!result || result.length === 0) {
-      return []
+      return [];
     }
-    return normalizeTags(result)
+    return normalizeTags(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "未知错误"
-    logger.warn(`插件 tag 失败: ${plugin.id} ${message}`)
-    return []
+    const message = error instanceof Error ? error.message : '未知错误';
+    logger.warn(`插件 tag 失败: ${plugin.id} ${message}`);
+    return [];
   }
 }
 
 async function safeApplyPreviewPlugin(
   plugin: PreviewPlugin,
-  input: PreviewPluginInput
+  input: PreviewPluginInput,
 ): Promise<PreviewSection | null> {
   try {
-    return await plugin.render(input)
+    return await plugin.render(input);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "未知错误"
-    logger.warn(`插件 preview 失败: ${plugin.id} ${message}`)
-    return null
+    const message = error instanceof Error ? error.message : '未知错误';
+    logger.warn(`插件 preview 失败: ${plugin.id} ${message}`);
+    return null;
   }
 }
 
 function normalizeTags(tags: string[]): string[] {
-  const result: string[] = []
+  const result: string[] = [];
   for (const tag of tags) {
-    const trimmed = tag.trim()
+    const trimmed = tag.trim();
     if (!trimmed) {
-      continue
+      continue;
     }
-    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-      result.push(trimmed)
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      result.push(trimmed);
     } else {
-      result.push(`[${trimmed}]`)
+      result.push(`[${trimmed}]`);
     }
   }
-  return result
+  return result;
 }

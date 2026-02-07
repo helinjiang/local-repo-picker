@@ -3,6 +3,7 @@
 目标：选择 repo 后，弹出 action 列表（fzf），并执行对应 action（复用现有 actions 模块）。
 
 ## 行为
+
 - actions 列表来源：
   - 复用现有 Action 定义（若没有，先抽象出来）
 - 选择 action 后执行：
@@ -16,5 +17,6 @@
   - library 仅返回结果（或提供可选参数决定是否启用 actions）
 
 ## 输出要求
+
 - patch 或完整文件内容
 - 手工验证步骤

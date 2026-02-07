@@ -32,15 +32,15 @@ Action 可通过 scopes 限制使用场景：
 示例（新增一个内置 Action）：
 
 ```ts
-import type { Action } from "../core/types"
+import type { Action } from '../core/types';
 
 const helloAction: Action = {
-  id: "builtin.hello",
-  label: "Say Hello",
+  id: 'builtin.hello',
+  label: 'Say Hello',
   run: async (repo) => {
-    console.log(`Hello ${repo.ownerRepo}`)
-  }
-}
+    console.log(`Hello ${repo.ownerRepo}`);
+  },
+};
 ```
 
 将其挂入 builtInPlugins：
@@ -48,13 +48,13 @@ const helloAction: Action = {
 ```ts
 export const builtInPlugins: PluginModule[] = [
   {
-    id: "builtin.node",
-    label: "Node 插件",
+    id: 'builtin.node',
+    label: 'Node 插件',
     tags: [nodeTagPlugin],
     previews: [nodePreviewPlugin],
-    actions: [pathActionPlugin, helloAction]
-  }
-]
+    actions: [pathActionPlugin, helloAction],
+  },
+];
 ```
 
 内置插件在 CLI 与 Web UI 启动时都会被注册：
@@ -73,58 +73,52 @@ export const builtInPlugins: PluginModule[] = [
 示例（与 README 中示例一致）：
 
 ```ts
-import {
-  registerPlugins,
-  registerBuiltInPlugins,
-  type PluginModule
-} from "local-repo-picker"
+import { registerPlugins, registerBuiltInPlugins, type PluginModule } from 'local-repo-picker';
 
-registerBuiltInPlugins()
+registerBuiltInPlugins();
 
 const myPlugin: PluginModule = {
-  id: "acme.demo",
-  label: "Demo",
+  id: 'acme.demo',
+  label: 'Demo',
   actions: [
     {
-      id: "print-path",
-      label: "打印路径",
-      scopes: ["cli"],
+      id: 'print-path',
+      label: '打印路径',
+      scopes: ['cli'],
       run: async (repo) => {
-        console.log(repo.path)
-      }
-    }
+        console.log(repo.path);
+      },
+    },
   ],
   tags: [
     {
-      id: "custom-tag",
-      label: "自定义标签",
+      id: 'custom-tag',
+      label: '自定义标签',
       apply: async ({ repoPath }) => {
-        return repoPath.includes("demo") ? ["[demo]"] : []
-      }
-    }
+        return repoPath.includes('demo') ? ['[demo]'] : [];
+      },
+    },
   ],
   previews: [
     {
-      id: "custom-preview",
-      label: "预览扩展",
+      id: 'custom-preview',
+      label: '预览扩展',
       render: async ({ repo }) => {
-        return { title: "EXTRA", lines: [repo.ownerRepo] }
-      }
-    }
-  ]
-}
+        return { title: 'EXTRA', lines: [repo.ownerRepo] };
+      },
+    },
+  ],
+};
 
-registerPlugins([myPlugin])
+registerPlugins([myPlugin]);
 ```
 
 如果你的插件是动态加载的，可使用 loadPlugins：
 
 ```ts
-import { loadPlugins } from "local-repo-picker"
+import { loadPlugins } from 'local-repo-picker';
 
-await loadPlugins([
-  async () => (await import("./my-plugin")).default
-])
+await loadPlugins([async () => (await import('./my-plugin')).default]);
 ```
 
 ## 运行与安全约束

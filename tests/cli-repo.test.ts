@@ -1,14 +1,14 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from 'vitest';
 
-vi.mock("../src/core/cache", () => ({
-  loadCache: vi.fn()
-}))
+vi.mock('../src/core/cache', () => ({
+  loadCache: vi.fn(),
+}));
 
-const cacheMocks = await import("../src/core/cache")
-const { resolveRepoInfo } = await import("../src/cli/repo")
+const cacheMocks = await import('../src/core/cache');
+const { resolveRepoInfo } = await import('../src/cli/repo');
 
-describe("cli repo", () => {
-  it("resolveRepoInfo 命中缓存", async () => {
+describe('cli repo', () => {
+  it('resolveRepoInfo 命中缓存', async () => {
     vi.mocked(cacheMocks.loadCache).mockResolvedValue({
       savedAt: Date.now(),
       ttlMs: 1000,
@@ -19,36 +19,36 @@ describe("cli repo", () => {
         scanDurationMs: 0,
         buildDurationMs: 0,
         repoCount: 1,
-        scanRoots: ["/"]
+        scanRoots: ['/'],
       },
       repos: [
         {
-          fullPath: "/a",
-          scanRoot: "/",
-          relativePath: "a",
-          recordKey: "local:a",
+          fullPath: '/a',
+          scanRoot: '/',
+          relativePath: 'a',
+          recordKey: 'local:a',
           git: undefined,
           isDirty: false,
           manualTags: [],
           autoTags: [],
-          lastScannedAt: 0
-        }
-      ]
-    })
+          lastScannedAt: 0,
+        },
+      ],
+    });
     const repo = await resolveRepoInfo(
-      { scanRoots: ["/"], cacheFile: "", manualTagsFile: "", lruFile: "" },
-      "/a"
-    )
-    expect(repo.fullPath).toBe("/a")
-  })
+      { scanRoots: ['/'], cacheFile: '', manualTagsFile: '', lruFile: '' },
+      '/a',
+    );
+    expect(repo.fullPath).toBe('/a');
+  });
 
-  it("resolveRepoInfo 未命中缓存时返回默认结构", async () => {
-    vi.mocked(cacheMocks.loadCache).mockResolvedValue(null)
+  it('resolveRepoInfo 未命中缓存时返回默认结构', async () => {
+    vi.mocked(cacheMocks.loadCache).mockResolvedValue(null);
     const repo = await resolveRepoInfo(
-      { scanRoots: ["/"], cacheFile: "", manualTagsFile: "", lruFile: "" },
-      "/b"
-    )
-    expect(repo.fullPath).toBe("/b")
-    expect(repo.manualTags).toEqual([])
-  })
-})
+      { scanRoots: ['/'], cacheFile: '', manualTagsFile: '', lruFile: '' },
+      '/b',
+    );
+    expect(repo.fullPath).toBe('/b');
+    expect(repo.manualTags).toEqual([]);
+  });
+});

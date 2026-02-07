@@ -19,6 +19,7 @@
 ## ✅ 必须要求（硬性）
 
 ### 1) 保留核心模块与数据结构
+
 以下模块（或等价职责）必须保留并复用，不允许重写成脚本式一坨代码：
 
 - `scan` / `indexer`：扫描 repo（multi scanRoots, maxDepth, prune）
@@ -35,6 +36,7 @@
 ---
 
 ### 2) 使用 fzf 完成交互（替代 Ink）
+
 - 不使用 Ink / React（可以保留依赖但默认路径不再用）
 - 交互必须基于 `fzf`（依赖用户已安装）
 - 若未安装 fzf：
@@ -44,6 +46,7 @@
 ---
 
 ### 3) 保留并增强 fzf-like 预览体验
+
 必须实现 fzf 的 `--preview`：
 
 - 左侧列表：展示 **owner/repo 优先**（拿不到则 repo basename），并显示 tags
@@ -64,6 +67,7 @@
 ---
 
 ### 4) 交互功能与快捷键（配置驱动）
+
 fzf 交互需要支持：
 
 - 搜索（fzf 默认）
@@ -80,6 +84,7 @@ fzf 交互需要支持：
 ---
 
 ### 5) Actions（选择 repo 后的动作）
+
 选择 repo 后，提供动作选择（可以用第二个 fzf）：
 
 - open in VSCode
@@ -92,6 +97,7 @@ fzf 交互需要支持：
 ---
 
 ### 6) 安全要求
+
 - 外部命令一律用 `execa`，禁止 `shell: true`
 - 路径必须是绝对路径
 - 不允许把 repo path 直接拼进 shell 命令字符串（尤其是 preview）
@@ -104,6 +110,7 @@ fzf 交互需要支持：
 ## 🧩 设计建议（请按此实现）
 
 ### A) 新增内部子命令：`repo __preview --path <repo>`
+
 - 只负责：
   - 读取 repo 预览数据（复用现有 preview builder）
   - 输出纯文本到 stdout（可带 ANSI）
@@ -111,6 +118,7 @@ fzf 交互需要支持：
   - `--preview 'repo __preview --path {2}'`
 
 ### B) 新增内部子命令：`repo __list [--filter-tag <tag>] [--all]`
+
 - 输出 TSV：
   - col1: display（owner/repo + ANSI tags）
   - col2: path（绝对路径）
@@ -120,6 +128,7 @@ fzf 交互需要支持：
 - 使用 `--delimiter=$'\t' --with-nth=1`
 
 ### C) tag 快捷键过滤实现（避免 awk/sed）
+
 - 用 `--bind ctrl-b:reload(repo __list --filter-tag [byted])`
 - `ctrl-a:reload(repo __list --all)`
 
@@ -138,17 +147,19 @@ fzf 交互需要支持：
 ---
 
 ## 📦 输出要求
+
 - 修改后的项目文件树
 - 每个变更文件的完整内容（或 patch）
 - README 更新：
   - 依赖 fzf 的说明
   - 快捷键说明
   - preview 的说明
-- internal 子命令（__preview / __list）在 README 标注为 internal
+- internal 子命令（**preview / **list）在 README 标注为 internal
 
 ---
 
 ## ⚠️ 约束
+
 - 不要把复杂逻辑塞进一段长 shell preview 字符串
 - 不要牺牲安全（禁止 shell 注入）
 - 不要破坏现有 import API
