@@ -37,8 +37,9 @@ export default function RepoList({
       dataIndex: "folderRelativePath",
       render: (_, repo) => (
         <div>
-          <Space size="small">
+          <Space size="small" wrap>
             <Typography.Text strong>{repo.folderRelativePath}</Typography.Text>
+            {repo.codePlatform ? <Tag color="blue">{repo.codePlatform}</Tag> : null}
             <Tag color={repo.isDirty ? "red" : "green"}>{repo.isDirty ? "dirty" : "clean"}</Tag>
           </Space>
           <div style={{ color: "#8c8c8c", fontSize: 12 }}>{repo.key}</div>

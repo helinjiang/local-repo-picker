@@ -82,22 +82,24 @@ export function parseTagList(raw: string): string[] {
   )
 }
 
-export function getRemoteTag(host?: string, hostTagAliases?: Record<string, string>): string {
+export function getCodePlatform(host?: string, hostTagAliases?: Record<string, string>): string {
   if (!host) {
-    return "[noremote]"
+    return "noremote"
   }
   const mapped = hostTagAliases?.[host]
   if (typeof mapped === "string" && mapped.trim()) {
     const trimmed = mapped.trim()
-    return trimmed.startsWith("[") && trimmed.endsWith("]") ? trimmed : `[${trimmed}]`
+    return trimmed.startsWith("[") && trimmed.endsWith("]")
+      ? trimmed.slice(1, -1)
+      : trimmed
   }
   if (host === "github.com") {
-    return "[github]"
+    return "github"
   }
   if (host === "gitee.com") {
-    return "[gitee]"
+    return "gitee"
   }
-  return `[internal:${host}]`
+  return `internal:${host}`
 }
 
 export function uniqueTags(tags: string[]): string[] {
@@ -113,18 +115,13 @@ export function uniqueTags(tags: string[]): string[] {
   return result
 }
 
-export function buildTags(options: {
-  remoteTag: string
-  autoTag?: string
-  manualTags?: string[]
-  dirty: boolean
-}): string[] {
+export function buildTags(options: { autoTag?: string; manualTags?: string[] }): string[] {
   const base =
     options.manualTags && options.manualTags.length > 0
-      ? [options.remoteTag, ...options.manualTags]
+      ? [...options.manualTags]
       : options.autoTag
-        ? [options.remoteTag, options.autoTag]
-        : [options.remoteTag]
+        ? [options.autoTag]
+        : []
   return uniqueTags(base)
 }
 

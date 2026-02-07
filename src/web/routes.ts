@@ -7,7 +7,7 @@ import type { Action, RepoInfo } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
-import { parseTagList, readManualTagEdits, setManualTags, updateManualTagEdits } from "../core/tags"
+import { getCodePlatform, parseTagList, readManualTagEdits, setManualTags, updateManualTagEdits } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
 import { getConfigPaths, readConfig, writeConfig } from "../config/config"
 import type { AppConfig } from "../config/schema"
@@ -30,6 +30,7 @@ type PaginatedRepos = {
     folderRelativePath: string
     folderFullPath: string
     key: string
+    codePlatform?: string
     tags: string[]
     manualTags: string[]
     lastScannedAt: number
@@ -154,13 +155,18 @@ export async function registerRoutes(
       if (query.tag === "[dirty]" || query.tag === "dirty") {
         repos = repos.filter((repo) => repo.isDirty)
       } else {
-        repos = repos.filter((repo) => repo.tags.includes(query.tag ?? ""))
+        repos = repos.filter(
+          (repo) =>
+            isCodePlatformMatch(repoCodePlatform(repo), query.tag ?? "") ||
+            repo.tags.includes(query.tag ?? "")
+        )
       }
     }
     if (query.q) {
       const keyword = query.q.toLowerCase()
       repos = repos.filter((repo) => {
-        const hay = `${repo.ownerRepo} ${repo.path} ${repo.tags.join("")}`.toLowerCase()
+        const hay =
+          `${repo.ownerRepo} ${repo.path} ${repoCodePlatform(repo)} ${repo.tags.join("")}`.toLowerCase()
         return hay.includes(keyword)
       })
     }
@@ -181,11 +187,13 @@ export async function registerRoutes(
         repo.ownerRepo || path.basename(repo.path)
       )
       const folderFullPath = repo.path
-      const key = buildRepoKeyFromTags(repo.tags, folderRelativePath)
+      const codePlatform = normalizeCodePlatform(repoCodePlatform(repo))
+      const key = buildRepoKeyFromPlatform(codePlatform, folderRelativePath)
       return {
         folderRelativePath,
         folderFullPath,
         key,
+        codePlatform,
         tags: repo.tags,
         manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
         lastScannedAt: repo.lastScannedAt,
@@ -282,6 +290,7 @@ async function resolveRepoInfo(options: ServerOptions, repoPath: string): Promis
   return {
     path: resolvedPath,
     ownerRepo: path.basename(resolvedPath),
+    codePlatform: getCodePlatform(),
     tags: [],
     lastScannedAt: Date.now()
   }
@@ -302,6 +311,17 @@ function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
     return true
   }
   return action.scopes.includes(scope)
+}
+
+function repoCodePlatform(repo: RepoInfo): string {
+  return repo.codePlatform ?? resolveCodePlatformFromTags(repo.tags)
+}
+
+function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
+  if (!filter) return false
+  const normalizedPlatform = normalizeCodePlatform(codePlatform)
+  const normalizedFilter = normalizeCodePlatform(filter)
+  return normalizedPlatform !== "" && normalizedPlatform === normalizedFilter
 }
 
 function deriveFolderRelativePath(
@@ -325,15 +345,15 @@ function deriveFolderRelativePath(
   return fallback
 }
 
-function buildRepoKeyFromTags(tags: string[], folderRelativePath: string): string {
-  const tagValue = normalizeTagValue(resolveRemoteTagFromTags(tags))
-  if (!tagValue || !folderRelativePath || folderRelativePath === "-") {
+function buildRepoKeyFromPlatform(codePlatform: string, folderRelativePath: string): string {
+  const platformValue = normalizeCodePlatform(codePlatform)
+  if (!platformValue || !folderRelativePath || folderRelativePath === "-") {
     return "-"
   }
-  return `${tagValue}/${folderRelativePath}`
+  return `${platformValue}/${folderRelativePath}`
 }
 
-function resolveRemoteTagFromTags(tags: string[]): string {
+function resolveCodePlatformFromTags(tags: string[]): string {
   const remoteTag = tags.find(
     (tag) =>
       tag === "[github]" ||
@@ -341,10 +361,14 @@ function resolveRemoteTagFromTags(tags: string[]): string {
       tag === "[noremote]" ||
       tag.startsWith("[internal:")
   )
-  return remoteTag ?? tags[0] ?? ""
+  return remoteTag ?? ""
 }
 
-function normalizeTagValue(tag: string): string {
-  const match = tag.match(/^\[(.*)\]$/)
-  return match ? match[1] : tag
+function normalizeCodePlatform(platform: string): string {
+  const trimmed = platform.trim()
+  if (!trimmed) {
+    return ""
+  }
+  const match = trimmed.match(/^\[(.*)\]$/)
+  return match ? match[1] : trimmed
 }

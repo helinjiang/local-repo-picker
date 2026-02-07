@@ -2,6 +2,7 @@ export type RepoInfo = {
   path: string
   ownerRepo: string
   originUrl?: string
+  codePlatform?: string
   tags: string[]
   isDirty?: boolean
   lastScannedAt: number
@@ -85,6 +86,7 @@ export type TagPluginInput = {
   scanRoot: string
   originUrl?: string
   ownerRepo: string
+  codePlatform?: string
   autoTag?: string
   manualTags?: string[]
   dirty: boolean

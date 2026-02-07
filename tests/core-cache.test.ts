@@ -10,7 +10,7 @@ vi.mock("../src/core/scan", () => ({
 vi.mock("../src/core/tags", () => ({
   readManualTagEdits: vi.fn(),
   buildTags: vi.fn(),
-  getRemoteTag: vi.fn(),
+  getCodePlatform: vi.fn(),
   uniqueTags: vi.fn()
 }))
 
@@ -71,8 +71,8 @@ describe("core cache", () => {
     vi.mocked(gitMocks.readOriginUrl).mockResolvedValue("https://github.com/a/b.git")
     vi.mocked(gitMocks.parseOriginInfo).mockReturnValue({ host: "github.com", ownerRepo: "a/b" })
     vi.mocked(gitMocks.isDirty).mockResolvedValue(false)
-    vi.mocked(tagMocks.getRemoteTag).mockReturnValue("[github]")
-    vi.mocked(tagMocks.buildTags).mockReturnValue(["[github]", "[manual]"])
+    vi.mocked(tagMocks.getCodePlatform).mockReturnValue("github")
+    vi.mocked(tagMocks.buildTags).mockReturnValue(["[manual]"])
     vi.mocked(tagMocks.uniqueTags).mockImplementation((tags: string[]) => tags)
     vi.mocked(pluginMocks.resolveTagExtensions).mockResolvedValue(["[extra]"])
     vi.mocked(lruMocks.readLru).mockResolvedValue([])
@@ -154,8 +154,8 @@ describe("core cache", () => {
     vi.mocked(gitMocks.readOriginUrl).mockResolvedValue(null)
     vi.mocked(gitMocks.parseOriginInfo).mockReturnValue({ ownerRepo: "" })
     vi.mocked(gitMocks.isDirty).mockResolvedValue(false)
-    vi.mocked(tagMocks.getRemoteTag).mockReturnValue("[noremote]")
-    vi.mocked(tagMocks.buildTags).mockReturnValue(["[noremote]"])
+    vi.mocked(tagMocks.getCodePlatform).mockReturnValue("noremote")
+    vi.mocked(tagMocks.buildTags).mockReturnValue([])
     vi.mocked(tagMocks.uniqueTags).mockImplementation((tags: string[]) => tags)
     vi.mocked(pluginMocks.resolveTagExtensions).mockResolvedValue([])
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "lrp-cache-"))

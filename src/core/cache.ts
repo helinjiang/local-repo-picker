@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs"
 import pLimit from "p-limit"
 import type { CacheData, CacheMetadata, RepoInfo, ScanOptions } from "./types"
 import { scanRepos } from "./scan"
-import { buildTags, getRemoteTag, readManualTagEdits, uniqueTags } from "./tags"
+import { buildTags, getCodePlatform, readManualTagEdits, uniqueTags } from "./tags"
 import { isDirty, parseOriginInfo, readOriginUrl } from "./git"
 import { readLru, sortByLru } from "./lru"
 import { getConfigPaths } from "../config/config"
@@ -43,19 +43,18 @@ export async function buildCache(
     repoLimit(async () => {
       const originUrl = await readOriginUrl(repo.path)
       const { host, ownerRepo } = parseOriginInfo(originUrl)
-      const remoteTag = getRemoteTag(host, normalized.remoteHostTags)
+      const codePlatform = getCodePlatform(host, normalized.remoteHostTags)
       const manual = manualEdits.get(normalizeRepoKey(repo.path))
       const dirty = await isDirty(repo.path)
       const baseTags = buildTags({
-        remoteTag,
         autoTag: repo.autoTag,
-        manualTags: manual?.add,
-        dirty
+        manualTags: manual?.add
       })
       const baseRepo = {
         path: repo.path,
         ownerRepo: ownerRepo || path.basename(repo.path),
         originUrl: originUrl ?? undefined,
+        codePlatform,
         tags: baseTags,
         isDirty: dirty,
         lastScannedAt: Date.now()
@@ -65,6 +64,7 @@ export async function buildCache(
         scanRoot: repo.scanRoot,
         originUrl: baseRepo.originUrl,
         ownerRepo: baseRepo.ownerRepo,
+        codePlatform: baseRepo.codePlatform,
         autoTag: repo.autoTag,
         manualTags: manual?.add,
         dirty,
