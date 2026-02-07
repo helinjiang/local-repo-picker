@@ -101,6 +101,12 @@ function buildCoreActions(): Action[] {
         }
         await execa("open", [siteUrl], { reject: false })
       }
+    },
+    {
+      id: "web.edit-repo-links",
+      label: "编辑固定链接",
+      scopes: ["web"],
+      run: async () => {}
     }
   ]
 }

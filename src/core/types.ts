@@ -2,7 +2,9 @@ export type RepoInfo = {
   path: string
   ownerRepo: string
   originUrl?: string
+  codePlatform?: string
   tags: string[]
+  isDirty?: boolean
   lastScannedAt: number
 }
 
@@ -13,6 +15,8 @@ export type PreviewSection = {
 
 export type RepoPreview = {
   path: string
+  repoPath: string
+  repoKey: string
   origin: string
   siteUrl: string
   branch: string
@@ -30,6 +34,7 @@ export type ScanOptions = {
   pruneDirs?: string[]
   cacheTtlMs?: number
   followSymlinks?: boolean
+  remoteHostTags?: Record<string, string>
   cacheFile?: string
   manualTagsFile?: string
   lruFile?: string
@@ -81,6 +86,7 @@ export type TagPluginInput = {
   scanRoot: string
   originUrl?: string
   ownerRepo: string
+  codePlatform?: string
   autoTag?: string
   manualTags?: string[]
   dirty: boolean

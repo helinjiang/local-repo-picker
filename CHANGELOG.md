@@ -1,5 +1,15 @@
 # 更新日志
 
+## [0.4.0] - 2026-02-07
+### 新增
+- codePlatform 属性与列表展示
+- 列表首行展示状态
+
+### 变更
+- repoKey 与列表 key 统一算法
+- folderRelativePath 改为相对 scanRoots 的路径
+- remoteTag 从 tags 中移除，dirty 独立于 tags
+
 ## [0.3.1] - 2026-02-06
 ### 新增
 - Web 快速标签筛选与配置入口

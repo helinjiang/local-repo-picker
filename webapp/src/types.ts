@@ -1,6 +1,8 @@
 export type RepoItem = {
-  path: string
-  ownerRepo: string
+  folderFullPath: string
+  folderRelativePath: string
+  key: string
+  codePlatform?: string
   tags: string[]
   manualTags?: string[]
   lastScannedAt: number
@@ -21,6 +23,8 @@ export type PreviewSection = {
 
 export type RepoPreview = {
   path: string
+  repoPath: string
+  repoKey: string
   origin: string
   siteUrl: string
   branch: string
@@ -37,6 +41,11 @@ export type RepoPreviewResult = {
   error?: string
 }
 
+export type FixedLink = {
+  label: string
+  url: string
+}
+
 export type AppConfig = {
   scanRoots: string[]
   maxDepth?: number
@@ -45,6 +54,8 @@ export type AppConfig = {
   followSymlinks?: boolean
   fzfTagFilters?: Record<string, string>
   webQuickTags?: string[]
+  webRepoLinks?: Record<string, FixedLink[]>
+  remoteHostTags?: Record<string, string>
 }
 
 export type ConfigPaths = {

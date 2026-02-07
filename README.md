@@ -62,7 +62,8 @@ asciinema play docs/demo.cast
 - 多路径扫描与缓存
 - 交互式列表与搜索
 - Git 预览（origin / site / branch / status / sync / recent commits / README）
-- 标签体系（auto / remote / dirty / manual）
+- 标签体系（auto / manual）
+- codePlatform 与 dirty 状态展示
 - LRU 最近访问排序
 - CLI 输出与配置管理
 - Debug 日志
@@ -134,7 +135,7 @@ brew install fzf
 ```
 
 - `ctrl-a` 恢复全量列表
-- 其他键按 tag 过滤（tag 精确包含即可）
+- 其他键按 tag 或 codePlatform 过滤（精确包含即可）
 
 ## Actions
 
@@ -171,7 +172,7 @@ DEBUG=1 repo
 
 ## Web 快速标签筛选
 
-配置项 `webQuickTags` 决定 Web 顶部的快捷筛选标签：
+配置项 `webQuickTags` 决定 Web 顶部的快捷筛选标签（支持 codePlatform / tag / dirty）：
 
 ```json
 {
@@ -181,12 +182,15 @@ DEBUG=1 repo
 
 ## Tag 体系
 
-Tag 由多部分组成：
+Tag 由 auto 与 manual 组成：
 
-- remote tag：`[github]` / `[gitee]` / `[internal:host]`
 - auto tag：扫描路径第一层目录，如 `[team-a]`
-- dirty tag：工作区有改动时追加 `[dirty]`
 - manual tag：从 `repo_tags.tsv` 读取
+
+仓库额外属性：
+
+- codePlatform：`github` / `gitee` / `internal:host` / `noremote`
+- dirty：工作区有改动时标记为 dirty
 
 `repo_tags.tsv` 示例：
 

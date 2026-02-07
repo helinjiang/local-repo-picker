@@ -7,7 +7,7 @@ import type { Action, RepoInfo } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
-import { parseTagList, readManualTagEdits, setManualTags, updateManualTagEdits } from "../core/tags"
+import { getCodePlatform, parseTagList, readManualTagEdits, setManualTags, updateManualTagEdits } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
 import { getConfigPaths, readConfig, writeConfig } from "../config/config"
 import type { AppConfig } from "../config/schema"
@@ -19,13 +19,23 @@ type ServerOptions = {
   pruneDirs?: string[]
   cacheTtlMs?: number
   followSymlinks?: boolean
+  remoteHostTags?: Record<string, string>
   cacheFile: string
   manualTagsFile: string
   lruFile: string
 }
 
 type PaginatedRepos = {
-  items: Array<RepoInfo & { isDirty?: boolean }>
+  items: Array<{
+    folderRelativePath: string
+    folderFullPath: string
+    key: string
+    codePlatform?: string
+    tags: string[]
+    manualTags: string[]
+    lastScannedAt: number
+    isDirty?: boolean
+  }>
   total: number
   page: number
   pageSize: number
@@ -142,12 +152,21 @@ export async function registerRoutes(
     const manualEdits = await readManualTagEdits(options.manualTagsFile)
     let repos = resolved.repos
     if (query.tag) {
-      repos = repos.filter((repo) => repo.tags.includes(query.tag as string))
+      if (query.tag === "[dirty]" || query.tag === "dirty") {
+        repos = repos.filter((repo) => repo.isDirty)
+      } else {
+        repos = repos.filter(
+          (repo) =>
+            isCodePlatformMatch(repoCodePlatform(repo), query.tag ?? "") ||
+            repo.tags.includes(query.tag ?? "")
+        )
+      }
     }
     if (query.q) {
       const keyword = query.q.toLowerCase()
       repos = repos.filter((repo) => {
-        const hay = `${repo.ownerRepo} ${repo.path} ${repo.tags.join("")}`.toLowerCase()
+        const hay =
+          `${repo.ownerRepo} ${repo.path} ${repoCodePlatform(repo)} ${repo.tags.join("")}`.toLowerCase()
         return hay.includes(keyword)
       })
     }
@@ -161,11 +180,27 @@ export async function registerRoutes(
     const page = Math.max(1, Number(query.page) || 1)
     const pageSize = Math.min(Math.max(1, Number(query.pageSize) || 200), 500)
     const offset = (page - 1) * pageSize
-    const items = repos.slice(offset, offset + pageSize).map((repo) => ({
-      ...repo,
-      manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
-      isDirty: repo.tags.includes("[dirty]")
-    }))
+    const items = repos.slice(offset, offset + pageSize).map((repo) => {
+      const folderRelativePath = deriveFolderRelativePath(
+        repo.path,
+        options.scanRoots,
+        repo.ownerRepo || path.basename(repo.path)
+      )
+      const folderFullPath = repo.path
+      const codePlatform = normalizeCodePlatform(repoCodePlatform(repo))
+      const repoPathLabel = deriveRepoPath(repo.path, repo.ownerRepo)
+      const key = buildRepoKeyFromPlatform(codePlatform, repoPathLabel)
+      return {
+        folderRelativePath,
+        folderFullPath,
+        key,
+        codePlatform,
+        tags: repo.tags,
+        manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
+        lastScannedAt: repo.lastScannedAt,
+        isDirty: Boolean(repo.isDirty)
+      }
+    })
     const payload: PaginatedRepos = {
       items,
       total,
@@ -187,7 +222,9 @@ export async function registerRoutes(
       return cached
     }
     const repo = await resolveRepoInfo(options, allowedPath)
-    const preview = await previewLimit(() => buildRepoPreview(repo))
+    const preview = await previewLimit(() =>
+      buildRepoPreview(repo, { remoteHostTags: options.remoteHostTags })
+    )
     previewCache.set(allowedPath, preview)
     return preview
   })
@@ -254,6 +291,7 @@ async function resolveRepoInfo(options: ServerOptions, repoPath: string): Promis
   return {
     path: resolvedPath,
     ownerRepo: path.basename(resolvedPath),
+    codePlatform: getCodePlatform(),
     tags: [],
     lastScannedAt: Date.now()
   }
@@ -274,4 +312,80 @@ function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
     return true
   }
   return action.scopes.includes(scope)
+}
+
+function repoCodePlatform(repo: RepoInfo): string {
+  return repo.codePlatform ?? resolveCodePlatformFromTags(repo.tags)
+}
+
+function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
+  if (!filter) return false
+  const normalizedPlatform = normalizeCodePlatform(codePlatform)
+  const normalizedFilter = normalizeCodePlatform(filter)
+  return normalizedPlatform !== "" && normalizedPlatform === normalizedFilter
+}
+
+function deriveFolderRelativePath(
+  fullPath: string,
+  scanRoots: string[],
+  fallback: string
+): string {
+  const resolvedPath = path.resolve(fullPath)
+  const rootMatches = scanRoots
+    .map((root) => path.resolve(root))
+    .filter((root) => resolvedPath === root || resolvedPath.startsWith(`${root}${path.sep}`))
+  for (const root of rootMatches) {
+    const relative = path.relative(root, resolvedPath)
+    if (!relative || relative === ".") {
+      return path.basename(resolvedPath)
+    }
+    if (!relative.startsWith("..")) {
+      return relative
+    }
+  }
+  return fallback
+}
+
+function deriveRepoPath(repoPath: string, preferred?: string): string {
+  const trimmedPreferred = preferred?.trim()
+  if (trimmedPreferred) {
+    return trimmedPreferred
+  }
+  const normalized = path.resolve(repoPath)
+  const parts = normalized.split(path.sep).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
+  }
+  if (parts.length === 1) {
+    return parts[0]
+  }
+  return "-"
+}
+
+function buildRepoKeyFromPlatform(codePlatform: string, repoPathLabel: string): string {
+  const platformValue = normalizeCodePlatform(codePlatform)
+  if (!platformValue || !repoPathLabel || repoPathLabel === "-") {
+    return "-"
+  }
+  return `${platformValue}/${repoPathLabel}`
+}
+
+function resolveCodePlatformFromTags(tags: string[]): string {
+  const remoteTag = tags.find(
+    (tag) =>
+      tag === "[github]" ||
+      tag === "[gitee]" ||
+      tag === "[noremote]" ||
+      tag.startsWith("[internal:")
+  )
+  return remoteTag ?? ""
+}
+
+function normalizeCodePlatform(platform: string): string {
+  const trimmed = platform.trim()
+  if (!trimmed) {
+    return ""
+  }
+  const match = trimmed.match(/^\[(.*)\]$/)
+  return match ? match[1] : trimmed
 }

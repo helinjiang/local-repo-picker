@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import { describe, expect, it } from "vitest"
-import { buildTags, getRemoteTag, parseTagList, readManualTags } from "../src/core/tags"
+import { buildTags, getCodePlatform, parseTagList, readManualTags } from "../src/core/tags"
 import { normalizeRepoKey } from "../src/core/path-utils"
 
 describe("tags", () => {
@@ -11,29 +11,25 @@ describe("tags", () => {
     expect(parseTagList("foo bar")).toEqual(["[foo]", "[bar]"])
   })
 
-  it("生成 remote tag", () => {
-    expect(getRemoteTag("github.com")).toBe("[github]")
-    expect(getRemoteTag("gitee.com")).toBe("[gitee]")
-    expect(getRemoteTag("custom.local")).toBe("[internal:custom.local]")
-    expect(getRemoteTag()).toBe("[noremote]")
+  it("生成 codePlatform", () => {
+    expect(getCodePlatform("github.com")).toBe("github")
+    expect(getCodePlatform("gitee.com")).toBe("gitee")
+    expect(getCodePlatform("custom.local")).toBe("internal:custom.local")
+    expect(getCodePlatform()).toBe("noremote")
   })
 
   it("构建最终 tags", () => {
     expect(
       buildTags({
-        remoteTag: "[github]",
         autoTag: "[team]",
-        manualTags: ["[manual]"],
-        dirty: true
+        manualTags: ["[manual]"]
       })
-    ).toEqual(["[github]", "[manual]", "[dirty]"])
+    ).toEqual(["[manual]"])
     expect(
       buildTags({
-        remoteTag: "[github]",
-        autoTag: "[team]",
-        dirty: false
+        autoTag: "[team]"
       })
-    ).toEqual(["[github]", "[team]"])
+    ).toEqual(["[team]"])
   })
 
   it("读取手动 tags 时进行路径归一化", async () => {

@@ -38,6 +38,36 @@ export async function readManualTagEdits(
   return map
 }
 
+export async function readManualTags(
+  filePath: string
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>()
+  try {
+    const content = await fs.readFile(filePath, "utf8")
+    const lines = content.split(/\r?\n/)
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue
+      }
+      const [rawPath, rawTags] = line.split("\t")
+      if (!rawPath || !rawTags) {
+        continue
+      }
+      const normalized = normalizeRepoKey(rawPath)
+      if (!normalized) {
+        continue
+      }
+      const edits = parseManualTagEdits(rawTags)
+      if (edits.add.length > 0) {
+        map.set(normalized, edits.add)
+      }
+    }
+  } catch {
+    return map
+  }
+  return map
+}
+
 export function parseTagList(raw: string): string[] {
   const matches = raw.match(/\[[^\]]+\]/g)
   if (matches && matches.length > 0) {
@@ -52,17 +82,24 @@ export function parseTagList(raw: string): string[] {
   )
 }
 
-export function getRemoteTag(host?: string): string {
+export function getCodePlatform(host?: string, hostTagAliases?: Record<string, string>): string {
   if (!host) {
-    return "[noremote]"
+    return "noremote"
+  }
+  const mapped = hostTagAliases?.[host]
+  if (typeof mapped === "string" && mapped.trim()) {
+    const trimmed = mapped.trim()
+    return trimmed.startsWith("[") && trimmed.endsWith("]")
+      ? trimmed.slice(1, -1)
+      : trimmed
   }
   if (host === "github.com") {
-    return "[github]"
+    return "github"
   }
   if (host === "gitee.com") {
-    return "[gitee]"
+    return "gitee"
   }
-  return `[internal:${host}]`
+  return `internal:${host}`
 }
 
 export function uniqueTags(tags: string[]): string[] {
@@ -78,20 +115,14 @@ export function uniqueTags(tags: string[]): string[] {
   return result
 }
 
-export function buildTags(options: {
-  remoteTag: string
-  autoTag?: string
-  manualTags?: string[]
-  dirty: boolean
-}): string[] {
+export function buildTags(options: { autoTag?: string; manualTags?: string[] }): string[] {
   const base =
     options.manualTags && options.manualTags.length > 0
-      ? [options.remoteTag, ...options.manualTags]
+      ? [...options.manualTags]
       : options.autoTag
-        ? [options.remoteTag, options.autoTag]
-        : [options.remoteTag]
-  const tags = options.dirty ? [...base, "[dirty]"] : base
-  return uniqueTags(tags)
+        ? [options.autoTag]
+        : []
+  return uniqueTags(base)
 }
 
 export async function setManualTags(

@@ -127,14 +127,25 @@ function filterListRepos(
 ): RepoInfo[] {
   const query = flags.query.toLowerCase()
   return repos.filter((repo) => {
-    if (flags.dirtyOnly && !repo.tags.includes("[dirty]")) {
+    if (flags.dirtyOnly && !repo.isDirty) {
       return false
     }
-    if (flags.tag && !repo.tags.some((tag) => tag.includes(flags.tag))) {
-      return false
+    if (flags.tag) {
+      if (isDirtyFilter(flags.tag)) {
+        if (!repo.isDirty) return false
+      } else {
+        const codePlatform = repoCodePlatform(repo)
+        if (
+          !isCodePlatformMatch(codePlatform, flags.tag) &&
+          !repo.tags.some((tag) => tag.includes(flags.tag))
+        ) {
+          return false
+        }
+      }
     }
     if (query) {
-      const haystack = `${repo.ownerRepo} ${repo.path} ${repo.tags.join(" ")}`.toLowerCase()
+      const haystack =
+        `${repo.ownerRepo} ${repo.path} ${repoCodePlatform(repo)} ${repo.tags.join(" ")}`.toLowerCase()
       if (!haystack.includes(query)) {
         return false
       }
@@ -172,7 +183,13 @@ async function getListRows(
   const cached = await loadCache(options)
   const resolved = cached ?? (await buildCache(options))
   const rows = filterTag
-    ? resolved.repos.filter((repo) => repo.tags.some((tag) => tag.includes(filterTag)))
+    ? isDirtyFilter(filterTag)
+      ? resolved.repos.filter((repo) => repo.isDirty)
+      : resolved.repos.filter(
+          (repo) =>
+            isCodePlatformMatch(repoCodePlatform(repo), filterTag) ||
+            repo.tags.some((tag) => tag.includes(filterTag))
+        )
     : resolved.repos
   return rows.map((repo) => ({
     display: buildListDisplay(repo),
@@ -192,4 +209,39 @@ function buildListDisplay(repo: RepoInfo): string {
 
 function applyAnsiTag(input: string): string {
   return `\u001b[36m${input}\u001b[0m`
+}
+
+function isDirtyFilter(tag: string): boolean {
+  return tag === "dirty" || tag === "[dirty]"
+}
+
+function repoCodePlatform(repo: RepoInfo): string {
+  return repo.codePlatform ?? resolveCodePlatformFromTags(repo.tags)
+}
+
+function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
+  if (!filter) return false
+  const normalizedPlatform = normalizeCodePlatform(codePlatform)
+  const normalizedFilter = normalizeCodePlatform(filter)
+  return normalizedPlatform !== "" && normalizedPlatform === normalizedFilter
+}
+
+function resolveCodePlatformFromTags(tags: string[]): string {
+  const remoteTag = tags.find(
+    (tag) =>
+      tag === "[github]" ||
+      tag === "[gitee]" ||
+      tag === "[noremote]" ||
+      tag.startsWith("[internal:")
+  )
+  return remoteTag ?? ""
+}
+
+function normalizeCodePlatform(platform: string): string {
+  const trimmed = platform.trim()
+  if (!trimmed) {
+    return ""
+  }
+  const match = trimmed.match(/^\[(.*)\]$/)
+  return match ? match[1] : trimmed
 }

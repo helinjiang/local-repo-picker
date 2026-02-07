@@ -1,28 +1,67 @@
 import { Card, Descriptions, Empty, Spin, Tag, Typography } from "antd"
-import type { RepoItem, RepoPreviewResult } from "../types"
+import type { FixedLink, RepoItem, RepoPreviewResult } from "../types"
 
 type Props = {
   loading: boolean
   preview: RepoPreviewResult | null
   repo: RepoItem | null
+  repoLinks: Record<string, FixedLink[]>
 }
 
-export default function PreviewPanel({ loading, preview, repo }: Props) {
+export default function PreviewPanel({ loading, preview, repo, repoLinks }: Props) {
   if (!repo) {
     return <Empty description="请选择一个仓库" />
   }
 
+  const originUrl =
+    preview?.data.origin && preview.data.origin !== "-" ? preview.data.origin : ""
+  const repoKeyValue =
+    preview?.data.repoKey && preview.data.repoKey !== "-"
+      ? preview.data.repoKey
+      : repo.key && repo.key !== "-"
+        ? repo.key
+        : repo.folderRelativePath
+  const resolvedFixedLinks = (repoLinks[repoKeyValue] ?? [])
+    .map((link) => {
+      const label = link.label.trim()
+      const template = link.url.trim()
+      if (!label || !template) return null
+      if (template.includes("{originUrl}") && !originUrl) return null
+      const url = template.replace(/\{(ownerRepo|path|originUrl)\}/g, (_, key) => {
+        if (key === "ownerRepo") return repo.folderRelativePath
+        if (key === "path") return repo.folderFullPath
+        if (key === "originUrl") return originUrl
+        return ""
+      })
+      return url ? { label, url } : null
+    })
+    .filter((item): item is { label: string; url: string } => Boolean(item))
+
   return (
     <Spin spinning={loading}>
-      <Card title="预览" size="small" style={{ marginTop: 12 }}>
-        <Descriptions size="small" column={1} className="preview-meta">
-          <Descriptions.Item label="路径">{repo.path}</Descriptions.Item>
+      <Card title="预览" size="small" style={{ marginTop: 12 }} className="preview-card">
+        <Descriptions bordered size="small" column={1} className="preview-meta">
+          <Descriptions.Item label="路径">{repo.folderFullPath}</Descriptions.Item>
+          <Descriptions.Item label="repoKey">{preview?.data.repoKey ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="Origin">{preview?.data.origin ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="站点">
             {preview?.data.siteUrl && preview.data.siteUrl !== "-" ? (
               <a href={preview.data.siteUrl} target="_blank" rel="noreferrer">
                 {preview.data.siteUrl}
               </a>
+            ) : (
+              "-"
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="固定链接">
+            {resolvedFixedLinks.length ? (
+              <div className="fixed-links">
+                {resolvedFixedLinks.map((item) => (
+                  <a key={`${item.label}-${item.url}`} href={item.url} target="_blank" rel="noreferrer">
+                    {item.label}
+                  </a>
+                ))}
+              </div>
             ) : (
               "-"
             )}
@@ -40,7 +79,7 @@ export default function PreviewPanel({ loading, preview, repo }: Props) {
           <Typography.Text type="warning">{preview.error}</Typography.Text>
         )}
 
-        <div style={{ marginTop: 16 }}>
+        <div className="preview-section">
           <Typography.Title level={5}>最近提交</Typography.Title>
           {preview?.data.recentCommits?.length ? (
             <pre className="preview-code">{preview.data.recentCommits.join("\n")}</pre>
@@ -49,7 +88,7 @@ export default function PreviewPanel({ loading, preview, repo }: Props) {
           )}
         </div>
 
-        <div style={{ marginTop: 16 }}>
+        <div className="preview-section">
           <Typography.Title level={5}>README</Typography.Title>
           {preview?.data.readme?.length ? (
             <pre className="preview-code">{preview.data.readme.join("\n")}</pre>
@@ -59,7 +98,7 @@ export default function PreviewPanel({ loading, preview, repo }: Props) {
         </div>
 
         {preview?.data.extensions?.map((section) => (
-          <div style={{ marginTop: 16 }} key={section.title}>
+          <div className="preview-section" key={section.title}>
             <Typography.Title level={5}>{section.title}</Typography.Title>
             <pre className="preview-code">{section.lines.join("\n")}</pre>
           </div>

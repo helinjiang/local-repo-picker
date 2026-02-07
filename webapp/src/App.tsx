@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { CopyOutlined, EditOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons"
+import { CopyOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons"
 import { App as AntApp, Button, Input, Modal, Select, Space, Tag, Tooltip, Tree, message } from "antd"
-import type { ActionInfo, AppConfig, ConfigPaths, RepoItem, RepoPreviewResult } from "./types"
+import type { ActionInfo, AppConfig, ConfigPaths, FixedLink, RepoItem, RepoPreviewResult } from "./types"
 import {
   fetchActions,
   fetchConfig,
@@ -43,17 +43,57 @@ export default function App() {
   const [tagModalRepo, setTagModalRepo] = useState<RepoItem | null>(null)
   const [tagModalMode, setTagModalMode] = useState<"add" | "edit">("add")
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [repoLinksOpen, setRepoLinksOpen] = useState(false)
   const [configPaths, setConfigPaths] = useState<ConfigPaths | null>(null)
   const [configText, setConfigText] = useState("")
   const [loadingConfig, setLoadingConfig] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
+  const [savingRepoLinks, setSavingRepoLinks] = useState(false)
   const [refreshingCache, setRefreshingCache] = useState(false)
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null)
   const [configEditorOpen, setConfigEditorOpen] = useState(false)
   const [quickTagsConfig, setQuickTagsConfig] = useState<string[]>([])
+  const [repoLinksConfig, setRepoLinksConfig] = useState<
+    { id: string; repo: string; links: { id: string; label: string; url: string }[] }[]
+  >([])
+  const [pendingRepoLinkKey, setPendingRepoLinkKey] = useState<string | null>(null)
+  const [currentRepoLinkKey, setCurrentRepoLinkKey] = useState<string | null>(null)
   const [configLoadedOnce, setConfigLoadedOnce] = useState(false)
   const debouncedQuery = useDebounce(query, 300)
   const [messageApi, contextHolder] = message.useMessage()
+
+  const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`
+
+  const ensureRepoLinksForKey = (
+    current: { id: string; repo: string; links: { id: string; label: string; url: string }[] }[],
+    repoKey: string
+  ) => {
+    const normalized = repoKey.trim()
+    if (!normalized) return current
+    const index = current.findIndex((group) => group.repo.trim() === normalized)
+    if (index === -1) {
+      return [
+        ...current,
+        {
+          id: createId(),
+          repo: normalized,
+          links: [{ id: createId(), label: "", url: "" }]
+        }
+      ]
+    }
+    const group = current[index]
+    if (!group) return current
+    if (group.links.length > 0) return current
+    const next = current.map((item, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...item,
+            links: [{ id: createId(), label: "", url: "" }]
+          }
+        : item
+    )
+    return next
+  }
 
   const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, "$1")
   const normalizeTagValue = (raw: string) => {
@@ -85,9 +125,37 @@ export default function App() {
   )
 
   const selectedRepo = useMemo(
-    () => repos.find((repo) => repo.path === selectedPath) ?? null,
+    () => repos.find((repo) => repo.folderFullPath === selectedPath) ?? null,
     [repos, selectedPath]
   )
+
+  const repoLinksMap = useMemo(
+    () =>
+      Object.fromEntries(
+        repoLinksConfig
+          .map((group) => ({
+            repo: group.repo.trim(),
+            links: group.links
+              .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+              .filter((link) => link.label && link.url)
+          }))
+          .filter((group) => group.repo && group.links.length > 0)
+          .map((group) => [group.repo, group.links])
+      ),
+    [repoLinksConfig]
+  )
+
+  const currentRepoLinksGroup = useMemo(() => {
+    if (!currentRepoLinkKey) return null
+    const key = currentRepoLinkKey.trim()
+    if (!key) return null
+    return repoLinksConfig.find((group) => group.repo.trim() === key) ?? null
+  }, [repoLinksConfig, currentRepoLinkKey])
+
+  const currentRepoLinksIndex = useMemo(() => {
+    if (!currentRepoLinksGroup) return -1
+    return repoLinksConfig.findIndex((group) => group.id === currentRepoLinksGroup.id)
+  }, [repoLinksConfig, currentRepoLinksGroup])
 
   useEffect(() => {
     let cancelled = false
@@ -104,8 +172,8 @@ export default function App() {
         setTotal(data.total)
         setPage(data.page)
         setPageSize(data.pageSize)
-        if (!data.items.find((repo) => repo.path === selectedPath)) {
-          setSelectedPath(data.items[0]?.path ?? null)
+        if (!data.items.find((repo) => repo.folderFullPath === selectedPath)) {
+          setSelectedPath(data.items[0]?.folderFullPath ?? null)
         }
       } catch (error) {
         if (!cancelled) {
@@ -153,6 +221,14 @@ export default function App() {
         setConfigPaths(data.paths)
         setConfigText(JSON.stringify(data.config, null, 2))
         setQuickTagsConfig(data.config.webQuickTags ?? [])
+        const repoLinks = data.config.webRepoLinks ?? {}
+        setRepoLinksConfig(
+          Object.entries(repoLinks).map(([repo, links]) => ({
+            id: createId(),
+            repo,
+            links: links.map((link) => ({ id: createId(), label: link.label, url: link.url }))
+          }))
+        )
         setConfigLoadedOnce(true)
       } catch (error) {
         if (!cancelled) {
@@ -162,13 +238,26 @@ export default function App() {
         if (!cancelled) setLoadingConfig(false)
       }
     }
-    if (settingsOpen || !configLoadedOnce) {
+    if (settingsOpen || repoLinksOpen || !configLoadedOnce) {
       void loadConfig()
     }
     return () => {
       cancelled = true
     }
-  }, [settingsOpen, messageApi, configLoadedOnce])
+  }, [settingsOpen, repoLinksOpen, messageApi, configLoadedOnce])
+
+  useEffect(() => {
+    if (!pendingRepoLinkKey || !configLoadedOnce) return
+    const next = ensureRepoLinksForKey(repoLinksConfig, pendingRepoLinkKey)
+    setPendingRepoLinkKey(null)
+    handleRepoLinksChange(next)
+  }, [pendingRepoLinkKey, configLoadedOnce, repoLinksConfig])
+
+  useEffect(() => {
+    if (!repoLinksOpen || !currentRepoLinkKey || !configLoadedOnce) return
+    const next = ensureRepoLinksForKey(repoLinksConfig, currentRepoLinkKey)
+    handleRepoLinksChange(next)
+  }, [repoLinksOpen, currentRepoLinkKey, configLoadedOnce, repoLinksConfig])
 
   useEffect(() => {
     if (!settingsOpen) {
@@ -230,10 +319,10 @@ export default function App() {
           setTagModalRepo(null)
           return
         }
-        await updateTags(tagModalRepo.path, { add: parsed })
+        await updateTags(tagModalRepo.folderFullPath, { add: parsed })
         messageApi.success("标签已新增")
       } else {
-        await upsertTags(tagModalRepo.path, nextTags)
+        await upsertTags(tagModalRepo.folderFullPath, nextTags)
         messageApi.success("标签已更新")
       }
       setTagModalOpen(false)
@@ -254,7 +343,7 @@ export default function App() {
 
   const handleRemoveTag = async (repo: RepoItem, removedTag: string) => {
     try {
-      await updateTags(repo.path, { remove: [removedTag] })
+      await updateTags(repo.folderFullPath, { remove: [removedTag] })
       messageApi.success("标签已删除")
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
       setRepos(data.items)
@@ -265,6 +354,25 @@ export default function App() {
   }
 
   const handleRunAction = async (actionId: string, repoPath: string) => {
+    if (actionId === "web.edit-repo-links") {
+      const repo = repos.find((item) => item.folderFullPath === repoPath)
+      if (!repo) return
+      const previewRepoKey =
+        preview?.data.path === repoPath && preview.data.repoKey !== "-"
+          ? preview.data.repoKey
+          : ""
+      const repoKey =
+        previewRepoKey || (repo.key && repo.key !== "-" ? repo.key : repo.folderRelativePath)
+      setRepoLinksOpen(true)
+      setCurrentRepoLinkKey(repoKey)
+      if (configLoadedOnce) {
+        const next = ensureRepoLinksForKey(repoLinksConfig, repoKey)
+        handleRepoLinksChange(next)
+      } else {
+        setPendingRepoLinkKey(repoKey)
+      }
+      return
+    }
     try {
       await runAction(actionId, repoPath)
     } catch (error) {
@@ -281,11 +389,30 @@ export default function App() {
       return
     }
     parsed.webQuickTags = quickTagsConfig
+    parsed.webRepoLinks = Object.fromEntries(
+      repoLinksConfig
+        .map((group) => ({
+          repo: group.repo.trim(),
+          links: group.links
+            .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+            .filter((link) => link.label && link.url)
+        }))
+        .filter((group) => group.repo && group.links.length > 0)
+        .map((group) => [group.repo, group.links])
+    )
     setSavingConfig(true)
     try {
       const result = await saveConfig(parsed)
       setConfigText(JSON.stringify(result.config, null, 2))
-        setQuickTagsConfig(result.config.webQuickTags ?? [])
+      setQuickTagsConfig(result.config.webQuickTags ?? [])
+      const repoLinks = result.config.webRepoLinks ?? {}
+      setRepoLinksConfig(
+        Object.entries(repoLinks).map(([repo, links]) => ({
+          id: createId(),
+          repo,
+          links: links.map((link) => ({ id: createId(), label: link.label, url: link.url }))
+        }))
+      )
       messageApi.success(`配置已更新并刷新缓存（${result.repoCount}）`)
       const data = await fetchRepos({ q: debouncedQuery, tag, page, pageSize })
       setRepos(data.items)
@@ -296,6 +423,46 @@ export default function App() {
       messageApi.error(`更新配置失败：${(error as Error).message}`)
     } finally {
       setSavingConfig(false)
+    }
+  }
+
+  const handleSaveRepoLinks = async () => {
+    let parsed: AppConfig
+    try {
+      parsed = JSON.parse(configText) as AppConfig
+    } catch (error) {
+      messageApi.error(`配置 JSON 无效：${(error as Error).message}`)
+      return
+    }
+    parsed.webRepoLinks = Object.fromEntries(
+      repoLinksConfig
+        .map((group) => ({
+          repo: group.repo.trim(),
+          links: group.links
+            .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+            .filter((link) => link.label && link.url)
+        }))
+        .filter((group) => group.repo && group.links.length > 0)
+        .map((group) => [group.repo, group.links])
+    )
+    setSavingRepoLinks(true)
+    try {
+      const result = await saveConfig(parsed)
+      setConfigText(JSON.stringify(result.config, null, 2))
+      const repoLinks = result.config.webRepoLinks ?? {}
+      setRepoLinksConfig(
+        Object.entries(repoLinks).map(([repo, links]) => ({
+          id: createId(),
+          repo,
+          links: links.map((link) => ({ id: createId(), label: link.label, url: link.url }))
+        }))
+      )
+      messageApi.success("固定链接已更新")
+      setRepoLinksOpen(false)
+    } catch (error) {
+      messageApi.error(`更新固定链接失败：${(error as Error).message}`)
+    } finally {
+      setSavingRepoLinks(false)
     }
   }
 
@@ -313,44 +480,121 @@ export default function App() {
     }
   }
 
+  const handleRepoLinksChange = (
+    next: { id: string; repo: string; links: { id: string; label: string; url: string }[] }[]
+  ) => {
+    setRepoLinksConfig(next)
+    try {
+      const parsed = JSON.parse(configText) as AppConfig
+      const updated = {
+        ...parsed,
+        webRepoLinks: Object.fromEntries(
+          next
+            .map((group) => ({
+              repo: group.repo.trim(),
+              links: group.links
+                .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+                .filter((link) => link.label && link.url)
+            }))
+            .filter((group) => group.repo && group.links.length > 0)
+            .map((group) => [group.repo, group.links])
+        )
+      }
+      setConfigText(JSON.stringify(updated, null, 2))
+    } catch {
+      setConfigText((prev) => prev)
+    }
+  }
+
+  const handleRepoLinksUpdate = (
+    index: number,
+    links: { id: string; label: string; url: string }[]
+  ) => {
+    const next = repoLinksConfig.map((group, current) =>
+      current === index ? { ...group, links } : group
+    )
+    handleRepoLinksChange(next)
+  }
+
+  const handleRepoLinkUpdate = (groupIndex: number, linkIndex: number, patch: Partial<FixedLink>) => {
+    const group = repoLinksConfig[groupIndex]
+    if (!group) return
+    const nextLinks = group.links.map((link, current) =>
+      current === linkIndex ? { ...link, ...patch } : link
+    )
+    handleRepoLinksUpdate(groupIndex, nextLinks)
+  }
+
+  const handleRepoLinkRemove = (groupIndex: number, linkIndex: number) => {
+    const group = repoLinksConfig[groupIndex]
+    if (!group) return
+    const nextLinks = group.links.filter((_, current) => current !== linkIndex)
+    handleRepoLinksUpdate(groupIndex, nextLinks)
+  }
+
+  const handleRepoLinkAdd = (groupIndex: number) => {
+    const group = repoLinksConfig[groupIndex]
+    if (!group) return
+    handleRepoLinksUpdate(groupIndex, [
+      ...group.links,
+      { id: createId(), label: "", url: "" }
+    ])
+  }
+
   return (
     <AntApp>
       {contextHolder}
       <div className="app-shell">
         <div className="toolbar">
-          <Input.Search
-            allowClear
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索 owner/repo、路径或标签"
-            style={{ width: 280 }}
-          />
-          <Select
-            allowClear
-            placeholder="按标签过滤"
-            value={tag}
-            onChange={(value) => setTag(value)}
-            style={{ minWidth: 180 }}
-            options={tagOptions}
-          />
-          {quickTagOptions.length > 0 ? (
-            <Space size={[4, 4]} wrap>
-              {quickTagOptions.map((item) => (
-                <Tag
-                  key={item.value}
-                  color={item.value === tag ? "blue" : undefined}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setTag(item.value === tag ? undefined : item.value)}
-                >
-                  {item.label}
-                </Tag>
-              ))}
-            </Space>
-          ) : null}
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshingCache}>刷新缓存</Button>
-            <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
-          </Space>
+          <div className="toolbar-row">
+            <div className="toolbar-group toolbar-group--filters">
+              <Input.Search
+                allowClear
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜索 owner/repo、路径或标签"
+                style={{ width: 320 }}
+              />
+            </div>
+            <div className="toolbar-group toolbar-group--actions">
+              <Space>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshingCache}>刷新缓存</Button>
+                <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>配置</Button>
+              </Space>
+            </div>
+          </div>
+          <div className="toolbar-row">
+            <div className="toolbar-group toolbar-group--filters">
+              <Select
+                allowClear
+                placeholder="按标签过滤"
+                value={tag}
+                onChange={(value) => setTag(value)}
+                style={{ width: 320 }}
+                options={tagOptions}
+              />
+            </div>
+            {quickTagOptions.length > 0 ? (
+              <div className="toolbar-group toolbar-group--quick-tags">
+                <Space size={[6, 6]} wrap>
+                  {quickTagOptions.map((item) => (
+                    <Tag
+                      key={item.value}
+                      color={item.value === tag ? "blue" : undefined}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setTag(item.value === tag ? undefined : item.value)}
+                    >
+                      {item.label}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            ) : (
+              <div className="toolbar-group toolbar-group--quick-tags toolbar-group--quick-tags-empty">
+                <span className="toolbar-placeholder">暂无快速标签</span>
+              </div>
+            )}
+          </div>
         </div>
         <div className="content-area">
           <div className="list-pane">
@@ -377,7 +621,12 @@ export default function App() {
               onRunAction={handleRunAction}
               repo={selectedRepo}
             />
-            <PreviewPanel loading={loadingPreview} preview={preview} repo={selectedRepo} />
+            <PreviewPanel
+              loading={loadingPreview}
+              preview={preview}
+              repo={selectedRepo}
+              repoLinks={repoLinksMap}
+            />
           </div>
         </div>
         <TagModal
@@ -509,6 +758,97 @@ export default function App() {
               </div>
             )}
           />
+        </Modal>
+        <Modal
+          title="固定链接"
+          open={repoLinksOpen}
+          onCancel={() => {
+            setRepoLinksOpen(false)
+            setCurrentRepoLinkKey(null)
+            setPendingRepoLinkKey(null)
+          }}
+          onOk={handleSaveRepoLinks}
+          confirmLoading={savingRepoLinks}
+          okText="保存"
+          cancelText="关闭"
+          width={720}
+        >
+          {currentRepoLinksGroup ? (
+            <div
+              style={{
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #f0f0f0",
+                background: "#fafafa",
+                marginBottom: 12
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>当前仓库</div>
+              <div style={{ fontFamily: "monospace", fontSize: 12, color: "#595959" }}>
+                {currentRepoLinksGroup.repo}
+              </div>
+              <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+                {selectedRepo?.folderFullPath ?? "-"}
+              </div>
+            </div>
+          ) : null}
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            {!currentRepoLinksGroup ? (
+              <div style={{ color: "#8c8c8c" }}>未选中仓库</div>
+            ) : (
+              <div key={currentRepoLinksGroup.id} style={{ width: "100%", padding: 12, border: "1px solid #f0f0f0", borderRadius: 8 }}>
+                <Space size="middle" style={{ width: "100%" }}>
+                  <Input
+                    placeholder="repoKey，如 github/namespace/repo-name"
+                    value={currentRepoLinksGroup.repo}
+                    disabled
+                  />
+                </Space>
+                <Space direction="vertical" size="small" style={{ width: "100%", marginTop: 12 }}>
+                  {currentRepoLinksGroup.links.length === 0 ? (
+                    <div style={{ color: "#8c8c8c" }}>未配置链接</div>
+                  ) : null}
+                  {currentRepoLinksGroup.links.map((link, linkIndex) => (
+                    <Space key={link.id} size="middle" style={{ width: "100%" }}>
+                      <Input
+                        placeholder="名称"
+                        value={link.label}
+                        onChange={(event) =>
+                          handleRepoLinkUpdate(currentRepoLinksIndex, linkIndex, {
+                            label: event.target.value
+                          })
+                        }
+                        style={{ width: 160 }}
+                      />
+                      <Input
+                        placeholder="https://example.com/{ownerRepo}"
+                        value={link.url}
+                        onChange={(event) =>
+                          handleRepoLinkUpdate(currentRepoLinksIndex, linkIndex, {
+                            url: event.target.value
+                          })
+                        }
+                      />
+                      <Tooltip title="删除链接">
+                        <Button
+                          icon={<DeleteOutlined />}
+                          type="text"
+                          onClick={() => handleRepoLinkRemove(currentRepoLinksIndex, linkIndex)}
+                        >
+                        </Button>
+                      </Tooltip>
+                    </Space>
+                  ))}
+                  <Button icon={<PlusOutlined />} onClick={() => handleRepoLinkAdd(currentRepoLinksIndex)}>
+                    添加链接
+                  </Button>
+                </Space>
+              </div>
+            )}
+            <div style={{ color: "#8c8c8c", fontSize: 12 }}>
+              Key 为 repoKey（remoteTag/repoPath），匹配后展示。支持占位符：{`{ownerRepo}`}、{`{path}`}、{`{originUrl}`}
+            </div>
+          </Space>
         </Modal>
       </div>
     </AntApp>

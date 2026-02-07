@@ -99,6 +99,31 @@ function normalizeConfig(raw: unknown): AppConfig {
   const webQuickTags = Array.isArray(value.webQuickTags)
     ? value.webQuickTags.filter((item) => typeof item === "string")
     : defaultConfig.webQuickTags
+  const webRepoLinks =
+    typeof value.webRepoLinks === "object" && value.webRepoLinks !== null
+      ? Object.fromEntries(
+          Object.entries(value.webRepoLinks as Record<string, unknown>)
+            .filter(([key, item]) => typeof key === "string" && Array.isArray(item))
+            .map(([key, item]) => [
+              key,
+              (item as unknown[])
+                .filter((link) => typeof link === "object" && link !== null)
+                .map((link) => link as Record<string, unknown>)
+                .map((link) => ({
+                  label: typeof link.label === "string" ? link.label : "",
+                  url: typeof link.url === "string" ? link.url : ""
+                }))
+                .filter((link) => link.label && link.url)
+            ])
+        )
+      : {}
+  const remoteHostTags =
+    typeof value.remoteHostTags === "object" && value.remoteHostTags !== null
+      ? (Object.fromEntries(
+          Object.entries(value.remoteHostTags as Record<string, unknown>)
+            .filter(([key, item]) => typeof key === "string" && typeof item === "string")
+        ) as Record<string, string>)
+      : defaultConfig.remoteHostTags
   const fzfTagFilters =
     typeof value.fzfTagFilters === "object" && value.fzfTagFilters !== null
       ? (Object.fromEntries(
@@ -113,6 +138,8 @@ function normalizeConfig(raw: unknown): AppConfig {
     cacheTtlMs,
     followSymlinks,
     webQuickTags,
+    webRepoLinks,
+    remoteHostTags,
     fzfTagFilters
   }
 }

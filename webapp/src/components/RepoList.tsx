@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons"
-import { Button, Popconfirm, Table, Tag, Tooltip, Typography } from "antd"
+import { Button, Popconfirm, Space, Table, Tag, Tooltip, Typography } from "antd"
 import type { ColumnsType } from "antd/es/table"
 import { useState } from "react"
 import type { RepoItem } from "../types"
@@ -34,11 +34,15 @@ export default function RepoList({
   const columns: ColumnsType<RepoItem> = [
     {
       title: "仓库",
-      dataIndex: "ownerRepo",
+      dataIndex: "folderRelativePath",
       render: (_, repo) => (
         <div>
-          <Typography.Text strong>{repo.ownerRepo}</Typography.Text>
-          <div style={{ color: "#8c8c8c", fontSize: 12 }}>{repo.path}</div>
+          <Space size="small" wrap>
+            <Typography.Text strong>{repo.folderRelativePath}</Typography.Text>
+            {repo.codePlatform ? <Tag color="blue">{repo.codePlatform}</Tag> : null}
+            <Tag color={repo.isDirty ? "red" : "green"}>{repo.isDirty ? "dirty" : "clean"}</Tag>
+          </Space>
+          <div style={{ color: "#8c8c8c", fontSize: 12 }}>{repo.key}</div>
         </div>
       )
     },
@@ -46,15 +50,15 @@ export default function RepoList({
       title: "标签",
       dataIndex: "tags",
       render: (_: string[], repo) => (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="repo-tags">
           {repo.tags.map((tag) => {
-            const tagKey = `${repo.path}::${tag}`
+            const tagKey = `${repo.folderFullPath}::${tag}`
             const hovered = hoveredTagKey === tagKey
             return (
               <Tag
-                color={tag === "[dirty]" ? "red" : "blue"}
+                color="blue"
                 key={tagKey}
-                style={{ position: "relative" }}
+                className="repo-tag"
                 onMouseEnter={() => {
                   setHoveredTagKey(tagKey)
                 }}
@@ -102,13 +106,14 @@ export default function RepoList({
           </Tooltip>
         </div>
       )
-    }
+    },
+  
   ]
 
   return (
     <Table
-      size="small"
-      rowKey="path"
+      size="middle"
+      rowKey="folderFullPath"
       columns={columns}
       dataSource={repos}
       loading={loading}
@@ -119,9 +124,11 @@ export default function RepoList({
         showSizeChanger: true,
         onChange: onPageChange
       }}
-      rowClassName={(record) => (record.path === selectedPath ? "repo-row-selected" : "")}
+      rowClassName={(record) =>
+        record.folderFullPath === selectedPath ? "repo-row-selected" : ""
+      }
       onRow={(record) => ({
-        onClick: () => onSelect(record.path)
+        onClick: () => onSelect(record.folderFullPath)
       })}
     />
   )

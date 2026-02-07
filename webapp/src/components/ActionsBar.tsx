@@ -3,6 +3,7 @@ import {
   DesktopOutlined,
   FolderOpenOutlined,
   GlobalOutlined,
+  LinkOutlined,
   QuestionCircleOutlined
 } from "@ant-design/icons"
 import { Button, Card, Space } from "antd"
@@ -18,11 +19,11 @@ type Props = {
 export default function ActionsBar({ repo, disabled, actions, onRunAction }: Props) {
   const handleAction = async (actionId: string) => {
     if (!repo) return
-    await onRunAction(actionId, repo.path)
+    await onRunAction(actionId, repo.folderFullPath)
   }
 
   return (
-    <Card size="small" title="Actions">
+    <Card size="small" title="Actions" className="actions-card">
       <Space wrap>
         {actions.map((action) => (
           <Button
@@ -44,5 +45,6 @@ function getActionIcon(actionId: string) {
   if (actionId === "builtin.open-iterm") return <DesktopOutlined />
   if (actionId === "builtin.open-finder") return <FolderOpenOutlined />
   if (actionId === "builtin.open-site") return <GlobalOutlined />
+  if (actionId === "web.edit-repo-links") return <LinkOutlined />
   return <QuestionCircleOutlined />
 }
