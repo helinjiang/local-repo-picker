@@ -1,10 +1,8 @@
 import { CopyOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Input, Modal, Select, Tooltip, Tree, message } from 'antd';
+import { Button, Input, Modal, Tooltip, Tree, message } from 'antd';
 import type { ConfigPaths } from '../types';
 import { copyPathToClipboard } from '../utils/clipboard';
 import { buildConfigTree } from '../utils/configTree';
-
-type TagOption = { label: string; value: string };
 
 type Props = {
   open: boolean;
@@ -14,9 +12,6 @@ type Props = {
   configPaths: ConfigPaths | null;
   hoveredConfigKey: string | null;
   onHoveredConfigKeyChange: (value: string | null) => void;
-  quickTagsConfig: string[];
-  quickTagOptions: TagOption[];
-  onQuickTagsChange: (values: string[]) => void;
   onOpenRepoLinks: () => void;
   configEditorOpen: boolean;
   onToggleConfigEditor: () => void;
@@ -34,9 +29,6 @@ export default function SettingsModal({
   configPaths,
   hoveredConfigKey,
   onHoveredConfigKeyChange,
-  quickTagsConfig,
-  quickTagOptions,
-  onQuickTagsChange,
   onOpenRepoLinks,
   configEditorOpen,
   onToggleConfigEditor,
@@ -103,17 +95,6 @@ export default function SettingsModal({
                   ) : null}
                 </div>
               )}
-            />
-          </div>
-          <div className="settings-section">
-            <div className="settings-section__title">快速标签</div>
-            <Select
-              mode="tags"
-              style={{ width: '100%' }}
-              placeholder="输入标签"
-              value={quickTagsConfig}
-              onChange={onQuickTagsChange}
-              options={quickTagOptions}
             />
           </div>
           <div className="settings-section">

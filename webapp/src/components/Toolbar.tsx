@@ -1,5 +1,5 @@
-import { ReloadOutlined, SettingOutlined } from '@ant-design/icons';
-import { Button, Input, Select, Space, Tag } from 'antd';
+import { ReloadOutlined, SettingOutlined, TagOutlined } from '@ant-design/icons';
+import { Button, Input, Select, Space, Tag, Tooltip } from 'antd';
 
 type TagOption = { label: string; value: string };
 
@@ -11,6 +11,7 @@ type Props = {
   tagOptions: TagOption[];
   quickTagOptions: TagOption[];
   onQuickTagClick: (value: string) => void;
+  onManageQuickTags: () => void;
   refreshingCache: boolean;
   onRefresh: () => void;
   onOpenSettings: () => void;
@@ -24,6 +25,7 @@ export default function Toolbar({
   tagOptions,
   quickTagOptions,
   onQuickTagClick,
+  onManageQuickTags,
   refreshingCache,
   onRefresh,
   onOpenSettings,
@@ -62,10 +64,10 @@ export default function Toolbar({
             options={tagOptions}
           />
         </div>
-        {quickTagOptions.length > 0 ? (
-          <div className="toolbar-group toolbar-group--quick-tags">
-            <Space size={[6, 6]} wrap>
-              {quickTagOptions.map((item) => (
+        <div className="toolbar-group toolbar-group--quick-tags">
+          <Space size={[6, 6]} wrap>
+            {quickTagOptions.length > 0 ? (
+              quickTagOptions.map((item) => (
                 <Tag
                   key={item.value}
                   color={item.value === tag ? 'blue' : undefined}
@@ -74,14 +76,15 @@ export default function Toolbar({
                 >
                   {item.label}
                 </Tag>
-              ))}
-            </Space>
-          </div>
-        ) : (
-          <div className="toolbar-group toolbar-group--quick-tags toolbar-group--quick-tags-empty">
-            <span className="toolbar-placeholder">暂无快速标签</span>
-          </div>
-        )}
+              ))
+            ) : (
+              <span className="toolbar-placeholder">暂无快速标签</span>
+            )}
+            <Tooltip title="管理快速标签">
+              <Button size="small" type="text" icon={<TagOutlined />} onClick={onManageQuickTags} />
+            </Tooltip>
+          </Space>
+        </div>
       </div>
     </div>
   );

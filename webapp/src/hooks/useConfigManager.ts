@@ -22,6 +22,7 @@ export function useConfigManager(params: {
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [savingRepoLinks, setSavingRepoLinks] = useState(false);
+  const [savingQuickTags, setSavingQuickTags] = useState(false);
   const [configLoadedOnce, setConfigLoadedOnce] = useState(false);
   const [configEditorOpen, setConfigEditorOpen] = useState(false);
   const [quickTagsConfig, setQuickTagsConfig] = useState<string[]>([]);
@@ -362,6 +363,44 @@ export function useConfigManager(params: {
     }
   }, [configText, repoLinksConfig, messageApi, createId]);
 
+  const handleSaveQuickTags = useCallback(async (): Promise<boolean> => {
+    let parsed: AppConfig;
+
+    try {
+      parsed = JSON.parse(configTextRef.current) as AppConfig;
+    } catch (error) {
+      messageApi.error(`配置 JSON 无效：${(error as Error).message}`);
+
+      return false;
+    }
+
+    parsed.webQuickTags = quickTagsConfig;
+    setSavingQuickTags(true);
+
+    try {
+      const result = await saveConfig(parsed);
+      setConfigText(JSON.stringify(result.config, null, 2));
+      setQuickTagsConfig(result.config.webQuickTags ?? []);
+      const repoLinks = result.config.webRepoLinks ?? {};
+      setRepoLinksConfig(
+        Object.entries(repoLinks).map(([repo, links]) => ({
+          id: createId(),
+          repo,
+          links: links.map((link) => ({ id: createId(), label: link.label, url: link.url })),
+        })),
+      );
+      messageApi.success('快速标签已更新');
+
+      return true;
+    } catch (error) {
+      messageApi.error(`更新快速标签失败：${(error as Error).message}`);
+
+      return false;
+    } finally {
+      setSavingQuickTags(false);
+    }
+  }, [quickTagsConfig, messageApi, createId]);
+
   return {
     configPaths,
     configText,
@@ -369,6 +408,7 @@ export function useConfigManager(params: {
     loadingConfig,
     savingConfig,
     savingRepoLinks,
+    savingQuickTags,
     configLoadedOnce,
     configEditorOpen,
     setConfigEditorOpen,
@@ -390,5 +430,6 @@ export function useConfigManager(params: {
     ensureRepoLinksForKey,
     handleSaveConfig,
     handleSaveRepoLinks,
+    handleSaveQuickTags,
   };
 }

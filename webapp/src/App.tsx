@@ -3,6 +3,7 @@ import { App as AntApp, message } from 'antd';
 import { runAction } from './api';
 import ActionsBar from './components/ActionsBar';
 import PreviewPanel from './components/PreviewPanel';
+import QuickTagsModal from './components/QuickTagsModal';
 import RepoList from './components/RepoList';
 import RepoLinksModal from './components/RepoLinksModal';
 import SettingsModal from './components/SettingsModal';
@@ -18,6 +19,7 @@ import { formatTagLabel, normalizeTagValue } from './utils/tagUtils';
 
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [quickTagsOpen, setQuickTagsOpen] = useState(false);
   const [repoLinksOpen, setRepoLinksOpen] = useState(false);
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null);
   const { query, setQuery, tag, setTag, debouncedQuery } = useSearchFilter();
@@ -53,6 +55,7 @@ export default function App() {
     quickTagsConfig,
     repoLinksConfig,
     repoLinksMap,
+    savingQuickTags,
     currentRepoLinkKey,
     setCurrentRepoLinkKey,
     pendingRepoLinkKey,
@@ -67,6 +70,7 @@ export default function App() {
     ensureRepoLinksForKey,
     handleSaveConfig,
     handleSaveRepoLinks,
+    handleSaveQuickTags,
   } = useConfigManager({ settingsOpen, repoLinksOpen, messageApi, createId });
   const {
     tagModalOpen,
@@ -156,6 +160,14 @@ export default function App() {
     }
   };
 
+  const handleSaveQuickTagsClick = async () => {
+    const ok = await handleSaveQuickTags();
+
+    if (ok) {
+      setQuickTagsOpen(false);
+    }
+  };
+
   const handleRepoLinksGroupRepoChange = useCallback(
     (groupIndex: number, value: string) => {
       const next = repoLinksConfig.map((item, currentIndex) =>
@@ -210,6 +222,7 @@ export default function App() {
           tagOptions={tagOptions}
           quickTagOptions={quickTagOptions}
           onQuickTagClick={handleQuickTagClick}
+          onManageQuickTags={() => setQuickTagsOpen(true)}
           refreshingCache={refreshingCache}
           onRefresh={handleRefreshCache}
           onOpenSettings={() => setSettingsOpen(true)}
@@ -254,6 +267,15 @@ export default function App() {
           onCancel={() => setTagModalOpen(false)}
           onSave={handleSaveTags}
         />
+        <QuickTagsModal
+          open={quickTagsOpen}
+          onCancel={() => setQuickTagsOpen(false)}
+          onSave={handleSaveQuickTagsClick}
+          saving={savingQuickTags}
+          quickTagsConfig={quickTagsConfig}
+          quickTagOptions={quickTagOptions}
+          onQuickTagsChange={handleQuickTagsChange}
+        />
         <SettingsModal
           open={settingsOpen}
           onCancel={() => setSettingsOpen(false)}
@@ -262,9 +284,6 @@ export default function App() {
           configPaths={configPaths}
           hoveredConfigKey={hoveredConfigKey}
           onHoveredConfigKeyChange={setHoveredConfigKey}
-          quickTagsConfig={quickTagsConfig}
-          quickTagOptions={quickTagOptions}
-          onQuickTagsChange={handleQuickTagsChange}
           onOpenRepoLinks={() => setRepoLinksOpen(true)}
           configEditorOpen={configEditorOpen}
           onToggleConfigEditor={() => setConfigEditorOpen((prev) => !prev)}
