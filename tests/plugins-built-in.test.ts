@@ -34,14 +34,29 @@ describe("built-in plugins", () => {
     const tag = await plugin.tags?.[0].apply({
       repoPath: root,
       scanRoot: root,
-      ownerRepo: "demo",
+      fullName: "demo",
+      provider: "github",
+      autoTags: [],
+      manualTags: [],
       dirty: false,
       baseTags: []
     })
     const preview = await plugin.previews?.[0].render({
-      repo: { path: root, ownerRepo: "demo", tags: [], lastScannedAt: 0 },
+      repo: {
+        fullPath: root,
+        scanRoot: root,
+        relativePath: "demo",
+        recordKey: "local:demo",
+        git: undefined,
+        isDirty: false,
+        manualTags: [],
+        autoTags: [],
+        lastScannedAt: 0
+      },
       preview: {
         path: root,
+        repoPath: "demo",
+        repoKey: "local:demo",
         origin: "-",
         siteUrl: "-",
         branch: "-",
@@ -69,11 +84,31 @@ describe("built-in plugins", () => {
     vi.mocked(originMocks.readOriginValue).mockResolvedValue("https://github.com/a/b.git")
     vi.mocked(originMocks.parseOriginToSiteUrl).mockReturnValue("https://github.com/a/b")
     const action = builtInPlugins[0].actions?.find((item) => item.id === "builtin.open-site")
-    await action?.run({ path: "/repo", ownerRepo: "a/b", tags: [], lastScannedAt: 0 })
+    await action?.run({
+      fullPath: "/repo",
+      scanRoot: "/",
+      relativePath: "repo",
+      recordKey: "local:repo",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
+      lastScannedAt: 0
+    })
     expect(execaMocks.execa).toHaveBeenCalled()
     const registered = vi.mocked(pluginMocks.registerPlugins).mock.calls[0]?.[0] ?? []
     const refreshAction = registered[0]?.actions?.find((item) => item.id === "builtin.refresh-cache")
-    await refreshAction?.run({ path: "/repo", ownerRepo: "a/b", tags: [], lastScannedAt: 0 })
+    await refreshAction?.run({
+      fullPath: "/repo",
+      scanRoot: "/",
+      relativePath: "repo",
+      recordKey: "local:repo",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
+      lastScannedAt: 0
+    })
     expect(cacheMocks.refreshCache).toHaveBeenCalled()
   })
 })

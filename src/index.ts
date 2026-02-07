@@ -7,7 +7,6 @@ import type {
   PreviewPlugin,
   PreviewSection,
   RepositoryRecord,
-  RepoInfo,
   RepoPreview,
   ScanOptions,
   TagPlugin
@@ -66,7 +65,6 @@ export {
   deriveRelativePath
 }
 export type {
-  RepoInfo,
   ScanOptions,
   AppConfig,
   CacheMetadata,
@@ -83,7 +81,7 @@ export type {
 
 export default async function pickRepo(
   options: ScanOptions & { refresh?: boolean }
-): Promise<RepoInfo[]> {
+): Promise<RepositoryRecord[]> {
   if (options.refresh) {
     const cache = await refreshCache(options)
     return cache.repos

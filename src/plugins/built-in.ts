@@ -21,7 +21,7 @@ const nodePreviewPlugin: PreviewPlugin = {
   id: "builtin.node-preview",
   label: "Node 预览扩展",
   render: async ({ repo }) => {
-    const packageJson = await readPackageJson(repo.path)
+    const packageJson = await readPackageJson(repo.fullPath)
     if (!packageJson) {
       return null
     }
@@ -57,7 +57,7 @@ function buildCoreActions(): Action[] {
       label: "打印此项目路径",
       scopes: ["cli"],
       run: async (repo) => {
-        console.log(repo.path)
+        console.log(repo.fullPath)
       }
     },
     {
@@ -66,35 +66,35 @@ function buildCoreActions(): Action[] {
       scopes: ["cli"],
       run: async (repo) => {
         const shell = process.env.SHELL || "bash"
-        await execa(shell, [], { cwd: repo.path, stdio: "inherit", reject: false })
+        await execa(shell, [], { cwd: repo.fullPath, stdio: "inherit", reject: false })
       }
     },
     {
       id: "builtin.open-vscode",
       label: "open in VSCode",
       run: async (repo) => {
-        await execa("code", [repo.path], { reject: false })
+        await execa("code", [repo.fullPath], { reject: false })
       }
     },
     {
       id: "builtin.open-iterm",
       label: "open in iTerm",
       run: async (repo) => {
-        await execa("open", ["-a", "iTerm", repo.path], { reject: false })
+        await execa("open", ["-a", "iTerm", repo.fullPath], { reject: false })
       }
     },
     {
       id: "builtin.open-finder",
       label: "open in Finder",
       run: async (repo) => {
-        await execa("open", [repo.path], { reject: false })
+        await execa("open", [repo.fullPath], { reject: false })
       }
     },
     {
       id: "builtin.open-site",
       label: "open site",
       run: async (repo) => {
-        const origin = await readOriginValue(repo.path)
+        const origin = await readOriginValue(repo.fullPath)
         const siteUrl = parseOriginToSiteUrl(origin)
         if (!siteUrl) {
           throw new Error("无法从 origin 解析站点地址")

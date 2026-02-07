@@ -48,7 +48,17 @@ describe("core origin/preview/command", () => {
   })
 
   it("buildRepoPreview 读取不到仓库路径时降级", async () => {
-    const preview = await buildRepoPreview({ path: "/non-exists", ownerRepo: "x", tags: [], lastScannedAt: 0 })
+    const preview = await buildRepoPreview({
+      fullPath: "/non-exists",
+      scanRoot: "/",
+      relativePath: "non-exists",
+      recordKey: "local:non-exists",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
+      lastScannedAt: 0
+    })
     expect(preview.error).toBe("Repository not accessible")
   })
 
@@ -56,7 +66,17 @@ describe("core origin/preview/command", () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "lrp-preview-"))
     await fs.writeFile(path.join(root, "README.md"), "hello\nworld\n", "utf8")
     vi.mocked(gitMocks.resolveGitDir).mockResolvedValue(null)
-    const preview = await buildRepoPreview({ path: root, ownerRepo: "a/b", tags: [], lastScannedAt: 0 })
+    const preview = await buildRepoPreview({
+      fullPath: root,
+      scanRoot: "/",
+      relativePath: "a/b",
+      recordKey: "local:a/b",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
+      lastScannedAt: 0
+    })
     expect(preview.data.readmeStatus).toBe("ok")
     expect(preview.error).toBe("Repository not accessible")
     await fs.rm(root, { recursive: true, force: true })
@@ -66,7 +86,17 @@ describe("core origin/preview/command", () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "lrp-preview-"))
     vi.mocked(gitMocks.resolveGitDir).mockResolvedValue(path.join(root, ".git"))
     vi.mocked(gitMocks.checkGitAvailable).mockResolvedValue(false)
-    const preview = await buildRepoPreview({ path: root, ownerRepo: "a/b", tags: [], lastScannedAt: 0 })
+    const preview = await buildRepoPreview({
+      fullPath: root,
+      scanRoot: "/",
+      relativePath: "a/b",
+      recordKey: "local:a/b",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
+      lastScannedAt: 0
+    })
     expect(preview.error).toBe("Git not available")
     await fs.rm(root, { recursive: true, force: true })
   })
@@ -85,7 +115,17 @@ describe("core origin/preview/command", () => {
       if (args[0] === "log") return { ok: true, stdout: "2020-01-01 abc msg" }
       return { ok: true, stdout: "https://github.com/a/b.git" }
     })
-    const preview = await buildRepoPreview({ path: root, ownerRepo: "a/b", tags: [], lastScannedAt: 0 })
+    const preview = await buildRepoPreview({
+      fullPath: root,
+      scanRoot: "/",
+      relativePath: "a/b",
+      recordKey: "local:a/b",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
+      lastScannedAt: 0
+    })
     expect(preview.data.status).toBe("dirty")
     expect(preview.data.siteUrl).toBe("https://github.com/a/b")
     expect(preview.data.repoPath).toBe("a/b")

@@ -1,5 +1,5 @@
 import { execa } from "execa"
-import type { Action, RepoInfo } from "../core/types"
+import type { Action, RepositoryRecord } from "../core/types"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
 import { logger } from "../core/logger"
@@ -60,7 +60,7 @@ export async function runFzfPicker(options: CliOptions, filters: Record<string, 
   return parts[1]?.trim() || null
 }
 
-export async function runFzfActionPicker(repo: RepoInfo, options: CliOptions): Promise<Action | null> {
+export async function runFzfActionPicker(options: CliOptions): Promise<Action | null> {
   registerBuiltInPlugins(options)
   const actions = getRegisteredActions().filter((action) => isActionAllowed(action, "cli"))
   if (actions.length === 0) {

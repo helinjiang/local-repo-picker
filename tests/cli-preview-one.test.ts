@@ -54,9 +54,14 @@ describe("cli preview/one", () => {
   it("runInternalPreview 输出预览内容", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "lrp-preview-cli-"))
     vi.mocked(repoMocks.resolveRepoInfo).mockResolvedValue({
-      path: root,
-      ownerRepo: "a/b",
-      tags: [],
+      fullPath: root,
+      scanRoot: "/",
+      relativePath: "a/b",
+      recordKey: "local:a/b",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
       lastScannedAt: 0
     })
     vi.mocked(previewMocks.buildRepoPreview).mockResolvedValue({
@@ -101,9 +106,14 @@ describe("cli preview/one", () => {
 
     vi.mocked(gitMocks.runGit).mockResolvedValue({ ok: true, stdout: "/repo" })
     vi.mocked(repoMocks.resolveRepoInfo).mockResolvedValue({
-      path: "/repo",
-      ownerRepo: "a/b",
-      tags: [],
+      fullPath: "/repo",
+      scanRoot: "/",
+      relativePath: "repo",
+      recordKey: "local:repo",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
       lastScannedAt: 0
     })
     const actionRun = vi.fn(async () => {})

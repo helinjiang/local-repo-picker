@@ -21,13 +21,25 @@ describe("cli repo", () => {
         repoCount: 1,
         scanRoots: ["/"]
       },
-      repos: [{ path: "/a", ownerRepo: "a", tags: [], lastScannedAt: 0 }]
+      repos: [
+        {
+          fullPath: "/a",
+          scanRoot: "/",
+          relativePath: "a",
+          recordKey: "local:a",
+          git: undefined,
+          isDirty: false,
+          manualTags: [],
+          autoTags: [],
+          lastScannedAt: 0
+        }
+      ]
     })
     const repo = await resolveRepoInfo(
       { scanRoots: ["/"], cacheFile: "", manualTagsFile: "", lruFile: "" },
       "/a"
     )
-    expect(repo.ownerRepo).toBe("a")
+    expect(repo.fullPath).toBe("/a")
   })
 
   it("resolveRepoInfo 未命中缓存时返回默认结构", async () => {
@@ -36,7 +48,7 @@ describe("cli repo", () => {
       { scanRoots: ["/"], cacheFile: "", manualTagsFile: "", lruFile: "" },
       "/b"
     )
-    expect(repo.path).toBe("/b")
-    expect(repo.tags).toEqual([])
+    expect(repo.fullPath).toBe("/b")
+    expect(repo.manualTags).toEqual([])
   })
 })

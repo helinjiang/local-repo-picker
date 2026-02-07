@@ -3,12 +3,12 @@ import type { FastifyInstance } from "fastify"
 import pLimit from "p-limit"
 import { buildCache, loadCache, refreshCache } from "../core/cache"
 import { buildRepoPreview } from "../core/preview"
-import { buildGitRepository, buildRecordKey, deriveRelativePath } from "../core/domain"
-import type { Action, RepoInfo } from "../core/types"
+import { buildRepositoryRecord, deriveRelativePath } from "../core/domain"
+import type { Action, RepositoryRecord } from "../core/types"
 import { normalizeRepoKey } from "../core/path-utils"
 import { getRegisteredActions } from "../core/plugins"
 import { registerBuiltInPlugins } from "../plugins/built-in"
-import { getCodePlatform, parseTagList, readManualTagEdits, setManualTags, updateManualTagEdits } from "../core/tags"
+import { parseTagList, setManualTags, updateManualTagEdits } from "../core/tags"
 import { readLru, sortByLru } from "../core/lru"
 import { getConfigPaths, readConfig, writeConfig } from "../config/config"
 import type { AppConfig } from "../config/schema"
@@ -150,7 +150,6 @@ export async function registerRoutes(
     }
     const cached = await loadCache(options)
     const resolved = cached ?? (await buildCache(options))
-    const manualEdits = await readManualTagEdits(options.manualTagsFile)
     let repos = resolved.repos
     if (query.tag) {
       if (query.tag === "[dirty]" || query.tag === "dirty") {
@@ -159,7 +158,7 @@ export async function registerRoutes(
         repos = repos.filter(
           (repo) =>
             isCodePlatformMatch(repoCodePlatform(repo), query.tag ?? "") ||
-            repo.tags.includes(query.tag ?? "")
+            recordTags(repo).includes(query.tag ?? "")
         )
       }
     }
@@ -167,12 +166,12 @@ export async function registerRoutes(
       const keyword = query.q.toLowerCase()
       repos = repos.filter((repo) => {
         const hay =
-          `${repo.ownerRepo} ${repo.path} ${repoCodePlatform(repo)} ${repo.tags.join("")}`.toLowerCase()
+          `${repoDisplayName(repo)} ${repo.fullPath} ${repoCodePlatform(repo)} ${recordTags(repo).join("")}`.toLowerCase()
         return hay.includes(keyword)
       })
     }
     if (query.sort === "name") {
-      repos = repos.slice().sort((a, b) => a.ownerRepo.localeCompare(b.ownerRepo))
+      repos = repos.slice().sort((a, b) => repoDisplayName(a).localeCompare(repoDisplayName(b)))
     } else if (query.sort === "lru") {
       const lruList = await readLru(options.lruFile)
       repos = sortByLru(repos, lruList)
@@ -182,19 +181,17 @@ export async function registerRoutes(
     const pageSize = Math.min(Math.max(1, Number(query.pageSize) || 200), 500)
     const offset = (page - 1) * pageSize
     const items = repos.slice(offset, offset + pageSize).map((repo) => {
-      const scanRoot = resolveScanRoot(repo.path, options.scanRoots)
-      const folderRelativePath = deriveRelativePath(repo.path, scanRoot)
-      const folderFullPath = repo.path
-      const git = buildGitRepository(repo.originUrl, repo.ownerRepo)
-      const key = buildRecordKey({ git, relativePath: folderRelativePath })
+      const folderRelativePath = repo.relativePath
+      const folderFullPath = repo.fullPath
+      const key = repo.recordKey
       const codePlatform = normalizeCodePlatform(repoCodePlatform(repo))
       return {
         folderRelativePath,
         folderFullPath,
         key,
         codePlatform,
-        tags: repo.tags,
-        manualTags: manualEdits.get(normalizeRepoKey(repo.path))?.add ?? [],
+        tags: recordTags(repo),
+        manualTags: repo.manualTags,
         lastScannedAt: repo.lastScannedAt,
         isDirty: Boolean(repo.isDirty)
       }
@@ -276,21 +273,28 @@ export async function registerRoutes(
   })
 }
 
-async function resolveRepoInfo(options: ServerOptions, repoPath: string): Promise<RepoInfo> {
+async function resolveRepoInfo(
+  options: ServerOptions,
+  repoPath: string
+): Promise<RepositoryRecord> {
   const cached = await loadCache(options)
   const resolvedPath = path.resolve(repoPath)
   const targetKey = normalizeRepoKey(resolvedPath)
-  const found = cached?.repos.find((repo) => normalizeRepoKey(repo.path) === targetKey)
+  const found = cached?.repos.find((repo) => normalizeRepoKey(repo.fullPath) === targetKey)
   if (found) {
     return found
   }
-  return {
-    path: resolvedPath,
-    ownerRepo: path.basename(resolvedPath),
-    codePlatform: getCodePlatform(),
-    tags: [],
+  const scanRoot = options.scanRoots[0] ?? path.dirname(resolvedPath)
+  return buildRepositoryRecord({
+    fullPath: resolvedPath,
+    scanRoot,
+    relativePath: deriveRelativePath(resolvedPath, scanRoot),
+    git: undefined,
+    isDirty: false,
+    manualTags: [],
+    autoTags: [],
     lastScannedAt: Date.now()
-  }
+  })
 }
 
 function resolveAllowedPath(scanRoots: string[], repoPath?: string | null): string | null {
@@ -310,8 +314,8 @@ function isActionAllowed(action: Action, scope: "cli" | "web"): boolean {
   return action.scopes.includes(scope)
 }
 
-function repoCodePlatform(repo: RepoInfo): string {
-  return repo.codePlatform ?? resolveCodePlatformFromTags(repo.tags)
+function repoCodePlatform(repo: RepositoryRecord): string {
+  return repo.git?.provider ?? "unknown"
 }
 
 function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
@@ -321,26 +325,18 @@ function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
   return normalizedPlatform !== "" && normalizedPlatform === normalizedFilter
 }
 
-function resolveScanRoot(fullPath: string, scanRoots: string[]): string {
-  const resolvedPath = path.resolve(fullPath)
-  const rootMatches = scanRoots
-    .map((root) => path.resolve(root))
-    .filter((root) => resolvedPath === root || resolvedPath.startsWith(`${root}${path.sep}`))
-  if (rootMatches.length > 0) {
-    return rootMatches[0]
-  }
-  return scanRoots[0] ? path.resolve(scanRoots[0]) : path.dirname(resolvedPath)
+function recordTags(repo: RepositoryRecord): string[] {
+  return [...repo.autoTags, ...repo.manualTags]
 }
 
-function resolveCodePlatformFromTags(tags: string[]): string {
-  const remoteTag = tags.find(
-    (tag) =>
-      tag === "[github]" ||
-      tag === "[gitee]" ||
-      tag === "[noremote]" ||
-      tag.startsWith("[internal:")
-  )
-  return remoteTag ?? ""
+function repoDisplayName(repo: RepositoryRecord): string {
+  if (repo.git?.fullName) {
+    return repo.git.fullName
+  }
+  if (repo.relativePath) {
+    return repo.relativePath
+  }
+  return path.basename(repo.fullPath)
 }
 
 function normalizeCodePlatform(platform: string): string {

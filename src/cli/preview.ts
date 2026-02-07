@@ -1,6 +1,6 @@
 import path from "node:path"
 import { buildFallbackPreview, buildRepoPreview, type RepoPreviewResult } from "../core/preview"
-import type { RepoInfo } from "../core/types"
+import type { RepositoryRecord } from "../core/types"
 import { logger } from "../core/logger"
 import type { CliOptions } from "./types"
 import { resolveRepoInfo } from "./repo"
@@ -26,13 +26,13 @@ export async function runInternalPreview(options: CliOptions, args: string[]): P
 }
 
 async function buildPreviewWithTimeout(
-  repo: RepoInfo,
+  repo: RepositoryRecord,
   timeoutMs: number
 ): Promise<RepoPreviewResult> {
   let timer: NodeJS.Timeout | null = null
   const timeout = new Promise<RepoPreviewResult>((resolve) => {
     timer = setTimeout(() => {
-      resolve(buildFallbackPreview(repo.path, "preview timed out"))
+      resolve(buildFallbackPreview(repo.fullPath, "preview timed out"))
     }, timeoutMs)
   })
   const result = await Promise.race([buildRepoPreview(repo), timeout])

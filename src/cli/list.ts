@@ -1,6 +1,6 @@
 import path from "node:path"
 import { buildCache, loadCache } from "../core/cache"
-import type { RepoInfo } from "../core/types"
+import type { RepositoryRecord } from "../core/types"
 import { readLru, sortByLru } from "../core/lru"
 import { logger } from "../core/logger"
 import type { CliOptions } from "./types"
@@ -41,7 +41,7 @@ export async function runListCommand(options: CliOptions, args: string[]): Promi
       return
     }
     const repo = await resolveRepoInfo(options, selected)
-    const action = await runFzfActionPicker(repo, options)
+    const action = await runFzfActionPicker(options)
     if (!action) {
       return
     }
@@ -53,10 +53,11 @@ export async function runListCommand(options: CliOptions, args: string[]): Promi
   repos = await sortListRepos(repos, flags.sort, options.lruFile)
   if (flags.format === "json") {
     const payload = repos.map((repo) => ({
-      path: repo.path,
-      ownerRepo: repo.ownerRepo || path.basename(repo.path),
-      tags: repo.tags,
-      originUrl: repo.originUrl ?? null,
+      path: repo.fullPath,
+      name: repoDisplayName(repo),
+      recordKey: repo.recordKey,
+      tags: recordTags(repo),
+      originUrl: repo.git?.originUrl ?? null,
       lastScannedAt: repo.lastScannedAt
     }))
     console.log(JSON.stringify(payload, null, 2))
@@ -64,17 +65,17 @@ export async function runListCommand(options: CliOptions, args: string[]): Promi
   }
   if (flags.format === "tsv") {
     for (const repo of repos) {
-      const name = repo.ownerRepo || path.basename(repo.path)
-      const tags = repo.tags.join("")
-      console.log(`${name}\t${repo.path}\t${tags}`)
+      const name = repoDisplayName(repo)
+      const tags = recordTags(repo).join("")
+      console.log(`${name}\t${repo.fullPath}\t${tags}`)
     }
     return
   }
   for (const repo of repos) {
-    const name = repo.ownerRepo || path.basename(repo.path)
-    const tags = repo.tags.join("")
+    const name = repoDisplayName(repo)
+    const tags = recordTags(repo).join("")
     const label = tags ? `${name} ${tags}` : name
-    console.log(`${label}  ${repo.path}`)
+    console.log(`${label}  ${repo.fullPath}`)
   }
 }
 
@@ -122,9 +123,9 @@ function normalizeTagFilter(raw: string): string {
 }
 
 function filterListRepos(
-  repos: RepoInfo[],
+  repos: RepositoryRecord[],
   flags: { query: string; tag: string; dirtyOnly: boolean }
-): RepoInfo[] {
+): RepositoryRecord[] {
   const query = flags.query.toLowerCase()
   return repos.filter((repo) => {
     if (flags.dirtyOnly && !repo.isDirty) {
@@ -137,7 +138,7 @@ function filterListRepos(
         const codePlatform = repoCodePlatform(repo)
         if (
           !isCodePlatformMatch(codePlatform, flags.tag) &&
-          !repo.tags.some((tag) => tag.includes(flags.tag))
+          !recordTags(repo).some((tag) => tag.includes(flags.tag))
         ) {
           return false
         }
@@ -145,7 +146,7 @@ function filterListRepos(
     }
     if (query) {
       const haystack =
-        `${repo.ownerRepo} ${repo.path} ${repoCodePlatform(repo)} ${repo.tags.join(" ")}`.toLowerCase()
+        `${repoDisplayName(repo)} ${repo.fullPath} ${repoCodePlatform(repo)} ${recordTags(repo).join(" ")}`.toLowerCase()
       if (!haystack.includes(query)) {
         return false
       }
@@ -155,21 +156,21 @@ function filterListRepos(
 }
 
 async function sortListRepos(
-  repos: RepoInfo[],
+  repos: RepositoryRecord[],
   sort: "lru" | "name",
   lruFile: string
-): Promise<RepoInfo[]> {
+): Promise<RepositoryRecord[]> {
   if (sort === "name") {
     return repos
       .slice()
       .sort((a, b) => {
-        const nameA = a.ownerRepo || path.basename(a.path)
-        const nameB = b.ownerRepo || path.basename(b.path)
+        const nameA = repoDisplayName(a)
+        const nameB = repoDisplayName(b)
         const compare = nameA.localeCompare(nameB)
         if (compare !== 0) {
           return compare
         }
-        return a.path.localeCompare(b.path)
+        return a.fullPath.localeCompare(b.fullPath)
       })
   }
   const lruList = await readLru(lruFile)
@@ -188,19 +189,19 @@ async function getListRows(
       : resolved.repos.filter(
           (repo) =>
             isCodePlatformMatch(repoCodePlatform(repo), filterTag) ||
-            repo.tags.some((tag) => tag.includes(filterTag))
+            recordTags(repo).some((tag) => tag.includes(filterTag))
         )
     : resolved.repos
   return rows.map((repo) => ({
     display: buildListDisplay(repo),
-    path: repo.path,
-    rawTags: repo.tags.join("")
+    path: repo.fullPath,
+    rawTags: recordTags(repo).join("")
   }))
 }
 
-function buildListDisplay(repo: RepoInfo): string {
-  const name = repo.ownerRepo || path.basename(repo.path)
-  const rawTags = repo.tags.join("")
+function buildListDisplay(repo: RepositoryRecord): string {
+  const name = repoDisplayName(repo)
+  const rawTags = recordTags(repo).join("")
   if (!rawTags) {
     return name
   }
@@ -215,8 +216,8 @@ function isDirtyFilter(tag: string): boolean {
   return tag === "dirty" || tag === "[dirty]"
 }
 
-function repoCodePlatform(repo: RepoInfo): string {
-  return repo.codePlatform ?? resolveCodePlatformFromTags(repo.tags)
+function repoCodePlatform(repo: RepositoryRecord): string {
+  return repo.git?.provider ?? "unknown"
 }
 
 function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
@@ -226,15 +227,18 @@ function isCodePlatformMatch(codePlatform: string, filter: string): boolean {
   return normalizedPlatform !== "" && normalizedPlatform === normalizedFilter
 }
 
-function resolveCodePlatformFromTags(tags: string[]): string {
-  const remoteTag = tags.find(
-    (tag) =>
-      tag === "[github]" ||
-      tag === "[gitee]" ||
-      tag === "[noremote]" ||
-      tag.startsWith("[internal:")
-  )
-  return remoteTag ?? ""
+function recordTags(repo: RepositoryRecord): string[] {
+  return [...repo.autoTags, ...repo.manualTags]
+}
+
+function repoDisplayName(repo: RepositoryRecord): string {
+  if (repo.git?.fullName) {
+    return repo.git.fullName
+  }
+  if (repo.relativePath) {
+    return repo.relativePath
+  }
+  return path.basename(repo.fullPath)
 }
 
 function normalizeCodePlatform(platform: string): string {

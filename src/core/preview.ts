@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import type { RepoInfo, RepoPreview } from "./types"
+import type { RepositoryRecord, RepoPreview } from "./types"
 import { checkGitAvailable, isDirty, readOriginUrl, resolveGitDir, runGit, type GitErrorKind } from "./git"
 import { parseOriginToSiteUrl } from "./origin"
 import { resolvePreviewExtensions } from "./plugins"
@@ -11,8 +11,8 @@ export type RepoPreviewResult = {
   error?: string
 }
 
-export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResult> {
-  const repoPath = repo.path
+export async function buildRepoPreview(repo: RepositoryRecord): Promise<RepoPreviewResult> {
+  const repoPath = repo.fullPath
   const accessible = await fs.access(repoPath).then(() => true, () => false)
   if (!accessible) {
     return buildFallbackPreview(repoPath, "Repository not accessible")
@@ -20,7 +20,7 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
   const gitDir = await resolveGitDir(repoPath)
   if (!gitDir) {
     const readme = await readReadme(repoPath)
-    const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
+    const repoPathLabel = deriveRepoPath(repoPath, repo.git?.fullName ?? repo.relativePath)
     const repoKey = buildRecordKey({ relativePath: repoPathLabel })
     return {
       data: {
@@ -43,7 +43,7 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
   const gitAvailable = await checkGitAvailable()
   if (!gitAvailable) {
     const readme = await readReadme(repoPath)
-    const repoPathLabel = deriveRepoPath(repoPath, repo.ownerRepo)
+    const repoPathLabel = deriveRepoPath(repoPath, repo.git?.fullName ?? repo.relativePath)
     const repoKey = buildRecordKey({ relativePath: repoPathLabel })
     return {
       data: {
@@ -77,8 +77,8 @@ export async function buildRepoPreview(repo: RepoInfo): Promise<RepoPreviewResul
     sync.errorKind,
     recentCommits.errorKind
   ])
-  const git = buildGitRepository(origin.value, repo.ownerRepo)
-  const repoPathLabel = deriveRepoPath(repoPath, git?.fullName || repo.ownerRepo)
+  const git = buildGitRepository(origin.value, repo.git?.fullName ?? repo.relativePath)
+  const repoPathLabel = deriveRepoPath(repoPath, git?.fullName || repo.relativePath)
   const repoKey = buildRecordKey({ git, relativePath: repoPathLabel })
   const basePreview: RepoPreview = {
     path: repoPath,

@@ -25,7 +25,7 @@ export async function runOneCommand(options: CliOptions): Promise<void> {
   }
   const repoPath = path.resolve(result.stdout.trim())
   const repo = await resolveRepoInfo(options, repoPath)
-  const action = await runFzfActionPicker(repo, options)
+  const action = await runFzfActionPicker(options)
   if (!action) {
     return
   }

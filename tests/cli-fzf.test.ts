@@ -69,28 +69,34 @@ describe("cli fzf", () => {
       exitCode: 0,
       stdout: "Action A\ta"
     })
-    const action = await runFzfActionPicker(
-      { path: "/repo", ownerRepo: "x", tags: [], lastScannedAt: 0 },
-      { scanRoots: ["/"], cacheFile: "", manualTagsFile: "", lruFile: "" }
-    )
+    const action = await runFzfActionPicker({
+      scanRoots: ["/"],
+      cacheFile: "",
+      manualTagsFile: "",
+      lruFile: ""
+    })
     expect(action?.id).toBe("a")
   })
 
   it("runFzfActionPicker 无 action 或取消", async () => {
     vi.mocked(pluginsMocks.getRegisteredActions).mockReturnValue([])
-    const none = await runFzfActionPicker(
-      { path: "/repo", ownerRepo: "x", tags: [], lastScannedAt: 0 },
-      { scanRoots: ["/"], cacheFile: "", manualTagsFile: "", lruFile: "" }
-    )
+    const none = await runFzfActionPicker({
+      scanRoots: ["/"],
+      cacheFile: "",
+      manualTagsFile: "",
+      lruFile: ""
+    })
     expect(none).toBeNull()
     vi.mocked(pluginsMocks.getRegisteredActions).mockReturnValue([
       { id: "a", label: "Action A", run: async () => {}, scopes: ["cli"] }
     ])
     ;(execaMocks.execa as any).mockResolvedValue({ exitCode: 130, stdout: "" })
-    const canceled = await runFzfActionPicker(
-      { path: "/repo", ownerRepo: "x", tags: [], lastScannedAt: 0 },
-      { scanRoots: ["/"], cacheFile: "", manualTagsFile: "", lruFile: "" }
-    )
+    const canceled = await runFzfActionPicker({
+      scanRoots: ["/"],
+      cacheFile: "",
+      manualTagsFile: "",
+      lruFile: ""
+    })
     expect(canceled).toBeNull()
   })
 })

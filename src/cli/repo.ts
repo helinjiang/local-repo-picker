@@ -1,22 +1,30 @@
 import path from "node:path"
 import { loadCache } from "../core/cache"
 import { normalizeRepoKey } from "../core/path-utils"
-import type { RepoInfo } from "../core/types"
-import { getCodePlatform } from "../core/tags"
+import type { RepositoryRecord } from "../core/types"
+import { buildRepositoryRecord, deriveRelativePath } from "../core/domain"
 import type { CliOptions } from "./types"
 
-export async function resolveRepoInfo(options: CliOptions, repoPath: string): Promise<RepoInfo> {
+export async function resolveRepoInfo(
+  options: CliOptions,
+  repoPath: string
+): Promise<RepositoryRecord> {
   const cached = await loadCache(options)
   const targetKey = normalizeRepoKey(repoPath)
-  const found = cached?.repos.find((repo) => normalizeRepoKey(repo.path) === targetKey)
+  const found = cached?.repos.find((repo) => normalizeRepoKey(repo.fullPath) === targetKey)
   if (found) {
     return found
   }
-  return {
-    path: repoPath,
-    ownerRepo: path.basename(repoPath),
-    codePlatform: getCodePlatform(),
-    tags: [],
+  const resolvedPath = path.resolve(repoPath)
+  const scanRoot = options.scanRoots[0] ?? path.dirname(resolvedPath)
+  return buildRepositoryRecord({
+    fullPath: resolvedPath,
+    scanRoot,
+    relativePath: deriveRelativePath(resolvedPath, scanRoot),
+    git: undefined,
+    isDirty: false,
+    manualTags: [],
+    autoTags: [],
     lastScannedAt: Date.now()
-  }
+  })
 }

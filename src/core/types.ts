@@ -70,7 +70,7 @@ export type CacheData = {
   savedAt: number
   ttlMs: number
   metadata: CacheMetadata
-  repos: RepoInfo[]
+  repos: RepositoryRecord[]
 }
 
 export type CacheMetadata = {
@@ -101,7 +101,7 @@ export type ScanWarning = {
 export type Action = {
   id: string
   label: string
-  run: (repo: RepoInfo) => Promise<void>
+  run: (repo: RepositoryRecord) => Promise<void>
   scopes?: Array<"cli" | "web">
 }
 
@@ -109,10 +109,10 @@ export type TagPluginInput = {
   repoPath: string
   scanRoot: string
   originUrl?: string
-  ownerRepo: string
-  codePlatform?: string
-  autoTag?: string
-  manualTags?: string[]
+  fullName: string
+  provider?: GitProvider
+  autoTags: string[]
+  manualTags: string[]
   dirty: boolean
   baseTags: string[]
 }
@@ -124,7 +124,7 @@ export type TagPlugin = {
 }
 
 export type PreviewPluginInput = {
-  repo: RepoInfo
+  repo: RepositoryRecord
   preview: RepoPreview
 }
 

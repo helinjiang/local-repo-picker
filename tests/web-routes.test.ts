@@ -60,8 +60,36 @@ const baseCache = {
     scanRoots: ["/root"]
   },
   repos: [
-    { path: "/root/a", ownerRepo: "b", tags: ["[x]"], isDirty: false, lastScannedAt: 0 },
-    { path: "/root/b", ownerRepo: "a", tags: [], isDirty: true, lastScannedAt: 0 }
+    {
+      fullPath: "/root/a",
+      scanRoot: "/root",
+      relativePath: "a",
+      recordKey: "local:a",
+      git: {
+        provider: "github" as const,
+        namespace: "b",
+        repo: "a",
+        fullName: "b/a",
+        baseUrl: "https://github.com",
+        originUrl: "https://github.com/b/a.git",
+        isValid: true
+      },
+      isDirty: false,
+      manualTags: ["[x]"],
+      autoTags: [] as string[],
+      lastScannedAt: 0
+    },
+    {
+      fullPath: "/root/b",
+      scanRoot: "/root",
+      relativePath: "b",
+      recordKey: "local:b",
+      git: undefined,
+      isDirty: true,
+      manualTags: [],
+      autoTags: [] as string[],
+      lastScannedAt: 0
+    }
   ]
 }
 

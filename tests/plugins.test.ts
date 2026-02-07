@@ -6,7 +6,7 @@ import {
   resolvePreviewExtensions,
   resolveTagExtensions
 } from "../src/core/plugins"
-import type { PluginModule, RepoInfo, RepoPreview } from "../src/core/types"
+import type { PluginModule, RepositoryRecord, RepoPreview } from "../src/core/types"
 
 afterEach(() => {
   clearPlugins()
@@ -44,7 +44,10 @@ describe("plugins", () => {
     const tags = await resolveTagExtensions({
       repoPath: "/tmp/repo",
       scanRoot: "/tmp",
-      ownerRepo: "repo",
+      fullName: "repo",
+      provider: "github",
+      autoTags: [],
+      manualTags: [],
       dirty: false,
       baseTags: []
     })
@@ -82,14 +85,21 @@ describe("plugins", () => {
       }
     ]
     registerPlugins(plugins)
-    const repo: RepoInfo = {
-      path: "/tmp/repo",
-      ownerRepo: "repo",
-      tags: [],
+    const repo: RepositoryRecord = {
+      fullPath: "/tmp/repo",
+      scanRoot: "/tmp",
+      relativePath: "repo",
+      recordKey: "local:repo",
+      git: undefined,
+      isDirty: false,
+      manualTags: [],
+      autoTags: [],
       lastScannedAt: Date.now()
     }
     const preview: RepoPreview = {
-      path: repo.path,
+      path: repo.fullPath,
+      repoPath: "repo",
+      repoKey: "local:repo",
       origin: "-",
       siteUrl: "-",
       branch: "-",

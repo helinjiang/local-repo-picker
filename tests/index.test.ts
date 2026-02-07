@@ -23,7 +23,19 @@ describe("index pickRepo", () => {
         repoCount: 1,
         scanRoots: ["/"]
       },
-      repos: [{ path: "/a", ownerRepo: "a", tags: [], lastScannedAt: 0 }]
+      repos: [
+        {
+          fullPath: "/a",
+          scanRoot: "/",
+          relativePath: "a",
+          recordKey: "local:a",
+          git: undefined,
+          isDirty: false,
+          manualTags: [],
+          autoTags: [],
+          lastScannedAt: 0
+        }
+      ]
     })
     const repos = await pickRepoModule.default({ scanRoots: ["/"], refresh: true })
     expect(repos.length).toBe(1)
@@ -42,7 +54,19 @@ describe("index pickRepo", () => {
         repoCount: 1,
         scanRoots: ["/"]
       },
-      repos: [{ path: "/a", ownerRepo: "a", tags: [], lastScannedAt: 0 }]
+      repos: [
+        {
+          fullPath: "/a",
+          scanRoot: "/",
+          relativePath: "a",
+          recordKey: "local:a",
+          git: undefined,
+          isDirty: false,
+          manualTags: [],
+          autoTags: [],
+          lastScannedAt: 0
+        }
+      ]
     })
     const cached = await pickRepoModule.default({ scanRoots: ["/"] })
     expect(cached.length).toBe(1)
@@ -59,10 +83,22 @@ describe("index pickRepo", () => {
         repoCount: 1,
         scanRoots: ["/"]
       },
-      repos: [{ path: "/b", ownerRepo: "b", tags: [], lastScannedAt: 0 }]
+      repos: [
+        {
+          fullPath: "/b",
+          scanRoot: "/",
+          relativePath: "b",
+          recordKey: "local:b",
+          git: undefined,
+          isDirty: false,
+          manualTags: [],
+          autoTags: [],
+          lastScannedAt: 0
+        }
+      ]
     })
     const built = await pickRepoModule.default({ scanRoots: ["/"] })
-    expect(built[0].path).toBe("/b")
+    expect(built[0].fullPath).toBe("/b")
   })
 
   it("index 导出存在", () => {
