@@ -28,10 +28,11 @@ export type GitRepository = {
 };
 
 export type RepositoryRecord = {
+  recordId: string;
   fullPath: string;
   scanRoot: string;
   relativePath: string;
-  recordKey: string;
+  repoKey: string;
   git?: GitRepository;
   isDirty: boolean;
   manualTags: string[];
@@ -45,9 +46,8 @@ export type PreviewSection = {
 };
 
 export type RepoPreview = {
-  path: string;
+  record: RepositoryRecord;
   repoPath: string;
-  repoKey: string;
   origin: string;
   siteUrl: string;
   branch: string;
@@ -57,6 +57,12 @@ export type RepoPreview = {
   readme: string[];
   readmeStatus: 'ok' | 'missing' | 'unavailable';
   extensions: PreviewSection[];
+};
+
+export type ListItem = {
+  record: RepositoryRecord;
+  displayName: string;
+  codePlatform?: string;
 };
 
 export type ScanOptions = {

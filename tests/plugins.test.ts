@@ -86,10 +86,11 @@ describe('plugins', () => {
     ];
     registerPlugins(plugins);
     const repo: RepositoryRecord = {
+      recordId: '/tmp/repo',
       fullPath: '/tmp/repo',
       scanRoot: '/tmp',
       relativePath: 'repo',
-      recordKey: 'local:repo',
+      repoKey: 'local:repo',
       git: undefined,
       isDirty: false,
       manualTags: [],
@@ -97,9 +98,8 @@ describe('plugins', () => {
       lastScannedAt: Date.now(),
     };
     const preview: RepoPreview = {
-      path: repo.fullPath,
+      record: repo,
       repoPath: 'repo',
-      repoKey: 'local:repo',
       origin: '-',
       siteUrl: '-',
       branch: '-',

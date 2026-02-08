@@ -77,7 +77,7 @@ export async function runListCommand(options: CliOptions, args: string[]): Promi
     const payload = repos.map((repo) => ({
       path: repo.fullPath,
       name: repoDisplayName(repo),
-      recordKey: repo.recordKey,
+      repoKey: repo.repoKey,
       tags: recordTags(repo),
       originUrl: repo.git?.originUrl ?? null,
       lastScannedAt: repo.lastScannedAt,

@@ -14,12 +14,12 @@ import {
 } from 'antd';
 import { useEffect, useState } from 'react';
 import { fetchRecord } from '../api';
-import type { FixedLink, RepoItem, RepoPreviewResult, RepositoryRecord } from '../types';
+import type { FixedLink, ListItem, RepoPreviewResult, RepositoryRecord } from '../types';
 
 type Props = {
   loading: boolean;
   preview: RepoPreviewResult | null;
-  repo: RepoItem | null;
+  repo: ListItem | null;
   repoLinks: Record<string, FixedLink[]>;
 };
 
@@ -28,7 +28,7 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
   const [recordLoading, setRecordLoading] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
   const [record, setRecord] = useState<RepositoryRecord | null>(null);
-  const repoPath = repo?.folderFullPath;
+  const repoPath = repo?.record.fullPath;
   useEffect(() => {
     if (!repoPath) {
       return;
@@ -62,12 +62,15 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
   }
 
   const originUrl = preview?.data.origin && preview.data.origin !== '-' ? preview.data.origin : '';
+  const previewRepoKey =
+    preview?.data.record.repoKey && preview.data.record.repoKey !== '-'
+      ? preview.data.record.repoKey
+      : '';
   const repoKeyValue =
-    preview?.data.repoKey && preview.data.repoKey !== '-'
-      ? preview.data.repoKey
-      : repo.key && repo.key !== '-'
-        ? repo.key
-        : repo.folderRelativePath;
+    previewRepoKey ||
+    (repo.record.repoKey && repo.record.repoKey !== '-'
+      ? repo.record.repoKey
+      : repo.record.relativePath);
   const resolvedFixedLinks = (repoLinks[repoKeyValue] ?? [])
     .map((link) => {
       const label = link.label.trim();
@@ -83,11 +86,11 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
 
       const url = template.replace(/\{(ownerRepo|path|originUrl)\}/g, (_, key) => {
         if (key === 'ownerRepo') {
-          return repo.displayName || repo.folderRelativePath;
+          return repo.displayName || repo.record.relativePath;
         }
 
         if (key === 'path') {
-          return repo.folderFullPath;
+          return repo.record.fullPath;
         }
 
         if (key === 'originUrl') {
@@ -122,8 +125,10 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
         className="preview-card"
       >
         <Descriptions bordered size="small" column={1} className="preview-meta">
-          <Descriptions.Item label="路径">{repo.folderFullPath}</Descriptions.Item>
-          <Descriptions.Item label="repoKey">{preview?.data.repoKey ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label="路径">{repo.record.fullPath}</Descriptions.Item>
+          <Descriptions.Item label="repoKey">
+            {preview?.data.record.repoKey ?? '-'}
+          </Descriptions.Item>
           <Descriptions.Item label="Origin">{preview?.data.origin ?? '-'}</Descriptions.Item>
           <Descriptions.Item label="站点">
             {preview?.data.siteUrl && preview.data.siteUrl !== '-' ? (

@@ -11,7 +11,7 @@ import {
 } from './git';
 import { parseOriginToSiteUrl } from './origin';
 import { resolvePreviewExtensions } from './plugins';
-import { buildGitRepository, buildRecordKey } from './domain';
+import { buildGitRepository, buildRepoKey } from './domain';
 
 export type RepoPreviewResult = {
   data: RepoPreview;
@@ -37,13 +37,13 @@ export async function buildRepoPreview(
   if (!gitDir) {
     const readme = await readReadme(repoPath);
     const repoPathLabel = deriveRepoPath(repoPath, repo.git?.fullName ?? repo.relativePath);
-    const repoKey = buildRecordKey({ relativePath: repoPathLabel });
+    const repoKey = buildRepoKey({ relativePath: repoPathLabel });
+    const record = { ...repo, repoKey, recordId: repo.recordId ?? repoPath };
 
     return {
       data: {
-        path: repoPath,
+        record,
         repoPath: repoPathLabel,
-        repoKey,
         origin: '-',
         siteUrl: '-',
         branch: '-',
@@ -63,13 +63,13 @@ export async function buildRepoPreview(
   if (!gitAvailable) {
     const readme = await readReadme(repoPath);
     const repoPathLabel = deriveRepoPath(repoPath, repo.git?.fullName ?? repo.relativePath);
-    const repoKey = buildRecordKey({ relativePath: repoPathLabel });
+    const repoKey = buildRepoKey({ relativePath: repoPathLabel });
+    const record = { ...repo, repoKey, recordId: repo.recordId ?? repoPath };
 
     return {
       data: {
-        path: repoPath,
+        record,
         repoPath: repoPathLabel,
-        repoKey,
         origin: '-',
         siteUrl: '-',
         branch: '-',
@@ -104,11 +104,11 @@ export async function buildRepoPreview(
     options?.remoteHostProviders,
   );
   const repoPathLabel = deriveRepoPath(repoPath, git?.fullName || repo.relativePath);
-  const repoKey = buildRecordKey({ git, relativePath: repoPathLabel });
+  const repoKey = buildRepoKey({ git, relativePath: repoPathLabel });
+  const record = { ...repo, repoKey, recordId: repo.recordId ?? repoPath, git };
   const basePreview: RepoPreview = {
-    path: repoPath,
+    record,
     repoPath: repoPathLabel,
-    repoKey,
     origin: origin.value,
     siteUrl: parseOriginToSiteUrl(origin.value) ?? '-',
     branch: branch.value,
@@ -129,13 +129,24 @@ export async function buildRepoPreview(
 
 export function buildFallbackPreview(repoPath: string, error: string): RepoPreviewResult {
   const repoPathLabel = deriveRepoPath(repoPath);
-  const repoKey = buildRecordKey({ relativePath: repoPathLabel });
+  const repoKey = buildRepoKey({ relativePath: repoPathLabel });
+  const record = {
+    recordId: repoPath,
+    fullPath: repoPath,
+    scanRoot: path.dirname(repoPath),
+    relativePath: repoPathLabel,
+    repoKey,
+    git: undefined,
+    isDirty: false,
+    manualTags: [],
+    autoTags: [],
+    lastScannedAt: 0,
+  };
 
   return {
     data: {
-      path: repoPath,
+      record,
       repoPath: repoPathLabel,
-      repoKey,
       origin: '-',
       siteUrl: '-',
       branch: '-',

@@ -4,7 +4,7 @@ import pLimit from 'p-limit';
 import { buildCache, loadCache, refreshCache } from '../core/cache';
 import { buildRepoPreview } from '../core/preview';
 import { buildRepositoryRecord, deriveRelativePath } from '../core/domain';
-import type { Action, RepositoryRecord } from '../core/types';
+import type { Action, ListItem, RepositoryRecord } from '../core/types';
 import { normalizeRepoKey } from '../core/path-utils';
 import { getRegisteredActions } from '../core/plugins';
 import { registerBuiltInPlugins } from '../plugins/built-in';
@@ -27,16 +27,7 @@ type ServerOptions = {
 };
 
 type PaginatedRepos = {
-  items: Array<{
-    folderRelativePath: string;
-    folderFullPath: string;
-    key: string;
-    codePlatform?: string;
-    tags: string[];
-    manualTags: string[];
-    lastScannedAt: number;
-    isDirty?: boolean;
-  }>;
+  items: ListItem[];
   total: number;
   page: number;
   pageSize: number;
@@ -217,22 +208,13 @@ export async function registerRoutes(
     const pageSize = Math.min(Math.max(1, Number(query.pageSize) || 200), 500);
     const offset = (page - 1) * pageSize;
     const items = repos.slice(offset, offset + pageSize).map((repo) => {
-      const folderRelativePath = repo.relativePath;
-      const folderFullPath = repo.fullPath;
-      const key = repo.recordKey;
       const displayName = repoDisplayName(repo);
       const codePlatform = normalizeCodePlatform(repoCodePlatform(repo));
 
       return {
-        folderRelativePath,
-        folderFullPath,
-        key,
+        record: repo,
         displayName,
         codePlatform,
-        tags: recordTags(repo),
-        manualTags: repo.manualTags,
-        lastScannedAt: repo.lastScannedAt,
-        isDirty: Boolean(repo.isDirty),
       };
     });
     const payload: PaginatedRepos = {

@@ -35,7 +35,7 @@ export function buildGitRepository(
   };
 }
 
-export function buildRecordKey(input: { git?: GitRepository; relativePath: string }): string {
+export function buildRepoKey(input: { git?: GitRepository; relativePath: string }): string {
   if (input.git?.fullName) {
     return `${input.git.provider}:${input.git.fullName}`;
   }
@@ -58,13 +58,14 @@ export function buildRepositoryRecord(input: {
   lastScannedAt: number;
 }): RepositoryRecord {
   const relativePath = input.relativePath ?? deriveRelativePath(input.fullPath, input.scanRoot);
-  const recordKey = buildRecordKey({ git: input.git, relativePath });
+  const repoKey = buildRepoKey({ git: input.git, relativePath });
 
   return {
+    recordId: input.fullPath,
     fullPath: input.fullPath,
     scanRoot: input.scanRoot,
     relativePath,
-    recordKey,
+    repoKey,
     git: input.git,
     isDirty: input.isDirty,
     manualTags: input.manualTags ?? [],

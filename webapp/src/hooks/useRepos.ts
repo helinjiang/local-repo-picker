@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { message } from 'antd';
-import type { RepoItem } from '../types';
+import type { ListItem } from '../types';
 import { fetchRepos, refreshCache } from '../api';
 
 export function useRepos(params: {
@@ -9,7 +9,7 @@ export function useRepos(params: {
   messageApi: ReturnType<typeof message.useMessage>[0];
 }) {
   const { debouncedQuery, tag, messageApi } = params;
-  const [repos, setRepos] = useState<RepoItem[]>([]);
+  const [repos, setRepos] = useState<ListItem[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [refreshingCache, setRefreshingCache] = useState(false);
@@ -49,8 +49,8 @@ export function useRepos(params: {
         setPage(data.page);
         setPageSize(data.pageSize);
 
-        if (!data.items.find((repo) => repo.folderFullPath === selectedPath)) {
-          setSelectedPath(data.items[0]?.folderFullPath ?? null);
+        if (!data.items.find((repo) => repo.record.fullPath === selectedPath)) {
+          setSelectedPath(data.items[0]?.record.fullPath ?? null);
         }
       } catch (error) {
         if (requestIdRef.current === requestId) {
@@ -96,7 +96,7 @@ export function useRepos(params: {
   }, [refreshingCache, messageApi, loadRepos]);
 
   const selectedRepo = useMemo(
-    () => repos.find((repo) => repo.folderFullPath === selectedPath) ?? null,
+    () => repos.find((repo) => repo.record.fullPath === selectedPath) ?? null,
     [repos, selectedPath],
   );
 

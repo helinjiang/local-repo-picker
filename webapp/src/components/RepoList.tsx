@@ -2,10 +2,10 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
-import type { RepoItem } from '../types';
+import type { ListItem } from '../types';
 
 type Props = {
-  repos: RepoItem[];
+  repos: ListItem[];
   selectedPath: string | null;
   loading: boolean;
   page: number;
@@ -13,8 +13,8 @@ type Props = {
   total: number;
   onSelect: (path: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
-  onAddTag: (repo: RepoItem) => void;
-  onRemoveTag: (repo: RepoItem, tag: string) => void;
+  onAddTag: (repo: ListItem) => void;
+  onRemoveTag: (repo: ListItem, tag: string) => void;
 };
 
 export default function RepoList({
@@ -31,28 +31,30 @@ export default function RepoList({
 }: Props) {
   const [hoveredTagKey, setHoveredTagKey] = useState<string | null>(null);
   const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, '$1');
-  const columns: ColumnsType<RepoItem> = [
+  const columns: ColumnsType<ListItem> = [
     {
       title: '仓库',
-      dataIndex: 'folderRelativePath',
+      dataIndex: 'record',
       render: (_, repo) => (
         <div>
           <Space size="small" wrap>
             <Typography.Text strong>{repo.displayName}</Typography.Text>
             {repo.codePlatform ? <Tag color="blue">{repo.codePlatform}</Tag> : null}
-            <Tag color={repo.isDirty ? 'red' : 'green'}>{repo.isDirty ? 'dirty' : 'clean'}</Tag>
+            <Tag color={repo.record.isDirty ? 'red' : 'green'}>
+              {repo.record.isDirty ? 'dirty' : 'clean'}
+            </Tag>
           </Space>
-          <div style={{ color: '#8c8c8c', fontSize: 12 }}>{repo.key}</div>
+          <div style={{ color: '#8c8c8c', fontSize: 12 }}>{repo.record.repoKey}</div>
         </div>
       ),
     },
     {
       title: '标签',
-      dataIndex: 'tags',
+      dataIndex: 'record',
       render: (_: string[], repo) => (
         <div className="repo-tags">
-          {repo.tags.map((tag) => {
-            const tagKey = `${repo.folderFullPath}::${tag}`;
+          {[...repo.record.autoTags, ...repo.record.manualTags].map((tag) => {
+            const tagKey = `${repo.record.fullPath}::${tag}`;
             const hovered = hoveredTagKey === tagKey;
 
             return (
@@ -113,7 +115,7 @@ export default function RepoList({
   return (
     <Table
       size="middle"
-      rowKey="folderFullPath"
+      rowKey={(record) => record.record.fullPath}
       columns={columns}
       dataSource={repos}
       loading={loading}
@@ -124,9 +126,11 @@ export default function RepoList({
         showSizeChanger: true,
         onChange: onPageChange,
       }}
-      rowClassName={(record) => (record.folderFullPath === selectedPath ? 'repo-row-selected' : '')}
+      rowClassName={(record) =>
+        record.record.fullPath === selectedPath ? 'repo-row-selected' : ''
+      }
       onRow={(record) => ({
-        onClick: () => onSelect(record.folderFullPath),
+        onClick: () => onSelect(record.record.fullPath),
       })}
     />
   );

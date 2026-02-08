@@ -1,17 +1,32 @@
-export type RepoItem = {
-  folderFullPath: string;
-  folderRelativePath: string;
-  key: string;
+export type RepositoryRecord = {
+  recordId: string;
+  fullPath: string;
+  scanRoot: string;
+  relativePath: string;
+  repoKey: string;
+  git?: {
+    provider: string;
+    namespace: string;
+    repo: string;
+    fullName: string;
+    baseUrl: string;
+    originUrl: string;
+    isValid: boolean;
+  };
+  isDirty: boolean;
+  manualTags: string[];
+  autoTags: string[];
+  lastScannedAt: number;
+};
+
+export type ListItem = {
+  record: RepositoryRecord;
   displayName: string;
   codePlatform?: string;
-  tags: string[];
-  manualTags?: string[];
-  lastScannedAt: number;
-  isDirty?: boolean;
 };
 
 export type RepoListResult = {
-  items: RepoItem[];
+  items: ListItem[];
   total: number;
   page: number;
   pageSize: number;
@@ -23,9 +38,8 @@ export type PreviewSection = {
 };
 
 export type RepoPreview = {
-  path: string;
+  record: RepositoryRecord;
   repoPath: string;
-  repoKey: string;
   origin: string;
   siteUrl: string;
   branch: string;
@@ -40,26 +54,6 @@ export type RepoPreview = {
 export type RepoPreviewResult = {
   data: RepoPreview;
   error?: string;
-};
-
-export type RepositoryRecord = {
-  fullPath: string;
-  scanRoot: string;
-  relativePath: string;
-  recordKey: string;
-  git?: {
-    provider: string;
-    namespace: string;
-    repo: string;
-    fullName: string;
-    baseUrl: string;
-    originUrl: string;
-    isValid: boolean;
-  };
-  isDirty: boolean;
-  manualTags: string[];
-  autoTags: string[];
-  lastScannedAt: number;
 };
 
 export type FixedLink = {

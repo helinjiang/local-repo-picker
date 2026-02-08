@@ -1,11 +1,11 @@
 import { Modal, Input, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import type { RepoItem } from '../types';
+import type { ListItem } from '../types';
 import { formatTagLabel } from '../utils/tagUtils';
 
 type Props = {
   open: boolean;
-  repo: RepoItem | null;
+  repo: ListItem | null;
   mode: 'add' | 'edit';
   onCancel: () => void;
   onSave: (value: string) => void;
@@ -20,7 +20,7 @@ export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) 
     }
 
     if (mode === 'edit') {
-      setValue((repo.manualTags ?? []).map(formatTagLabel).join(' '));
+      setValue((repo.record.manualTags ?? []).map(formatTagLabel).join(' '));
 
       return;
     }

@@ -23,10 +23,11 @@ describe('cli repo', () => {
       },
       repos: [
         {
+          recordId: '/a',
           fullPath: '/a',
           scanRoot: '/',
           relativePath: 'a',
-          recordKey: 'local:a',
+          repoKey: 'local:a',
           git: undefined,
           isDirty: false,
           manualTags: [],

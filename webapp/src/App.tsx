@@ -84,7 +84,10 @@ export default function App() {
 
   const tagOptions = useMemo(() => {
     const tagSet = new Set<string>();
-    repos.forEach((repo) => repo.tags.forEach((item) => tagSet.add(item)));
+    repos.forEach((repo) => {
+      repo.record.autoTags.forEach((item) => tagSet.add(item));
+      repo.record.manualTags.forEach((item) => tagSet.add(item));
+    });
 
     return Array.from(tagSet)
       .sort((a, b) => a.localeCompare(b))
@@ -180,16 +183,21 @@ export default function App() {
 
   const handleRunAction = async (actionId: string, repoPath: string) => {
     if (actionId === 'web.edit-repo-links') {
-      const repo = repos.find((item) => item.folderFullPath === repoPath);
+      const repo = repos.find((item) => item.record.fullPath === repoPath);
 
       if (!repo) {
         return;
       }
 
       const previewRepoKey =
-        preview?.data.path === repoPath && preview.data.repoKey !== '-' ? preview.data.repoKey : '';
+        preview?.data.record.fullPath === repoPath && preview.data.record.repoKey !== '-'
+          ? preview.data.record.repoKey
+          : '';
       const repoKey =
-        previewRepoKey || (repo.key && repo.key !== '-' ? repo.key : repo.folderRelativePath);
+        previewRepoKey ||
+        (repo.record.repoKey && repo.record.repoKey !== '-'
+          ? repo.record.repoKey
+          : repo.record.relativePath);
       setRepoLinksOpen(true);
       setCurrentRepoLinkKey(repoKey);
 

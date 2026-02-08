@@ -3,6 +3,7 @@ import type {
   CacheMetadata,
   GitProvider,
   GitRepository,
+  ListItem,
   PluginModule,
   PreviewPlugin,
   PreviewSection,
@@ -16,7 +17,7 @@ import { readLru, sortByLru, updateLru } from './core/lru';
 import { scanRepos } from './core/scan';
 import {
   buildGitRepository,
-  buildRecordKey,
+  buildRepoKey,
   buildRepositoryRecord,
   deriveRelativePath,
 } from './core/domain';
@@ -53,7 +54,7 @@ export {
   writeConfig,
   ensureConfigFile,
 };
-export { buildGitRepository, buildRecordKey, buildRepositoryRecord, deriveRelativePath };
+export { buildGitRepository, buildRepoKey, buildRepositoryRecord, deriveRelativePath };
 export type {
   ScanOptions,
   AppConfig,
@@ -67,6 +68,7 @@ export type {
   GitProvider,
   GitRepository,
   RepositoryRecord,
+  ListItem,
 };
 
 export default async function pickRepo(

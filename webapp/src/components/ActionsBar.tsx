@@ -7,10 +7,10 @@ import {
   QuestionCircleOutlined,
 } from '@ant-design/icons';
 import { Button, Card, Space } from 'antd';
-import type { ActionInfo, RepoItem } from '../types';
+import type { ActionInfo, ListItem } from '../types';
 
 type Props = {
-  repo: RepoItem | null;
+  repo: ListItem | null;
   disabled: boolean;
   actions: ActionInfo[];
   onRunAction: (actionId: string, path: string) => Promise<void>;
@@ -22,7 +22,7 @@ export default function ActionsBar({ repo, disabled, actions, onRunAction }: Pro
       return;
     }
 
-    await onRunAction(actionId, repo.folderFullPath);
+    await onRunAction(actionId, repo.record.fullPath);
   };
 
   return (

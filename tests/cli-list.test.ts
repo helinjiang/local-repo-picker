@@ -45,10 +45,11 @@ const baseCache = {
   },
   repos: [
     {
+      recordId: '/a',
       fullPath: '/a',
       scanRoot: '/',
       relativePath: 'a',
-      recordKey: 'local:a',
+      repoKey: 'local:a',
       git: {
         provider: 'github' as const,
         namespace: 'b',
@@ -64,10 +65,11 @@ const baseCache = {
       lastScannedAt: 0,
     },
     {
+      recordId: '/b',
       fullPath: '/b',
       scanRoot: '/',
       relativePath: 'b',
-      recordKey: 'local:b',
+      repoKey: 'local:b',
       git: undefined,
       isDirty: true,
       manualTags: [],

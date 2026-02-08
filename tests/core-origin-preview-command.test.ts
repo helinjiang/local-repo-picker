@@ -52,10 +52,11 @@ describe('core origin/preview/command', () => {
 
   it('buildRepoPreview 读取不到仓库路径时降级', async () => {
     const preview = await buildRepoPreview({
+      recordId: '/non-exists',
       fullPath: '/non-exists',
       scanRoot: '/',
       relativePath: 'non-exists',
-      recordKey: 'local:non-exists',
+      repoKey: 'local:non-exists',
       git: undefined,
       isDirty: false,
       manualTags: [],
@@ -70,10 +71,11 @@ describe('core origin/preview/command', () => {
     await fs.writeFile(path.join(root, 'README.md'), 'hello\nworld\n', 'utf8');
     vi.mocked(gitMocks.resolveGitDir).mockResolvedValue(null);
     const preview = await buildRepoPreview({
+      recordId: root,
       fullPath: root,
       scanRoot: '/',
       relativePath: 'a/b',
-      recordKey: 'local:a/b',
+      repoKey: 'local:a/b',
       git: undefined,
       isDirty: false,
       manualTags: [],
@@ -90,10 +92,11 @@ describe('core origin/preview/command', () => {
     vi.mocked(gitMocks.resolveGitDir).mockResolvedValue(path.join(root, '.git'));
     vi.mocked(gitMocks.checkGitAvailable).mockResolvedValue(false);
     const preview = await buildRepoPreview({
+      recordId: root,
       fullPath: root,
       scanRoot: '/',
       relativePath: 'a/b',
-      recordKey: 'local:a/b',
+      repoKey: 'local:a/b',
       git: undefined,
       isDirty: false,
       manualTags: [],
@@ -130,10 +133,11 @@ describe('core origin/preview/command', () => {
       return { ok: true, stdout: 'https://github.com/a/b.git' };
     });
     const preview = await buildRepoPreview({
+      recordId: root,
       fullPath: root,
       scanRoot: '/',
       relativePath: 'a/b',
-      recordKey: 'local:a/b',
+      repoKey: 'local:a/b',
       git: undefined,
       isDirty: false,
       manualTags: [],
@@ -143,7 +147,7 @@ describe('core origin/preview/command', () => {
     expect(preview.data.status).toBe('dirty');
     expect(preview.data.siteUrl).toBe('https://github.com/a/b');
     expect(preview.data.repoPath).toBe('a/b');
-    expect(preview.data.repoKey).toBe('github:a/b');
+    expect(preview.data.record.repoKey).toBe('github:a/b');
     expect(preview.data.extensions.length).toBe(1);
     await fs.rm(root, { recursive: true, force: true });
   });
@@ -152,7 +156,7 @@ describe('core origin/preview/command', () => {
     const fallback = buildFallbackPreview('/tmp/a', 'boom');
     expect(fallback.data.origin).toBe('-');
     expect(fallback.data.repoPath).toBe('tmp/a');
-    expect(fallback.data.repoKey).toBe('local:tmp/a');
+    expect(fallback.data.record.repoKey).toBe('local:tmp/a');
     expect(fallback.error).toBe('boom');
   });
 

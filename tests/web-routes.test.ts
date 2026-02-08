@@ -62,10 +62,11 @@ const baseCache = {
   },
   repos: [
     {
+      recordId: '/root/a',
       fullPath: '/root/a',
       scanRoot: '/root',
       relativePath: 'a',
-      recordKey: 'local:a',
+      repoKey: 'local:a',
       git: {
         provider: 'github' as const,
         namespace: 'b',
@@ -81,10 +82,11 @@ const baseCache = {
       lastScannedAt: 0,
     },
     {
+      recordId: '/root/b',
       fullPath: '/root/b',
       scanRoot: '/root',
       relativePath: 'b',
-      recordKey: 'local:b',
+      repoKey: 'local:b',
       git: undefined,
       isDirty: true,
       manualTags: [],
@@ -187,7 +189,7 @@ describe('web routes', () => {
     const reposByLru = await handlers['GET /api/repos']({
       query: { sort: 'lru', page: '1', pageSize: '2', tag: 'dirty' },
     });
-    expect(reposByLru.items.every((item: any) => item.isDirty)).toBe(true);
+    expect(reposByLru.items.every((item: any) => item.record.isDirty)).toBe(true);
   });
 
   it('preview/action/cache/tags 接口', async () => {
@@ -195,9 +197,19 @@ describe('web routes', () => {
     vi.mocked(cacheMocks.loadCache).mockResolvedValue(baseCache);
     vi.mocked(previewMocks.buildRepoPreview).mockResolvedValue({
       data: {
-        path: '/root/a',
+        record: {
+          recordId: '/root/a',
+          fullPath: '/root/a',
+          scanRoot: '/root',
+          relativePath: 'a',
+          repoKey: 'noremote/root/a',
+          git: undefined,
+          isDirty: false,
+          manualTags: [],
+          autoTags: [],
+          lastScannedAt: 0,
+        },
         repoPath: 'root/a',
-        repoKey: 'noremote/root/a',
         origin: '-',
         siteUrl: '-',
         branch: '-',
@@ -224,8 +236,8 @@ describe('web routes', () => {
     expect(reply.code).toHaveBeenCalledWith(400);
     const previewFirst = await handlers['GET /api/preview']({ query: { path: '/root/a' } }, reply);
     const previewSecond = await handlers['GET /api/preview']({ query: { path: '/root/a' } }, reply);
-    expect(previewFirst.data.path).toBe('/root/a');
-    expect(previewSecond.data.path).toBe('/root/a');
+    expect(previewFirst.data.record.fullPath).toBe('/root/a');
+    expect(previewSecond.data.record.fullPath).toBe('/root/a');
     await handlers['POST /api/action']({ body: { actionId: 'a', path: '/root/a' } }, reply);
     expect(actionRun).toHaveBeenCalled();
     await handlers['POST /api/cache/refresh']();

@@ -249,7 +249,14 @@ function normalizeCacheRepos(
   return input
     .map((item) => {
       if (isRepositoryRecord(item)) {
-        return item;
+        const legacy = item as RepositoryRecord & { recordKey?: string };
+        const repoKey = legacy.repoKey ?? legacy.recordKey ?? '';
+
+        if (!repoKey) {
+          return null;
+        }
+
+        return { ...legacy, repoKey, recordId: legacy.recordId ?? legacy.fullPath };
       }
 
       const legacy = item as { path?: string; lastScannedAt?: number };
@@ -278,9 +285,10 @@ function isRepositoryRecord(value: unknown): value is RepositoryRecord {
     return false;
   }
 
-  const record = value as RepositoryRecord;
+  const record = value as RepositoryRecord & { recordKey?: string };
+  const repoKey = record.repoKey ?? record.recordKey;
 
-  return typeof record.fullPath === 'string' && typeof record.recordKey === 'string';
+  return typeof record.fullPath === 'string' && typeof repoKey === 'string';
 }
 
 function buildCacheMetadataFromCache(

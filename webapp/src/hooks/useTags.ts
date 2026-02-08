@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { message } from 'antd';
-import type { RepoItem } from '../types';
+import type { ListItem } from '../types';
 import { updateTags, upsertTags } from '../api';
 import { stripTagBrackets } from '../utils/tagUtils';
 
@@ -10,19 +10,19 @@ export function useTags(params: {
 }) {
   const { messageApi, reloadRepos } = params;
   const [tagModalOpen, setTagModalOpen] = useState(false);
-  const [tagModalRepo, setTagModalRepo] = useState<RepoItem | null>(null);
+  const [tagModalRepo, setTagModalRepo] = useState<ListItem | null>(null);
   const [tagModalMode, setTagModalMode] = useState<'add' | 'edit'>('add');
 
-  const handleAddTag = useCallback((repo: RepoItem) => {
+  const handleAddTag = useCallback((repo: ListItem) => {
     setTagModalRepo(repo);
     setTagModalMode('add');
     setTagModalOpen(true);
   }, []);
 
   const handleRemoveTag = useCallback(
-    async (repo: RepoItem, removedTag: string) => {
+    async (repo: ListItem, removedTag: string) => {
       try {
-        await updateTags(repo.folderFullPath, { remove: [removedTag] });
+        await updateTags(repo.record.fullPath, { remove: [removedTag] });
         messageApi.success('标签已删除');
         await reloadRepos();
       } catch (error) {
@@ -52,10 +52,10 @@ export function useTags(params: {
             return;
           }
 
-          await updateTags(tagModalRepo.folderFullPath, { add: parsed });
+          await updateTags(tagModalRepo.record.fullPath, { add: parsed });
           messageApi.success('标签已新增');
         } else {
-          await upsertTags(tagModalRepo.folderFullPath, nextTags);
+          await upsertTags(tagModalRepo.record.fullPath, nextTags);
           messageApi.success('标签已更新');
         }
 

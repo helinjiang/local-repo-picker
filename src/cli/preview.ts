@@ -58,8 +58,8 @@ function formatPreviewLines(result: RepoPreviewResult): string[] {
     lines.push('');
   }
 
-  lines.push(`PATH: ${result.data.path}`);
-  lines.push(`KEY: ${result.data.repoKey}`);
+  lines.push(`PATH: ${result.data.record.fullPath}`);
+  lines.push(`KEY: ${result.data.record.repoKey}`);
   lines.push(`ORIGIN: ${result.data.origin}`);
   lines.push(`BRANCH: ${result.data.branch}`);
   lines.push(`STATUS: ${result.data.status}`);
