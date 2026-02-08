@@ -1,6 +1,6 @@
 export type RepoInfo = {
   path: string;
-  ownerRepo: string;
+  fullName: string;
   originUrl?: string;
   codePlatform?: string;
   tags: string[];

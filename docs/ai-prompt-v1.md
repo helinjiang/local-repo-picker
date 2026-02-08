@@ -71,7 +71,7 @@ const result = await pickRepo(options);
 
 type PickResult = {
 path: string;
-ownerRepo: string;
+fullName: string;
 originUrl?: string;
 tags: string[];
 };
@@ -179,7 +179,7 @@ C️⃣ Cache
 • cache 保存：
 • path
 • originUrl
-• ownerRepo
+• fullName
 • tags（raw）
 • lastScannedAt
 • TTL 默认 12h

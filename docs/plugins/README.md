@@ -38,7 +38,7 @@ const helloAction: Action = {
   id: 'builtin.hello',
   label: 'Say Hello',
   run: async (repo) => {
-    console.log(`Hello ${repo.ownerRepo}`);
+    console.log(`Hello ${repo.git?.fullName ?? repo.relativePath}`);
   },
 };
 ```
@@ -104,7 +104,7 @@ const myPlugin: PluginModule = {
       id: 'custom-preview',
       label: '预览扩展',
       render: async ({ repo }) => {
-        return { title: 'EXTRA', lines: [repo.ownerRepo] };
+        return { title: 'EXTRA', lines: [repo.git?.fullName ?? repo.relativePath] };
       },
     },
   ],

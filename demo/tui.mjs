@@ -3,9 +3,9 @@ import { render } from 'ink';
 import { RepoPicker } from '../dist/ui/index.js';
 
 const repos = [
-  { path: '/tmp/demo-a', ownerRepo: 'demo/a', tags: ['[github]'], lastScannedAt: Date.now() },
-  { path: '/tmp/demo-b', ownerRepo: 'demo/b', tags: ['[gitee]'], lastScannedAt: Date.now() },
-  { path: '/tmp/demo-c', ownerRepo: 'demo/c', tags: ['[internal]'], lastScannedAt: Date.now() },
+  { path: '/tmp/demo-a', fullName: 'demo/a', tags: ['[github]'], lastScannedAt: Date.now() },
+  { path: '/tmp/demo-b', fullName: 'demo/b', tags: ['[gitee]'], lastScannedAt: Date.now() },
+  { path: '/tmp/demo-c', fullName: 'demo/c', tags: ['[internal]'], lastScannedAt: Date.now() },
 ];
 
 render(

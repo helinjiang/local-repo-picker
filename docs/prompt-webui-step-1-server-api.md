@@ -21,7 +21,7 @@
      - q= 模糊搜索
      - tag= 单个 tag 过滤
      - sort=lru|name
-       返回：RepoInfo[]（包含 path, ownerRepo, originUrl, tags, isDirty(可选)）
+       返回：RepoInfo[]（包含 path, fullName, originUrl, tags, isDirty(可选)）
    - `GET /api/preview?path=<abs>` -> RepoPreview（与 fzf/ink 预览一致：commits 时间到秒）
    - `POST /api/action` body: { actionId, path } -> 执行 action
    - `POST /api/cache/refresh` -> 强制 rebuild cache

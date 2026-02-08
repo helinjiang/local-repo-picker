@@ -84,9 +84,9 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
         return null;
       }
 
-      const url = template.replace(/\{(ownerRepo|path|originUrl)\}/g, (_, key) => {
-        if (key === 'ownerRepo') {
-          return repo.displayName || repo.record.relativePath;
+      const url = template.replace(/\{(fullName|path|originUrl)\}/g, (_, key) => {
+        if (key === 'fullName') {
+          return repo.record.git?.fullName || repo.record.relativePath;
         }
 
         if (key === 'path') {

@@ -245,7 +245,7 @@ const myPlugin: PluginModule = {
       id: 'custom-preview',
       label: '预览扩展',
       render: async ({ repo }) => {
-        return { title: 'EXTRA', lines: [repo.ownerRepo] };
+        return { title: 'EXTRA', lines: [repo.git?.fullName ?? repo.relativePath] };
       },
     },
   ],

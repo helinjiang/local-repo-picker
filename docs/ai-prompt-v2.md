@@ -66,7 +66,7 @@ const result = await pickRepo();
 ```
 type PickResult = {
   path: string;
-  ownerRepo: string;
+  fullName: string;
   originUrl?: string;
   tags: string[];
 };

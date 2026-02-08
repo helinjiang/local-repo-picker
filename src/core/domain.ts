@@ -15,13 +15,13 @@ export function buildGitRepository(
     return undefined;
   }
 
-  const { host, ownerRepo } = parseOriginInfo(originUrl);
+  const { host, fullName: originFullName } = parseOriginInfo(originUrl);
 
   if (!host) {
     return undefined;
   }
 
-  const fullName = ownerRepo || (fallbackFullName?.trim() ?? '');
+  const fullName = originFullName || (fallbackFullName?.trim() ?? '');
   const providerInfo = resolveProviderInfo(host, remoteHostProviders);
   const { namespace, repo } = splitFullName(fullName);
   const isValid = Boolean(fullName && namespace && repo);

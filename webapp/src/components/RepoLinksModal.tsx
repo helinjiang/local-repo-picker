@@ -142,7 +142,7 @@ export default function RepoLinksModal({
         </Space>
       )}
       <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 12 }}>
-        Key 为 repoKey（provider:fullName），匹配后展示。支持占位符：{`{ownerRepo}`}、{`{path}`}、
+        Key 为 repoKey（provider:fullName），匹配后展示。支持占位符：{`{fullName}`}、{`{path}`}、
         {`{originUrl}`}
       </div>
     </Modal>

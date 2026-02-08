@@ -136,10 +136,10 @@ export async function readOriginUrl(repoPath: string): Promise<string | null> {
 
 export function parseOriginInfo(originUrl: string | null): {
   host?: string;
-  ownerRepo: string;
+  fullName: string;
 } {
   if (!originUrl) {
-    return { ownerRepo: '' };
+    return { fullName: '' };
   }
 
   let host: string | undefined;
@@ -151,7 +151,7 @@ export function parseOriginInfo(originUrl: string | null): {
       host = url.hostname;
       repoPath = url.pathname;
     } catch {
-      return { ownerRepo: '' };
+      return { fullName: '' };
     }
   } else {
     const scpMatch = originUrl.match(/^(?:.+@)?([^:]+):(.+)$/);
@@ -160,19 +160,19 @@ export function parseOriginInfo(originUrl: string | null): {
       host = scpMatch[1];
       repoPath = scpMatch[2];
     } else {
-      return { ownerRepo: '' };
+      return { fullName: '' };
     }
   }
 
   const trimmed = repoPath.replace(/^\//, '').replace(/\.git$/, '');
   const parts = trimmed.split('/').filter(Boolean);
-  let ownerRepo = trimmed;
+  let fullName = trimmed;
 
   if (parts.length >= 2) {
-    ownerRepo = `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+    fullName = `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
   }
 
-  return { host, ownerRepo };
+  return { host, fullName };
 }
 
 export async function isDirty(repoPath: string, timeoutMs?: number): Promise<boolean> {

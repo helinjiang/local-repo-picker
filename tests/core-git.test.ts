@@ -85,9 +85,9 @@ describe('core git', () => {
   });
 
   it('parseOriginInfo 支持 http 与 scp', () => {
-    expect(parseOriginInfo('https://github.com/a/b.git').ownerRepo).toBe('a/b');
+    expect(parseOriginInfo('https://github.com/a/b.git').fullName).toBe('a/b');
     expect(parseOriginInfo('git@github.com:a/b.git').host).toBe('github.com');
-    expect(parseOriginInfo('bad').ownerRepo).toBe('');
+    expect(parseOriginInfo('bad').fullName).toBe('');
   });
 
   it('isDirty 根据 git status 输出判断', async () => {

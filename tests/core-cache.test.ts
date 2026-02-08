@@ -10,7 +10,6 @@ vi.mock('../src/core/scan', () => ({
 vi.mock('../src/core/tags', () => ({
   readManualTagEdits: vi.fn(),
   buildTags: vi.fn(),
-  getCodePlatform: vi.fn(),
   uniqueTags: vi.fn(),
 }));
 
@@ -69,9 +68,8 @@ describe('core cache', () => {
       new Map([[path.join(root, 'repo-a'), { add: ['[manual]'], remove: [] }]]),
     );
     vi.mocked(gitMocks.readOriginUrl).mockResolvedValue('https://github.com/a/b.git');
-    vi.mocked(gitMocks.parseOriginInfo).mockReturnValue({ host: 'github.com', ownerRepo: 'a/b' });
+    vi.mocked(gitMocks.parseOriginInfo).mockReturnValue({ host: 'github.com', fullName: 'a/b' });
     vi.mocked(gitMocks.isDirty).mockResolvedValue(false);
-    vi.mocked(tagMocks.getCodePlatform).mockReturnValue('github');
     vi.mocked(tagMocks.buildTags).mockReturnValue(['[manual]']);
     vi.mocked(tagMocks.uniqueTags).mockImplementation((tags: string[]) => tags);
     vi.mocked(pluginMocks.resolveTagExtensions).mockResolvedValue(['[extra]']);
@@ -134,7 +132,7 @@ describe('core cache', () => {
         repoCount: 1,
         scanRoots: [root],
       },
-      repos: [{ path: path.join(root, 'missing'), ownerRepo: 'x', tags: [], lastScannedAt: 0 }],
+      repos: [{ path: path.join(root, 'missing'), fullName: 'x', tags: [], lastScannedAt: 0 }],
     };
     await fs.writeFile(cacheFile, JSON.stringify(data), 'utf8');
     vi.mocked(lruMocks.readLru).mockResolvedValue([]);
@@ -148,9 +146,8 @@ describe('core cache', () => {
     vi.mocked(scanMocks.scanRepos).mockResolvedValue([]);
     vi.mocked(tagMocks.readManualTagEdits).mockResolvedValue(new Map());
     vi.mocked(gitMocks.readOriginUrl).mockResolvedValue(null);
-    vi.mocked(gitMocks.parseOriginInfo).mockReturnValue({ ownerRepo: '' });
+    vi.mocked(gitMocks.parseOriginInfo).mockReturnValue({ fullName: '' });
     vi.mocked(gitMocks.isDirty).mockResolvedValue(false);
-    vi.mocked(tagMocks.getCodePlatform).mockReturnValue('noremote');
     vi.mocked(tagMocks.buildTags).mockReturnValue([]);
     vi.mocked(tagMocks.uniqueTags).mockImplementation((tags: string[]) => tags);
     vi.mocked(pluginMocks.resolveTagExtensions).mockResolvedValue([]);

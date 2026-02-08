@@ -9,7 +9,7 @@ vi.mock('../src/core/git', () => ({
   checkGitAvailable: vi.fn(),
   isDirty: vi.fn(),
   resolveGitDir: vi.fn(),
-  parseOriginInfo: vi.fn(() => ({ host: 'github.com', ownerRepo: 'a/b' })),
+  parseOriginInfo: vi.fn(() => ({ host: 'github.com', fullName: 'a/b' })),
 }));
 
 vi.mock('../src/core/plugins', () => ({
