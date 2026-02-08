@@ -12,7 +12,6 @@ type Props = {
   configPaths: ConfigPaths | null;
   hoveredConfigKey: string | null;
   onHoveredConfigKeyChange: (value: string | null) => void;
-  onOpenRepoLinks: () => void;
   configEditorOpen: boolean;
   onToggleConfigEditor: () => void;
   configText: string;
@@ -29,7 +28,6 @@ export default function SettingsModal({
   configPaths,
   hoveredConfigKey,
   onHoveredConfigKeyChange,
-  onOpenRepoLinks,
   configEditorOpen,
   onToggleConfigEditor,
   configText,
@@ -96,11 +94,6 @@ export default function SettingsModal({
                 </div>
               )}
             />
-          </div>
-          <div className="settings-section">
-            <div className="settings-section__title">固定链接</div>
-            <div className="settings-section__desc">在每个 repo 预览中显示快捷链接</div>
-            <Button onClick={onOpenRepoLinks}>管理链接</Button>
           </div>
         </div>
         <div className="settings-right">

@@ -292,7 +292,6 @@ export default function App() {
           configPaths={configPaths}
           hoveredConfigKey={hoveredConfigKey}
           onHoveredConfigKeyChange={setHoveredConfigKey}
-          onOpenRepoLinks={() => setRepoLinksOpen(true)}
           configEditorOpen={configEditorOpen}
           onToggleConfigEditor={() => setConfigEditorOpen((prev) => !prev)}
           configText={configText}
