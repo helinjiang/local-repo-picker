@@ -17,6 +17,7 @@ import { readLru, sortByLru, updateLru } from './core/lru';
 import { scanRepos } from './core/scan';
 import {
   buildGitRepository,
+  buildRecordId,
   buildRepoKey,
   buildRepositoryRecord,
   deriveRelativePath,
@@ -54,7 +55,13 @@ export {
   writeConfig,
   ensureConfigFile,
 };
-export { buildGitRepository, buildRepoKey, buildRepositoryRecord, deriveRelativePath };
+export {
+  buildGitRepository,
+  buildRecordId,
+  buildRepoKey,
+  buildRepositoryRecord,
+  deriveRelativePath,
+};
 export type {
   ScanOptions,
   AppConfig,

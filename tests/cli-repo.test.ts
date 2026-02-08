@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { buildRecordId } from '../src/core/domain';
 
 vi.mock('../src/core/cache', () => ({
   loadCache: vi.fn(),
@@ -23,7 +24,7 @@ describe('cli repo', () => {
       },
       repos: [
         {
-          recordId: '/a',
+          recordId: buildRecordId('/a'),
           fullPath: '/a',
           scanRoot: '/',
           relativePath: 'a',

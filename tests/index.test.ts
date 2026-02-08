@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { buildRecordId } from '../src/core/domain';
 
 vi.mock('../src/core/cache', () => ({
   buildCache: vi.fn(),
@@ -25,7 +26,7 @@ describe('index pickRepo', () => {
       },
       repos: [
         {
-          recordId: '/a',
+          recordId: buildRecordId('/a'),
           fullPath: '/a',
           scanRoot: '/',
           relativePath: 'a',
@@ -57,7 +58,7 @@ describe('index pickRepo', () => {
       },
       repos: [
         {
-          recordId: '/a',
+          recordId: buildRecordId('/a'),
           fullPath: '/a',
           scanRoot: '/',
           relativePath: 'a',
@@ -87,7 +88,7 @@ describe('index pickRepo', () => {
       },
       repos: [
         {
-          recordId: '/b',
+          recordId: buildRecordId('/b'),
           fullPath: '/b',
           scanRoot: '/',
           relativePath: 'b',

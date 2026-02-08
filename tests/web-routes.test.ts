@@ -46,6 +46,7 @@ const lruMocks = await import('../src/core/lru');
 const pluginsMocks = await import('../src/core/plugins');
 const configMocks = await import('../src/config/config');
 const tagMocks = await import('../src/core/tags');
+const { buildRecordId } = await import('../src/core/domain');
 const { registerRoutes } = await import('../src/web/routes');
 
 const baseCache = {
@@ -62,7 +63,7 @@ const baseCache = {
   },
   repos: [
     {
-      recordId: '/root/a',
+      recordId: buildRecordId('/root/a'),
       fullPath: '/root/a',
       scanRoot: '/root',
       relativePath: 'a',
@@ -82,7 +83,7 @@ const baseCache = {
       lastScannedAt: 0,
     },
     {
-      recordId: '/root/b',
+      recordId: buildRecordId('/root/b'),
       fullPath: '/root/b',
       scanRoot: '/root',
       relativePath: 'b',
@@ -198,7 +199,7 @@ describe('web routes', () => {
     vi.mocked(previewMocks.buildRepoPreview).mockResolvedValue({
       data: {
         record: {
-          recordId: '/root/a',
+          recordId: buildRecordId('/root/a'),
           fullPath: '/root/a',
           scanRoot: '/root',
           relativePath: 'a',

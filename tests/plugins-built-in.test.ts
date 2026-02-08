@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { describe, expect, it, vi } from 'vitest';
+import { buildRecordId } from '../src/core/domain';
 
 vi.mock('../src/core/plugins', () => ({
   registerPlugins: vi.fn(),
@@ -46,7 +47,7 @@ describe('built-in plugins', () => {
     });
     const preview = await plugin.previews?.[0].render({
       repo: {
-        recordId: root,
+        recordId: buildRecordId(root),
         fullPath: root,
         scanRoot: root,
         relativePath: 'demo',
@@ -59,7 +60,7 @@ describe('built-in plugins', () => {
       },
       preview: {
         record: {
-          recordId: root,
+          recordId: buildRecordId(root),
           fullPath: root,
           scanRoot: root,
           relativePath: 'demo',
@@ -99,7 +100,7 @@ describe('built-in plugins', () => {
     vi.mocked(originMocks.parseOriginToSiteUrl).mockReturnValue('https://github.com/a/b');
     const action = builtInPlugins[0].actions?.find((item) => item.id === 'builtin.open-site');
     await action?.run({
-      recordId: '/repo',
+      recordId: buildRecordId('/repo'),
       fullPath: '/repo',
       scanRoot: '/',
       relativePath: 'repo',
@@ -116,7 +117,7 @@ describe('built-in plugins', () => {
       (item) => item.id === 'builtin.refresh-cache',
     );
     await refreshAction?.run({
-      recordId: '/repo',
+      recordId: buildRecordId('/repo'),
       fullPath: '/repo',
       scanRoot: '/',
       relativePath: 'repo',

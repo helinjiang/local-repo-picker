@@ -10,7 +10,12 @@ import { getConfigPaths } from '../config/config';
 import { logger } from './logger';
 import { resolveTagExtensions } from './plugins';
 import { normalizeRepoKey } from './path-utils';
-import { buildGitRepository, buildRepositoryRecord, deriveRelativePath } from './domain';
+import {
+  buildGitRepository,
+  buildRecordId,
+  buildRepositoryRecord,
+  deriveRelativePath,
+} from './domain';
 
 const defaultTtlMs = 12 * 60 * 60 * 1000;
 
@@ -256,7 +261,7 @@ function normalizeCacheRepos(
           return null;
         }
 
-        return { ...legacy, repoKey, recordId: legacy.recordId ?? legacy.fullPath };
+        return { ...legacy, repoKey, recordId: buildRecordId(legacy.fullPath) };
       }
 
       const legacy = item as { path?: string; lastScannedAt?: number };

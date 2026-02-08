@@ -20,6 +20,7 @@ const gitMocks = await import('../src/core/git');
 const pluginMocks = await import('../src/core/plugins');
 const { readOriginValue, parseOriginToSiteUrl } = await import('../src/core/origin');
 const { buildRepoPreview, buildFallbackPreview } = await import('../src/core/preview');
+const { buildRecordId } = await import('../src/core/domain');
 const { runCommand } = await import('../src/core/command');
 
 describe('core origin/preview/command', () => {
@@ -52,7 +53,7 @@ describe('core origin/preview/command', () => {
 
   it('buildRepoPreview 读取不到仓库路径时降级', async () => {
     const preview = await buildRepoPreview({
-      recordId: '/non-exists',
+      recordId: buildRecordId('/non-exists'),
       fullPath: '/non-exists',
       scanRoot: '/',
       relativePath: 'non-exists',
@@ -71,7 +72,7 @@ describe('core origin/preview/command', () => {
     await fs.writeFile(path.join(root, 'README.md'), 'hello\nworld\n', 'utf8');
     vi.mocked(gitMocks.resolveGitDir).mockResolvedValue(null);
     const preview = await buildRepoPreview({
-      recordId: root,
+      recordId: buildRecordId(root),
       fullPath: root,
       scanRoot: '/',
       relativePath: 'a/b',
@@ -92,7 +93,7 @@ describe('core origin/preview/command', () => {
     vi.mocked(gitMocks.resolveGitDir).mockResolvedValue(path.join(root, '.git'));
     vi.mocked(gitMocks.checkGitAvailable).mockResolvedValue(false);
     const preview = await buildRepoPreview({
-      recordId: root,
+      recordId: buildRecordId(root),
       fullPath: root,
       scanRoot: '/',
       relativePath: 'a/b',
@@ -133,7 +134,7 @@ describe('core origin/preview/command', () => {
       return { ok: true, stdout: 'https://github.com/a/b.git' };
     });
     const preview = await buildRepoPreview({
-      recordId: root,
+      recordId: buildRecordId(root),
       fullPath: root,
       scanRoot: '/',
       relativePath: 'a/b',

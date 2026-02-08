@@ -2,6 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { promises as fs } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildRecordId } from '../src/core/domain';
 
 vi.mock('../src/core/preview', () => ({
   buildRepoPreview: vi.fn(),
@@ -54,7 +55,7 @@ describe('cli preview/one', () => {
   it('runInternalPreview 输出预览内容', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'lrp-preview-cli-'));
     vi.mocked(repoMocks.resolveRepoInfo).mockResolvedValue({
-      recordId: root,
+      recordId: buildRecordId(root),
       fullPath: root,
       scanRoot: '/',
       relativePath: 'a/b',
@@ -68,7 +69,7 @@ describe('cli preview/one', () => {
     vi.mocked(previewMocks.buildRepoPreview).mockResolvedValue({
       data: {
         record: {
-          recordId: root,
+          recordId: buildRecordId(root),
           fullPath: root,
           scanRoot: '/',
           relativePath: 'a/b',
@@ -118,7 +119,7 @@ describe('cli preview/one', () => {
 
     vi.mocked(gitMocks.runGit).mockResolvedValue({ ok: true, stdout: '/repo' });
     vi.mocked(repoMocks.resolveRepoInfo).mockResolvedValue({
-      recordId: '/repo',
+      recordId: buildRecordId('/repo'),
       fullPath: '/repo',
       scanRoot: '/',
       relativePath: 'repo',

@@ -11,7 +11,7 @@ import {
 } from './git';
 import { parseOriginToSiteUrl } from './origin';
 import { resolvePreviewExtensions } from './plugins';
-import { buildGitRepository, buildRepoKey } from './domain';
+import { buildGitRepository, buildRecordId, buildRepoKey } from './domain';
 
 export type RepoPreviewResult = {
   data: RepoPreview;
@@ -38,7 +38,7 @@ export async function buildRepoPreview(
     const readme = await readReadme(repoPath);
     const repoPathLabel = deriveRepoPath(repoPath, repo.git?.fullName ?? repo.relativePath);
     const repoKey = buildRepoKey({ relativePath: repoPathLabel });
-    const record = { ...repo, repoKey, recordId: repo.recordId ?? repoPath };
+    const record = { ...repo, repoKey, recordId: buildRecordId(repoPath) };
 
     return {
       data: {
@@ -64,7 +64,7 @@ export async function buildRepoPreview(
     const readme = await readReadme(repoPath);
     const repoPathLabel = deriveRepoPath(repoPath, repo.git?.fullName ?? repo.relativePath);
     const repoKey = buildRepoKey({ relativePath: repoPathLabel });
-    const record = { ...repo, repoKey, recordId: repo.recordId ?? repoPath };
+    const record = { ...repo, repoKey, recordId: buildRecordId(repoPath) };
 
     return {
       data: {
@@ -105,7 +105,7 @@ export async function buildRepoPreview(
   );
   const repoPathLabel = deriveRepoPath(repoPath, git?.fullName || repo.relativePath);
   const repoKey = buildRepoKey({ git, relativePath: repoPathLabel });
-  const record = { ...repo, repoKey, recordId: repo.recordId ?? repoPath, git };
+  const record = { ...repo, repoKey, recordId: buildRecordId(repoPath), git };
   const basePreview: RepoPreview = {
     record,
     repoPath: repoPathLabel,
@@ -131,7 +131,7 @@ export function buildFallbackPreview(repoPath: string, error: string): RepoPrevi
   const repoPathLabel = deriveRepoPath(repoPath);
   const repoKey = buildRepoKey({ relativePath: repoPathLabel });
   const record = {
-    recordId: repoPath,
+    recordId: buildRecordId(repoPath),
     fullPath: repoPath,
     scanRoot: path.dirname(repoPath),
     relativePath: repoPathLabel,

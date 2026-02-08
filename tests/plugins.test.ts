@@ -7,6 +7,7 @@ import {
   resolveTagExtensions,
 } from '../src/core/plugins';
 import type { PluginModule, RepositoryRecord, RepoPreview } from '../src/core/types';
+import { buildRecordId } from '../src/core/domain';
 
 afterEach(() => {
   clearPlugins();
@@ -86,7 +87,7 @@ describe('plugins', () => {
     ];
     registerPlugins(plugins);
     const repo: RepositoryRecord = {
-      recordId: '/tmp/repo',
+      recordId: buildRecordId('/tmp/repo'),
       fullPath: '/tmp/repo',
       scanRoot: '/tmp',
       relativePath: 'repo',

@@ -1,6 +1,8 @@
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import type { GitProvider, GitRepository, RepositoryRecord } from './types';
 import { parseOriginInfo } from './git';
+import { normalizeRepoKey } from './path-utils';
 
 type GitProviderInfo = { provider: GitProvider; baseUrl: string };
 
@@ -47,6 +49,16 @@ export function buildRepoKey(input: { git?: GitRepository; relativePath: string 
   return '-';
 }
 
+export function buildRecordId(fullPath: string): string {
+  const normalized = normalizeRepoKey(fullPath);
+
+  if (!normalized) {
+    return '';
+  }
+
+  return createHash('sha1').update(normalized).digest('hex');
+}
+
 export function buildRepositoryRecord(input: {
   fullPath: string;
   scanRoot: string;
@@ -61,7 +73,7 @@ export function buildRepositoryRecord(input: {
   const repoKey = buildRepoKey({ git: input.git, relativePath });
 
   return {
-    recordId: input.fullPath,
+    recordId: buildRecordId(input.fullPath),
     fullPath: input.fullPath,
     scanRoot: input.scanRoot,
     relativePath,
