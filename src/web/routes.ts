@@ -398,10 +398,6 @@ function recordTags(repo: RepositoryRecord): string[] {
 }
 
 function repoDisplayName(repo: RepositoryRecord): string {
-  if (repo.git?.fullName) {
-    return repo.git.fullName;
-  }
-
   if (repo.relativePath) {
     return repo.relativePath;
   }
