@@ -40,19 +40,16 @@ export function useTags(params: {
 
       try {
         if (tagModalMode === 'add') {
-          const parsed = nextTags
-            .split(/[\s,]+/)
-            .map(stripTagBrackets)
-            .filter(Boolean);
+          const parsed = stripTagBrackets(nextTags);
 
-          if (parsed.length === 0) {
+          if (!parsed) {
             setTagModalOpen(false);
             setTagModalRepo(null);
 
             return;
           }
 
-          await updateTags(tagModalRepo.record.fullPath, { add: parsed });
+          await updateTags(tagModalRepo.record.fullPath, { add: [parsed] });
           messageApi.success('标签已新增');
         } else {
           await upsertTags(tagModalRepo.record.fullPath, nextTags);

@@ -1,5 +1,6 @@
 import { Modal, Input, Typography } from 'antd';
-import { useEffect, useState } from 'react';
+import type { InputRef } from 'antd';
+import { useEffect, useRef, useState } from 'react';
 import type { ListItem } from '../types';
 import { formatTagLabel } from '../utils/tagUtils';
 
@@ -13,6 +14,7 @@ type Props = {
 
 export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) {
   const [value, setValue] = useState('');
+  const inputRef = useRef<InputRef | null>(null);
 
   useEffect(() => {
     if (!repo) {
@@ -28,6 +30,12 @@ export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) 
     setValue('');
   }, [repo, mode]);
 
+  useEffect(() => {
+    if (open && mode === 'add') {
+      inputRef.current?.focus({ cursor: 'end' });
+    }
+  }, [open, mode]);
+
   return (
     <Modal
       open={open}
@@ -38,10 +46,11 @@ export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) 
       onOk={() => onSave(value)}
     >
       <Typography.Paragraph type="secondary">
-        {mode === 'edit' ? '使用空格或逗号分隔多个标签' : '输入一个标签名称'}
+        {mode === 'edit' ? '使用空格或逗号分隔多个标签' : '仅支持一个标签'}
       </Typography.Paragraph>
       <Input
-        placeholder={mode === 'edit' ? '例如：frontend urgent' : '例如：frontend'}
+        ref={inputRef}
+        placeholder={mode === 'edit' ? '例如：frontend urgent' : '例如：frontend urgent'}
         value={value}
         onChange={(event) => setValue(event.target.value)}
       />
