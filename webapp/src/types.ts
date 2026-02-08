@@ -22,7 +22,6 @@ export type RepositoryRecord = {
 export type ListItem = {
   record: RepositoryRecord;
   displayName: string;
-  codePlatform?: string;
 };
 
 export type RepoListResult = {

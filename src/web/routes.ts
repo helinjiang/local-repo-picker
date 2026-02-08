@@ -209,12 +209,10 @@ export async function registerRoutes(
     const offset = (page - 1) * pageSize;
     const items = repos.slice(offset, offset + pageSize).map((repo) => {
       const displayName = repoDisplayName(repo);
-      const codePlatform = normalizeCodePlatform(repoCodePlatform(repo));
 
       return {
         record: repo,
         displayName,
-        codePlatform,
       };
     });
     const payload: PaginatedRepos = {

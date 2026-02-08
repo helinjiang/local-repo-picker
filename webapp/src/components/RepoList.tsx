@@ -39,7 +39,9 @@ export default function RepoList({
         <div>
           <Space size="small" wrap>
             <Typography.Text strong>{repo.displayName}</Typography.Text>
-            {repo.codePlatform ? <Tag color="blue">{repo.codePlatform}</Tag> : null}
+            {repo.record.git?.provider ? (
+              <Tag color="blue">{repo.record.git.provider}</Tag>
+            ) : null}
             <Tag color={repo.record.isDirty ? 'red' : 'green'}>
               {repo.record.isDirty ? 'dirty' : 'clean'}
             </Tag>

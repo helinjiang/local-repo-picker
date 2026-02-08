@@ -62,7 +62,6 @@ export type RepoPreview = {
 export type ListItem = {
   record: RepositoryRecord;
   displayName: string;
-  codePlatform?: string;
 };
 
 export type ScanOptions = {

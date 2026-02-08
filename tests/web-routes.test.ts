@@ -187,6 +187,9 @@ describe('web routes', () => {
       query: { sort: 'name', page: '1', pageSize: '1' },
     });
     expect(reposByName.items.length).toBe(1);
+    const firstRepo = reposByName.items[0];
+    expect(firstRepo.record.git?.provider).toBe('github');
+    expect('codePlatform' in firstRepo).toBe(false);
     const reposByLru = await handlers['GET /api/repos']({
       query: { sort: 'lru', page: '1', pageSize: '2', tag: 'dirty' },
     });
