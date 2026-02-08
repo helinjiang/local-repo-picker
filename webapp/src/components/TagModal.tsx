@@ -32,7 +32,9 @@ export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) 
 
   useEffect(() => {
     if (open && mode === 'add') {
-      inputRef.current?.focus({ cursor: 'end' });
+      setTimeout(() => {
+        inputRef.current?.focus({ cursor: 'end' });
+      }, 0);
     }
   }, [open, mode]);
 
@@ -45,12 +47,10 @@ export default function TagModal({ open, repo, mode, onCancel, onSave }: Props) 
       onCancel={onCancel}
       onOk={() => onSave(value)}
     >
-      <Typography.Paragraph type="secondary">
-        {mode === 'edit' ? '使用空格或逗号分隔多个标签' : '仅支持一个标签'}
-      </Typography.Paragraph>
+      <Typography.Paragraph type="secondary">支持空格，视为一个标签</Typography.Paragraph>
       <Input
         ref={inputRef}
-        placeholder={mode === 'edit' ? '例如：frontend urgent' : '例如：frontend urgent'}
+        placeholder="例如：frontend urgent"
         value={value}
         onChange={(event) => setValue(event.target.value)}
       />

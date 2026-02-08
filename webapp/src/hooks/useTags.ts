@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import type { message } from 'antd';
 import type { ListItem } from '../types';
 import { updateTags, upsertTags } from '../api';
-import { stripTagBrackets } from '../utils/tagUtils';
+import { normalizeTagValue } from '../utils/tagUtils';
 
 export function useTags(params: {
   messageApi: ReturnType<typeof message.useMessage>[0];
@@ -40,7 +40,7 @@ export function useTags(params: {
 
       try {
         if (tagModalMode === 'add') {
-          const parsed = stripTagBrackets(nextTags);
+          const parsed = normalizeTagValue(nextTags);
 
           if (!parsed) {
             setTagModalOpen(false);
@@ -52,7 +52,16 @@ export function useTags(params: {
           await updateTags(tagModalRepo.record.fullPath, { add: [parsed] });
           messageApi.success('标签已新增');
         } else {
-          await upsertTags(tagModalRepo.record.fullPath, nextTags);
+          const parsed = normalizeTagValue(nextTags);
+
+          if (!parsed) {
+            setTagModalOpen(false);
+            setTagModalRepo(null);
+
+            return;
+          }
+
+          await upsertTags(tagModalRepo.record.fullPath, parsed);
           messageApi.success('标签已更新');
         }
 
