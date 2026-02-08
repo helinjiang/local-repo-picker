@@ -363,43 +363,47 @@ export function useConfigManager(params: {
     }
   }, [configText, repoLinksConfig, messageApi, createId]);
 
-  const handleSaveQuickTags = useCallback(async (): Promise<boolean> => {
-    let parsed: AppConfig;
+  const handleSaveQuickTags = useCallback(
+    async (values?: string[]): Promise<boolean> => {
+      let parsed: AppConfig;
+      const nextQuickTags = values ?? quickTagsConfig;
 
-    try {
-      parsed = JSON.parse(configTextRef.current) as AppConfig;
-    } catch (error) {
-      messageApi.error(`配置 JSON 无效：${(error as Error).message}`);
+      try {
+        parsed = JSON.parse(configTextRef.current) as AppConfig;
+      } catch (error) {
+        messageApi.error(`配置 JSON 无效：${(error as Error).message}`);
 
-      return false;
-    }
+        return false;
+      }
 
-    parsed.webQuickTags = quickTagsConfig;
-    setSavingQuickTags(true);
+      parsed.webQuickTags = nextQuickTags;
+      setSavingQuickTags(true);
 
-    try {
-      const result = await saveConfig(parsed);
-      setConfigText(JSON.stringify(result.config, null, 2));
-      setQuickTagsConfig(result.config.webQuickTags ?? []);
-      const repoLinks = result.config.webRepoLinks ?? {};
-      setRepoLinksConfig(
-        Object.entries(repoLinks).map(([repo, links]) => ({
-          id: createId(),
-          repo,
-          links: links.map((link) => ({ id: createId(), label: link.label, url: link.url })),
-        })),
-      );
-      messageApi.success('快速标签已更新');
+      try {
+        const result = await saveConfig(parsed);
+        setConfigText(JSON.stringify(result.config, null, 2));
+        setQuickTagsConfig(result.config.webQuickTags ?? []);
+        const repoLinks = result.config.webRepoLinks ?? {};
+        setRepoLinksConfig(
+          Object.entries(repoLinks).map(([repo, links]) => ({
+            id: createId(),
+            repo,
+            links: links.map((link) => ({ id: createId(), label: link.label, url: link.url })),
+          })),
+        );
+        messageApi.success('快速标签已更新');
 
-      return true;
-    } catch (error) {
-      messageApi.error(`更新快速标签失败：${(error as Error).message}`);
+        return true;
+      } catch (error) {
+        messageApi.error(`更新快速标签失败：${(error as Error).message}`);
 
-      return false;
-    } finally {
-      setSavingQuickTags(false);
-    }
-  }, [quickTagsConfig, messageApi, createId]);
+        return false;
+      } finally {
+        setSavingQuickTags(false);
+      }
+    },
+    [quickTagsConfig, messageApi, createId],
+  );
 
   return {
     configPaths,

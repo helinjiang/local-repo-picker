@@ -1,4 +1,6 @@
 import { Modal, Select } from 'antd';
+import type { BaseSelectRef } from 'rc-select';
+import { useEffect, useMemo, useRef } from 'react';
 
 type TagOption = { label: string; value: string };
 
@@ -21,6 +23,28 @@ export default function QuickTagsModal({
   tagOptions,
   onQuickTagsChange,
 }: Props) {
+  const selectRef = useRef<BaseSelectRef | null>(null);
+  const selectOptions = useMemo(
+    () =>
+      tagOptions.map((option) => ({
+        label: option.label,
+        value: option.label,
+      })),
+    [tagOptions],
+  );
+  const uniqueValues = useMemo(
+    () => Array.from(new Set(quickTagsConfig.map((item) => item.trim()).filter(Boolean))),
+    [quickTagsConfig],
+  );
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        selectRef.current?.focus();
+      }, 0);
+    }
+  }, [open]);
+
   return (
     <Modal
       title="快速标签"
@@ -33,12 +57,17 @@ export default function QuickTagsModal({
       width={600}
     >
       <Select
-        mode="multiple"
+        ref={selectRef}
+        mode="tags"
         style={{ width: '100%' }}
-        placeholder="选择标签"
-        value={quickTagsConfig}
-        onChange={onQuickTagsChange}
-        options={tagOptions}
+        placeholder="选择或输入标签"
+        value={uniqueValues}
+        onChange={(nextValues) => {
+          const normalized = nextValues.map((item) => item.trim()).filter(Boolean);
+          const unique = Array.from(new Set(normalized));
+          onQuickTagsChange(unique);
+        }}
+        options={selectOptions}
       />
     </Modal>
   );

@@ -20,6 +20,7 @@ import { formatTagLabel, normalizeTagValue } from './utils/tagUtils';
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [quickTagsOpen, setQuickTagsOpen] = useState(false);
+  const [quickTagsDraft, setQuickTagsDraft] = useState<string[]>([]);
   const [repoLinksOpen, setRepoLinksOpen] = useState(false);
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null);
   const { query, setQuery, tag, setTag, debouncedQuery } = useSearchFilter();
@@ -66,7 +67,6 @@ export default function App() {
     handleRepoLinkUpdate,
     handleRepoLinkRemove,
     handleRepoLinkAdd,
-    handleQuickTagsChange,
     ensureRepoLinksForKey,
     handleSaveConfig,
     handleSaveRepoLinks,
@@ -111,6 +111,12 @@ export default function App() {
     },
     [tag, setTag],
   );
+
+  useEffect(() => {
+    if (quickTagsOpen) {
+      setQuickTagsDraft(quickTagsConfig);
+    }
+  }, [quickTagsOpen, quickTagsConfig]);
 
   useEffect(() => {
     if (!pendingRepoLinkKey || !configLoadedOnce) {
@@ -164,7 +170,7 @@ export default function App() {
   };
 
   const handleSaveQuickTagsClick = async () => {
-    const ok = await handleSaveQuickTags();
+    const ok = await handleSaveQuickTags(quickTagsDraft);
 
     if (ok) {
       setQuickTagsOpen(false);
@@ -272,6 +278,7 @@ export default function App() {
           open={tagModalOpen}
           repo={tagModalRepo}
           mode={tagModalMode}
+          tagOptions={tagOptions}
           onCancel={() => setTagModalOpen(false)}
           onSave={handleSaveTags}
         />
@@ -280,9 +287,9 @@ export default function App() {
           onCancel={() => setQuickTagsOpen(false)}
           onSave={handleSaveQuickTagsClick}
           saving={savingQuickTags}
-          quickTagsConfig={quickTagsConfig}
+          quickTagsConfig={quickTagsDraft}
           tagOptions={tagOptions}
-          onQuickTagsChange={handleQuickTagsChange}
+          onQuickTagsChange={setQuickTagsDraft}
         />
         <SettingsModal
           open={settingsOpen}

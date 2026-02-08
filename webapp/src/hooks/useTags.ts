@@ -33,26 +33,28 @@ export function useTags(params: {
   );
 
   const handleSaveTags = useCallback(
-    async (nextTags: string) => {
+    async (nextTags: string[]) => {
       if (!tagModalRepo) {
         return;
       }
 
       try {
         if (tagModalMode === 'add') {
-          const parsed = normalizeTagValue(nextTags);
+          const parsed = Array.from(
+            new Set(nextTags.map((tag) => normalizeTagValue(tag)).filter(Boolean)),
+          );
 
-          if (!parsed) {
+          if (parsed.length === 0) {
             setTagModalOpen(false);
             setTagModalRepo(null);
 
             return;
           }
 
-          await updateTags(tagModalRepo.record.fullPath, { add: [parsed] });
+          await updateTags(tagModalRepo.record.fullPath, { add: parsed });
           messageApi.success('标签已新增');
         } else {
-          const parsed = normalizeTagValue(nextTags);
+          const parsed = normalizeTagValue(nextTags[0] ?? '');
 
           if (!parsed) {
             setTagModalOpen(false);
