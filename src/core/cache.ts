@@ -4,8 +4,9 @@ import pLimit from 'p-limit';
 import type { CacheData, CacheMetadata, RepositoryRecord, ScanOptions } from './types';
 import { scanRepos } from './scan';
 import { buildTags, readManualTagEdits, uniqueTags } from './tags';
-import { isDirty, readOriginUrl } from './git';
+import { isDirty } from './git';
 import { readLru, sortByLru } from './lru';
+import { readOriginValue } from './origin';
 import { getConfigPaths } from '../config/config';
 import { logger } from './logger';
 import { resolveTagExtensions } from './plugins';
@@ -13,6 +14,7 @@ import { normalizeRepoKey } from './path-utils';
 import {
   buildGitRepository,
   buildRecordId,
+  buildRepoKey,
   buildRepositoryRecord,
   deriveRelativePath,
 } from './domain';
@@ -48,7 +50,7 @@ export async function buildCache(
   const repoLimit = pLimit(6);
   const repoTasks = found.map((repo) =>
     repoLimit(async () => {
-      const originUrl = await readOriginUrl(repo.path);
+      const originUrl = await readOriginValue(repo.path);
       const git = buildGitRepository(originUrl, undefined, normalized.remoteHostProviders);
       const manual = manualEdits.get(normalizeRepoKey(repo.path));
       const dirty = await isDirty(repo.path);
@@ -147,16 +149,19 @@ export async function loadCache(options: ScanOptions): Promise<CacheData | null>
     const existing = await filterExistingRepos(
       repos.map((repo) => ({ ...repo, fullPath: path.resolve(repo.fullPath) })),
     );
-    const sorted = await applyLruIfNeeded(existing.repos, normalized.lruFile);
+    const hydrated = await hydrateMissingGitInfo(existing.repos, normalized.remoteHostProviders);
+    const sorted = await applyLruIfNeeded(hydrated.repos, normalized.lruFile);
     const metadata = buildCacheMetadataFromCache(
-      { ...data, repos: existing.repos } as CacheData,
+      { ...data, repos: hydrated.repos } as CacheData,
       normalized.scanRoots,
       sorted.length,
     );
 
-    if (existing.prunedCount > 0) {
-      metadata.prunedAt = Date.now();
-      metadata.prunedRepoCount = existing.prunedCount;
+    if (existing.prunedCount > 0 || hydrated.updated) {
+      if (existing.prunedCount > 0) {
+        metadata.prunedAt = Date.now();
+        metadata.prunedRepoCount = existing.prunedCount;
+      }
       await persistCache(normalized.cacheFile, {
         savedAt,
         ttlMs,
@@ -246,6 +251,46 @@ async function filterExistingRepos(
   const filtered = repos.filter((_repo, index) => checks[index]);
 
   return { repos: filtered, prunedCount: repos.length - filtered.length };
+}
+
+async function hydrateMissingGitInfo(
+  repos: RepositoryRecord[],
+  remoteHostProviders?: Record<string, string>,
+): Promise<{ repos: RepositoryRecord[]; updated: boolean }> {
+  if (repos.length === 0) {
+    return { repos, updated: false };
+  }
+
+  let updated = false;
+  const limit = pLimit(6);
+  const hydrated = await Promise.all(
+    repos.map((repo) =>
+      limit(async () => {
+        if (repo.git?.originUrl) {
+          return repo;
+        }
+
+        const originUrl = await readOriginValue(repo.fullPath);
+
+        if (!originUrl) {
+          return repo;
+        }
+
+        const git = buildGitRepository(originUrl, repo.relativePath, remoteHostProviders);
+
+        if (!git) {
+          return repo;
+        }
+
+        updated = true;
+        const repoKey = buildRepoKey({ git, relativePath: repo.relativePath });
+
+        return { ...repo, git, repoKey };
+      }),
+    ),
+  );
+
+  return { repos: hydrated, updated };
 }
 
 function normalizeCacheRepos(
