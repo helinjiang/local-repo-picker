@@ -8,7 +8,7 @@ type Props = {
   onSave: () => void;
   saving: boolean;
   quickTagsConfig: string[];
-  quickTagOptions: TagOption[];
+  tagOptions: TagOption[];
   onQuickTagsChange: (values: string[]) => void;
 };
 
@@ -18,7 +18,7 @@ export default function QuickTagsModal({
   onSave,
   saving,
   quickTagsConfig,
-  quickTagOptions,
+  tagOptions,
   onQuickTagsChange,
 }: Props) {
   return (
@@ -33,12 +33,12 @@ export default function QuickTagsModal({
       width={600}
     >
       <Select
-        mode="tags"
+        mode="multiple"
         style={{ width: '100%' }}
-        placeholder="输入标签"
+        placeholder="选择标签"
         value={quickTagsConfig}
         onChange={onQuickTagsChange}
-        options={quickTagOptions}
+        options={tagOptions}
       />
     </Modal>
   );

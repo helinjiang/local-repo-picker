@@ -281,7 +281,7 @@ export default function App() {
           onSave={handleSaveQuickTagsClick}
           saving={savingQuickTags}
           quickTagsConfig={quickTagsConfig}
-          quickTagOptions={quickTagOptions}
+          tagOptions={tagOptions}
           onQuickTagsChange={handleQuickTagsChange}
         />
         <SettingsModal
