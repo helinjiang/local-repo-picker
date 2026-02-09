@@ -36,13 +36,13 @@ export default function Toolbar({
 }: Props) {
   const popoverContent =
     globalLinks.length > 0 ? (
-      <Space direction="vertical">
+      <div className="global-links-popover">
         {globalLinks.map((item) => (
           <a key={item.value} href={item.value} target="_blank" rel="noreferrer">
             {item.label}
           </a>
         ))}
-      </Space>
+      </div>
     ) : (
       <span className="toolbar-placeholder">暂无自定义链接</span>
     );

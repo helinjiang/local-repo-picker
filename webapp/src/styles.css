@@ -150,6 +150,37 @@ body,
   text-decoration: underline;
 }
 
+.global-links-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.global-links-popover a {
+  color: #1677ff;
+  text-decoration: none;
+}
+
+.global-links-popover a:hover {
+  text-decoration: underline;
+}
+
+.global-links-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-links-label {
+  width: 180px;
+}
+
+.global-links-url {
+  flex: 1;
+  min-width: 320px;
+}
+
 .quick-tags-sort {
   margin-top: 12px;
   display: flex;

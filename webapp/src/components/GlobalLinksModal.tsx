@@ -36,19 +36,21 @@ export default function GlobalLinksModal({
     >
       <Space direction="vertical" style={{ width: '100%' }}>
         {links.map((link, index) => (
-          <Space key={link.id} style={{ width: '100%' }}>
+          <div key={link.id} className="global-links-row">
             <Input
+              className="global-links-label"
               placeholder="链接名称"
               value={link.label}
               onChange={(event) => onLinkUpdate(index, { label: event.target.value })}
             />
             <Input
+              className="global-links-url"
               placeholder="链接地址"
               value={link.url}
               onChange={(event) => onLinkUpdate(index, { url: event.target.value })}
             />
             <Button danger icon={<DeleteOutlined />} onClick={() => onLinkRemove(index)} />
-          </Space>
+          </div>
         ))}
         <Space>
           <Button icon={<PlusOutlined />} onClick={onLinkAdd}>
