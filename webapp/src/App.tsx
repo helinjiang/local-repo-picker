@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App as AntApp, message } from 'antd';
-import { runAction } from './api';
+import { fetchTagOptions, runAction } from './api';
 import ActionsBar from './components/ActionsBar';
 import PreviewPanel from './components/PreviewPanel';
 import QuickTagsModal from './components/QuickTagsModal';
@@ -27,6 +27,7 @@ export default function App() {
   const { query, setQuery, tag, setTag, debouncedQuery } = useSearchFilter();
   const [messageApi, contextHolder] = message.useMessage();
   const createId = useCallback(() => `${Date.now()}-${Math.random().toString(16).slice(2)}`, []);
+  const [tagOptions, setTagOptions] = useState<Array<{ label: string; value: string }>>([]);
   const {
     repos,
     selectedPath,
@@ -73,6 +74,17 @@ export default function App() {
     handleSaveRepoLinks,
     handleSaveQuickTags,
   } = useConfigManager({ settingsOpen, repoLinksOpen, messageApi, createId });
+  const reloadTagOptions = useCallback(async () => {
+    try {
+      const tags = await fetchTagOptions();
+      const options = tags
+        .map((item) => ({ label: formatTagLabel(item), value: item }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      setTagOptions(options);
+    } catch (error) {
+      messageApi.error(`获取标签选项失败：${(error as Error).message}`);
+    }
+  }, [messageApi]);
   const {
     tagModalOpen,
     tagModalRepo,
@@ -87,19 +99,11 @@ export default function App() {
     handleRenameTag,
     handleSaveTagRename,
     handleSaveTags,
-  } = useTags({ messageApi, reloadRepos });
+  } = useTags({ messageApi, reloadRepos, reloadTagOptions });
 
-  const tagOptions = useMemo(() => {
-    const tagSet = new Set<string>();
-    repos.forEach((repo) => {
-      repo.record.autoTags.forEach((item) => tagSet.add(item));
-      repo.record.manualTags.forEach((item) => tagSet.add(item));
-    });
-
-    return Array.from(tagSet)
-      .sort((a, b) => a.localeCompare(b))
-      .map((item) => ({ label: formatTagLabel(item), value: item }));
-  }, [repos]);
+  useEffect(() => {
+    void reloadTagOptions();
+  }, [reloadTagOptions]);
 
   const quickTagOptions = useMemo(
     () =>
@@ -166,6 +170,12 @@ export default function App() {
     }
 
     await reloadRepos();
+    await reloadTagOptions();
+  };
+
+  const handleRefreshCacheClick = async () => {
+    await handleRefreshCache();
+    await reloadTagOptions();
   };
 
   const handleSaveRepoLinksClick = async () => {
@@ -245,7 +255,7 @@ export default function App() {
           onQuickTagClick={handleQuickTagClick}
           onManageQuickTags={() => setQuickTagsOpen(true)}
           refreshingCache={refreshingCache}
-          onRefresh={handleRefreshCache}
+            onRefresh={handleRefreshCacheClick}
           onOpenSettings={() => setSettingsOpen(true)}
         />
         <div className="content-area">

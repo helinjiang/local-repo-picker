@@ -225,6 +225,17 @@ export async function registerRoutes(
     return payload;
   });
 
+  app.get('/api/tag-options', async () => {
+    const cached = await loadCache(options);
+    const resolved = cached ?? (await buildCache(options));
+    const tagSet = new Set<string>();
+    resolved.repos.forEach((repo) => {
+      recordTags(repo).forEach((tag) => tagSet.add(tag));
+    });
+
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+  });
+
   app.get('/api/preview', async (request, reply) => {
     const query = request.query as { path?: string };
     const allowedPath = resolveAllowedPath(options.scanRoots, query.path);

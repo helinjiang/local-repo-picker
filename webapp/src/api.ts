@@ -59,6 +59,10 @@ export async function fetchRepos(params: {
   return request<RepoListResult>(`/repos${suffix}`);
 }
 
+export async function fetchTagOptions(): Promise<string[]> {
+  return request<string[]>('/tag-options');
+}
+
 export async function fetchPreview(path: string): Promise<RepoPreviewResult> {
   const search = new URLSearchParams({ path });
 

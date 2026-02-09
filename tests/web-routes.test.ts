@@ -194,6 +194,8 @@ describe('web routes', () => {
       query: { sort: 'lru', page: '1', pageSize: '2', tag: 'dirty' },
     });
     expect(reposByLru.items.every((item: any) => item.record.isDirty)).toBe(true);
+    const tagOptions = await handlers['GET /api/tag-options']();
+    expect(tagOptions).toContain('[x]');
   });
 
   it('preview/action/cache/tags 接口', async () => {

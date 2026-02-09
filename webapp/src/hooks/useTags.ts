@@ -7,8 +7,9 @@ import { normalizeTagValue } from '../utils/tagUtils';
 export function useTags(params: {
   messageApi: ReturnType<typeof message.useMessage>[0];
   reloadRepos: () => Promise<void>;
+  reloadTagOptions: () => Promise<void>;
 }) {
-  const { messageApi, reloadRepos } = params;
+  const { messageApi, reloadRepos, reloadTagOptions } = params;
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const [tagModalRepo, setTagModalRepo] = useState<ListItem | null>(null);
   const [tagModalMode, setTagModalMode] = useState<'add' | 'edit'>('add');
@@ -29,11 +30,12 @@ export function useTags(params: {
         await updateTags(repo.record.fullPath, { remove: [removedTag] });
         messageApi.success('标签已删除');
         await reloadRepos();
+        await reloadTagOptions();
       } catch (error) {
         messageApi.error(`删除标签失败：${(error as Error).message}`);
       }
     },
-    [messageApi, reloadRepos],
+    [messageApi, reloadRepos, reloadTagOptions],
   );
 
   const handleRenameTag = useCallback((repo: ListItem, tag: string) => {
@@ -74,13 +76,14 @@ export function useTags(params: {
         setTagRenameRepo(null);
         setTagRenameValue(null);
         await reloadRepos();
+        await reloadTagOptions();
       } catch (error) {
         messageApi.error(`重命名标签失败：${(error as Error).message}`);
       } finally {
         setTagRenameSaving(false);
       }
     },
-    [tagRenameRepo, tagRenameValue, messageApi, reloadRepos],
+    [tagRenameRepo, tagRenameValue, messageApi, reloadRepos, reloadTagOptions],
   );
 
   const handleSaveTags = useCallback(
@@ -121,11 +124,12 @@ export function useTags(params: {
         setTagModalOpen(false);
         setTagModalRepo(null);
         await reloadRepos();
+        await reloadTagOptions();
       } catch (error) {
         messageApi.error(`更新标签失败：${(error as Error).message}`);
       }
     },
-    [tagModalRepo, tagModalMode, messageApi, reloadRepos],
+    [tagModalRepo, tagModalMode, messageApi, reloadRepos, reloadTagOptions],
   );
 
   return {
