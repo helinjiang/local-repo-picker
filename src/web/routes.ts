@@ -170,7 +170,7 @@ export async function registerRoutes(
       } else {
         repos = repos.filter(
           (repo) =>
-            isCodePlatformMatch(repoCodePlatform(repo), normalizedTag) ||
+            isCodePlatformMatch(repoGitProvider(repo), normalizedTag) ||
             recordTags(repo).includes(normalizedTag),
         );
       }
@@ -180,7 +180,7 @@ export async function registerRoutes(
       const keyword = query.q.toLowerCase();
       repos = repos.filter((repo) => {
         const hay =
-          `${repoDisplayName(repo)} ${repo.fullPath} ${repoCodePlatform(repo)} ${recordTags(repo).join(' ')}`.toLowerCase();
+          `${repoDisplayName(repo)} ${repo.relativePath} ${repo.repoKey} ${repoGitProvider(repo)} ${recordTags(repo).join(' ')}`.toLowerCase();
 
         return hay.includes(keyword);
       });
@@ -378,7 +378,7 @@ function isActionAllowed(action: Action, scope: 'cli' | 'web'): boolean {
   return action.scopes.includes(scope);
 }
 
-function repoCodePlatform(repo: RepositoryRecord): string {
+function repoGitProvider(repo: RepositoryRecord): string {
   return repo.git?.provider ?? 'unknown';
 }
 
