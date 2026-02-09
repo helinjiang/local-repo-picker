@@ -1,4 +1,4 @@
-import type { AppConfig } from "./schema"
+import type { AppConfig } from './schema';
 
 export const defaultConfig: AppConfig = {
   scanRoots: [],
@@ -8,12 +8,12 @@ export const defaultConfig: AppConfig = {
   followSymlinks: false,
   webQuickTags: [],
   webRepoLinks: {},
-  remoteHostTags: {},
+  remoteHostProviders: {},
   fzfTagFilters: {
-    "ctrl-b": "[byted]",
-    "ctrl-g": "[github]",
-    "ctrl-e": "[gitee]",
-    "ctrl-d": "[dirty]",
-    "ctrl-a": "all"
-  }
-}
+    'ctrl-b': '[byted]',
+    'ctrl-g': '[github]',
+    'ctrl-e': '[gitee]',
+    'ctrl-d': '[dirty]',
+    'ctrl-a': 'all',
+  },
+};

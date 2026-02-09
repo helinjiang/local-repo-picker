@@ -3,6 +3,7 @@
 目标：新增 `repo __preview --path <abs>`，用于 fzf 的 `--preview` 调用。
 
 ## 行为
+
 - 输入：--path <absolute path>
 - 输出：纯文本（可带 ANSI），包含：
   - PATH
@@ -16,9 +17,11 @@
 - 必须有超时保护：单个 repo preview 构建超过 2s 时输出降级信息（例如“preview timed out”）
 
 ## 安全
+
 - 不使用 shell=true
 - 参数必须校验为绝对路径
 
 ## 输出要求
+
 - patch 或完整文件内容
 - 手工验证命令

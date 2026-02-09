@@ -4,13 +4,13 @@
 
 ## 5 分钟上手
 
-1) 安装
+1. 安装
 
 ```bash
 npm i -g local-repo-picker
 ```
 
-2) 生成配置并填写扫描路径
+2. 生成配置并填写扫描路径
 
 ```bash
 repo --config
@@ -29,13 +29,13 @@ repo --config
 }
 ```
 
-3) 启动 Web UI（推荐）
+3. 启动 Web UI（推荐）
 
 ```bash
 repo ui
 ```
 
-4) 刷新缓存
+4. 刷新缓存
 
 ```bash
 repo refresh
@@ -114,11 +114,18 @@ brew install fzf
 - `repo __list --filter-tag <tag>`
 - `repo __preview --path <absolute-path>`
 
+`repo __list` 输出列顺序：
+
+1. relativePath
+2. repoKey
+3. tags
+4. fullPath（绝对路径）
+
 ## fzf 预览
 
 右侧预览通过 `repo __preview --path <abs>` 输出，包含 PATH / ORIGIN / BRANCH / STATUS / SYNC / RECENT COMMITS / README（最多 200 行）。
 
-## fzf 快捷键
+## fzf 快捷搜索
 
 默认快捷键由配置项 `fzfTagFilters` 控制：
 
@@ -172,7 +179,7 @@ DEBUG=1 repo
 
 ## Web 快速标签筛选
 
-配置项 `webQuickTags` 决定 Web 顶部的快捷筛选标签（支持 codePlatform / tag / dirty）：
+配置项 `webQuickTags` 决定 Web 顶部的快捷筛选标签（支持 codePlatform / tag / dirty，顺序可在 UI 中拖拽调整）：
 
 ```json
 {
@@ -215,47 +222,43 @@ Tag 由 auto 与 manual 组成：
 支持 action / tag / preview 扩展，必须显式注册，插件失败不会影响主流程。
 
 ```ts
-import {
-  registerPlugins,
-  registerBuiltInPlugins,
-  type PluginModule
-} from "local-repo-picker"
+import { registerPlugins, registerBuiltInPlugins, type PluginModule } from 'local-repo-picker';
 
-registerBuiltInPlugins()
+registerBuiltInPlugins();
 
 const myPlugin: PluginModule = {
-  id: "acme.demo",
-  label: "Demo",
+  id: 'acme.demo',
+  label: 'Demo',
   actions: [
     {
-      id: "print-path",
-      label: "打印路径",
+      id: 'print-path',
+      label: '打印路径',
       run: async (repo) => {
-        console.log(repo.path)
-      }
-    }
+        console.log(repo.path);
+      },
+    },
   ],
   tags: [
     {
-      id: "custom-tag",
-      label: "自定义标签",
+      id: 'custom-tag',
+      label: '自定义标签',
       apply: async ({ repoPath }) => {
-        return repoPath.includes("demo") ? ["[demo]"] : []
-      }
-    }
+        return repoPath.includes('demo') ? ['[demo]'] : [];
+      },
+    },
   ],
   previews: [
     {
-      id: "custom-preview",
-      label: "预览扩展",
+      id: 'custom-preview',
+      label: '预览扩展',
       render: async ({ repo }) => {
-        return { title: "EXTRA", lines: [repo.ownerRepo] }
-      }
-    }
-  ]
-}
+        return { title: 'EXTRA', lines: [repo.git?.fullName ?? repo.relativePath] };
+      },
+    },
+  ],
+};
 
-registerPlugins([myPlugin])
+registerPlugins([myPlugin]);
 ```
 
 内置插件：

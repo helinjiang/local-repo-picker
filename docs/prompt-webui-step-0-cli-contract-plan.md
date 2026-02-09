@@ -3,6 +3,7 @@
 你是资深 Node/TS CLI 工程师。现有 local-repo-picker 已实现扫描/cache/tag/LRU/git-preview/actions 等核心能力（交互是 fzf）。现在要新增 **Web UI** 并重构 CLI 命令体系。
 
 ## 目标（只输出计划，不写代码）
+
 1. 重新定义 CLI 命令：
    - `repo` 默认行为等效 `repo --help`
    - `repo list`：输出仓库列表（文本/TSV/JSON，需说明默认格式与参数）
@@ -21,6 +22,7 @@
 5. 风险与回滚策略：保留旧交互入口（可选），或以 feature flag 控制。
 
 ## 输出要求
+
 - 计划文档：文件改动清单（新增哪些文件/目录、修改哪些文件）
 - CLI help 文案草稿
 - API 端点草图（/api/repos, /api/preview, /api/action, /api/tags, /api/cache/refresh, /api/status 等）

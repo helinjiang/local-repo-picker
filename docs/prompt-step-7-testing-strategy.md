@@ -16,13 +16,16 @@
 ## 1️⃣ 测试分层设计
 
 ### 1.1 单元测试（Unit Tests）
+
 **覆盖对象**
+
 - path 扫描逻辑
 - tag 推导（remote / auto / dirty）
 - owner/repo 解析
 - config 解析与默认值
 
 **建议**
+
 - 使用 vitest / jest
 - mock fs（memfs / fs-extra）
 - mock git（假命令返回）
@@ -30,12 +33,15 @@
 ---
 
 ### 1.2 集成测试（Integration Tests）
+
 **覆盖对象**
+
 - 扫描 + cache
 - LRU 更新
 - manual tag 读写
 
 **策略**
+
 - 在 temp dir 中创建假 repo：
   - `.git` 目录
   - `.git` 文件（worktree）
@@ -44,9 +50,11 @@
 ---
 
 ### 1.3 UI 测试（轻量）
+
 **不要求全自动**
 
 建议：
+
 - 将 Ink UI 拆成纯逻辑组件
 - 对 reducer / state logic 做测试
 - UI 本身用人工回归测试
@@ -56,10 +64,12 @@
 ## 2️⃣ Git 相关测试策略
 
 ### 2.1 Mock 优先
+
 - git 命令通过 adapter 层
 - adapter 可注入 fake 实现
 
 ### 2.2 真 git 测试（少量）
+
 - CI 环境中：
   - init repo
   - commit

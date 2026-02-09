@@ -1,33 +1,38 @@
 import type {
   Action,
   CacheMetadata,
+  GitProvider,
+  GitRepository,
+  ListItem,
   PluginModule,
   PreviewPlugin,
   PreviewSection,
-  RepoInfo,
+  RepositoryRecord,
   RepoPreview,
   ScanOptions,
-  TagPlugin
-} from "./core/types"
-import { buildCache, loadCache, refreshCache } from "./core/cache"
-import { readLru, sortByLru, updateLru } from "./core/lru"
-import { scanRepos } from "./core/scan"
+  TagPlugin,
+} from './core/types';
+import { buildCache, loadCache, refreshCache } from './core/cache';
+import { readLru, sortByLru, updateLru } from './core/lru';
+import { scanRepos } from './core/scan';
+import {
+  buildGitRepository,
+  buildRecordId,
+  buildRepoKey,
+  buildRepositoryRecord,
+  deriveRelativePath,
+} from './core/domain';
 import {
   clearPlugins,
   getRegisteredActions,
   getRegisteredPlugins,
   loadPlugins,
   registerPlugin,
-  registerPlugins
-} from "./core/plugins"
-import {
-  ensureConfigFile,
-  getConfigPaths,
-  readConfig,
-  writeConfig
-} from "./config/config"
-import type { AppConfig } from "./config/schema"
-import { builtInPlugins, registerBuiltInPlugins } from "./plugins/built-in"
+  registerPlugins,
+} from './core/plugins';
+import { ensureConfigFile, getConfigPaths, readConfig, writeConfig } from './config/config';
+import type { AppConfig } from './config/schema';
+import { builtInPlugins, registerBuiltInPlugins } from './plugins/built-in';
 
 export {
   buildCache,
@@ -48,10 +53,16 @@ export {
   getConfigPaths,
   readConfig,
   writeConfig,
-  ensureConfigFile
-}
+  ensureConfigFile,
+};
+export {
+  buildGitRepository,
+  buildRecordId,
+  buildRepoKey,
+  buildRepositoryRecord,
+  deriveRelativePath,
+};
 export type {
-  RepoInfo,
   ScanOptions,
   AppConfig,
   CacheMetadata,
@@ -60,20 +71,29 @@ export type {
   PreviewPlugin,
   PreviewSection,
   RepoPreview,
-  PluginModule
-}
+  PluginModule,
+  GitProvider,
+  GitRepository,
+  RepositoryRecord,
+  ListItem,
+};
 
 export default async function pickRepo(
-  options: ScanOptions & { refresh?: boolean }
-): Promise<RepoInfo[]> {
+  options: ScanOptions & { refresh?: boolean },
+): Promise<RepositoryRecord[]> {
   if (options.refresh) {
-    const cache = await refreshCache(options)
-    return cache.repos
+    const cache = await refreshCache(options);
+
+    return cache.repos;
   }
-  const cached = await loadCache(options)
+
+  const cached = await loadCache(options);
+
   if (cached) {
-    return cached.repos
+    return cached.repos;
   }
-  const cache = await buildCache(options)
-  return cache.repos
+
+  const cache = await buildCache(options);
+
+  return cache.repos;
 }

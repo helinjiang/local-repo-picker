@@ -3,6 +3,7 @@
 目标：将 `repo` 默认交互从 Ink 切换为 fzf，使用 Step1/2 的 internal 子命令实现列表与预览。
 
 ## 行为
+
 - 启动 fzf：
   - 输入：`repo __list --all`
   - delimiter TSV：\t
@@ -19,5 +20,6 @@
   - 友好提示 + 非 0 退出码
 
 ## 输出要求
+
 - patch 或完整文件内容
 - README 增补：依赖 fzf、快捷键

@@ -5,6 +5,7 @@
 ---
 
 ## 要求
+
 - 使用 TypeScript
 - Node.js 18+ / 20+
 - 支持 ESM（推荐）或 CJS（二选一，需说明）
@@ -14,6 +15,7 @@
 ---
 
 ## 工程结构（建议）
+
 ```
 local-repo-picker/
   package.json
@@ -34,6 +36,7 @@ local-repo-picker/
 ---
 
 ## package.json
+
 - name: local-repo-picker
 - version: 0.1.0
 - type: module（若使用 ESM）
@@ -49,6 +52,7 @@ local-repo-picker/
 ---
 
 ## tsconfig
+
 - target: ES2020 或更新
 - moduleResolution: node
 - strict: true
@@ -58,6 +62,7 @@ local-repo-picker/
 ---
 
 ## CLI（最小实现）
+
 - 运行 `repo` 时打印：
   - "local-repo-picker (bootstrap)"
 - 支持：
@@ -66,6 +71,7 @@ local-repo-picker/
 ---
 
 ## Library API（占位）
+
 ```ts
 export default async function pickRepo(): Promise<null> {
   return null;
@@ -75,6 +81,7 @@ export default async function pickRepo(): Promise<null> {
 ---
 
 ## README（最小）
+
 - 项目简介
 - 安装方式
 - CLI 占位说明
@@ -83,6 +90,7 @@ export default async function pickRepo(): Promise<null> {
 ---
 
 ## 验收
+
 1. pnpm install / npm install
 2. pnpm build
 3. npm i -g .

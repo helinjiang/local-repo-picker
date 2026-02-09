@@ -18,6 +18,7 @@
 ## 1️⃣ npm 包发布规范
 
 ### 1.1 package.json 校验
+
 确保包含以下关键字段：
 
 - `name: "local-repo-picker"`
@@ -30,6 +31,7 @@
 - `bugs`
 
 ### 1.2 bin 与 exports
+
 - `bin`：
   ```json
   {
@@ -53,11 +55,13 @@
 ## 2️⃣ 版本管理策略（SemVer）
 
 ### 2.1 版本号含义
+
 - `MAJOR`：破坏性变更（CLI 行为 / Config 结构）
 - `MINOR`：新增功能（向后兼容）
 - `PATCH`：Bug 修复 / 性能优化
 
 ### 2.2 推荐流程
+
 - 开发阶段：`0.x`
 - 稳定发布：`1.0.0`
 - 每次发布前：
@@ -69,20 +73,29 @@
 ## 3️⃣ Changelog 规范
 
 ### 3.1 文件
+
 - `CHANGELOG.md`
 
 ### 3.2 格式（推荐）
+
 ```md
 ## [1.2.0] - 2026-02-04
+
 ### Added
+
 - New git preview panel
+
 ### Fixed
+
 - Crash when repo has no upstream
+
 ### Changed
+
 - Cache TTL default to 12h
 ```
 
 ### 3.3 原则
+
 - 面向用户描述
 - 不写内部重构细节
 - 每个版本都要写
@@ -92,6 +105,7 @@
 ## 4️⃣ 发布流程（推荐）
 
 ### 4.1 本地发布前检查
+
 - `pnpm build`
 - `pnpm typecheck`
 - `pnpm test`（如有）
@@ -102,12 +116,14 @@
   ```
 
 ### 4.2 npm 发布
+
 ```bash
 npm login
 npm publish
 ```
 
 如为 scoped 包：
+
 ```bash
 npm publish --access public
 ```
@@ -117,12 +133,14 @@ npm publish --access public
 ## 5️⃣ 升级与兼容性策略
 
 ### 5.1 Config 兼容
+
 - Config 结构变更：
   - 提供 migration
   - 或自动 fallback 默认值
 - 启动时检测 config 版本（可选）
 
 ### 5.2 Cache 兼容
+
 - cache schema 变更：
   - 自动 rebuild
   - 不尝试兼容旧 cache
@@ -132,6 +150,7 @@ npm publish --access public
 ## 6️⃣ 用户体验（Distribution UX）
 
 ### 6.1 安装说明
+
 README 中清晰说明：
 
 ```bash
@@ -139,6 +158,7 @@ npm i -g local-repo-picker
 ```
 
 ### 6.2 初次运行体验
+
 - 第一次运行：
   - 自动生成 config
   - 提示如何修改
@@ -149,10 +169,12 @@ npm i -g local-repo-picker
 ## 7️⃣ 发布后维护
 
 ### 7.1 Issue 模板（可选）
+
 - Bug Report
 - Feature Request
 
 ### 7.2 Roadmap（可选）
+
 - README 中列出未来方向：
   - Action system
   - Plugin system
