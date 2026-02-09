@@ -1,4 +1,4 @@
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
@@ -15,6 +15,7 @@ type Props = {
   onPageChange: (page: number, pageSize: number) => void;
   onAddTag: (repo: ListItem) => void;
   onRemoveTag: (repo: ListItem, tag: string) => void;
+  onRenameTag: (repo: ListItem, tag: string) => void;
 };
 
 export default function RepoList({
@@ -28,6 +29,7 @@ export default function RepoList({
   onPageChange,
   onAddTag,
   onRemoveTag,
+  onRenameTag,
 }: Props) {
   const [hoveredTagKey, setHoveredTagKey] = useState<string | null>(null);
   const formatTagLabel = (raw: string) => raw.replace(/^\[(.*)\]$/, '$1');
@@ -55,7 +57,10 @@ export default function RepoList({
       dataIndex: 'record',
       render: (_: string[], repo) => (
         <div className="repo-tags">
-          {[...repo.record.autoTags, ...repo.record.manualTags].map((tag) => {
+          {[
+            ...repo.record.autoTags.map((tag) => ({ tag, canRename: false })),
+            ...repo.record.manualTags.map((tag) => ({ tag, canRename: true })),
+          ].map(({ tag, canRename }) => {
             const tagKey = `${repo.record.fullPath}::${tag}`;
             const hovered = hoveredTagKey === tagKey;
 
@@ -70,6 +75,26 @@ export default function RepoList({
                 onMouseLeave={() => setHoveredTagKey(null)}
               >
                 <span>{formatTagLabel(tag)}</span>
+                {canRename ? (
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<EditOutlined />}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onRenameTag(repo, tag);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      opacity: hovered ? 1 : 0,
+                      pointerEvents: hovered ? 'auto' : 'none',
+                    }}
+                  />
+                ) : null}
                 <Popconfirm
                   title="删除该标签？"
                   okText="删除"

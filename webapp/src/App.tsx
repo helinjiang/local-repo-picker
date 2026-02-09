@@ -8,6 +8,7 @@ import RepoList from './components/RepoList';
 import RepoLinksModal from './components/RepoLinksModal';
 import SettingsModal from './components/SettingsModal';
 import TagModal from './components/TagModal';
+import TagRenameModal from './components/TagRenameModal';
 import Toolbar from './components/Toolbar';
 import { useActions } from './hooks/useActions';
 import { useConfigManager } from './hooks/useConfigManager';
@@ -77,8 +78,13 @@ export default function App() {
     tagModalRepo,
     tagModalMode,
     setTagModalOpen,
+    tagRenameOpen,
+    tagRenameValue,
+    setTagRenameOpen,
     handleAddTag,
     handleRemoveTag,
+    handleRenameTag,
+    handleSaveTagRename,
     handleSaveTags,
   } = useTags({ messageApi, reloadRepos });
 
@@ -253,6 +259,7 @@ export default function App() {
               total={total}
               onAddTag={handleAddTag}
               onRemoveTag={handleRemoveTag}
+              onRenameTag={handleRenameTag}
               onPageChange={(nextPage, nextPageSize) => {
                 setPage(nextPage);
                 setPageSize(nextPageSize);
@@ -281,6 +288,13 @@ export default function App() {
           tagOptions={tagOptions}
           onCancel={() => setTagModalOpen(false)}
           onSave={handleSaveTags}
+        />
+        <TagRenameModal
+          open={tagRenameOpen}
+          currentTag={tagRenameValue}
+          tagOptions={tagOptions}
+          onCancel={() => setTagRenameOpen(false)}
+          onSave={handleSaveTagRename}
         />
         <QuickTagsModal
           open={quickTagsOpen}

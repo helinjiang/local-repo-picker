@@ -12,6 +12,9 @@ export function useTags(params: {
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const [tagModalRepo, setTagModalRepo] = useState<ListItem | null>(null);
   const [tagModalMode, setTagModalMode] = useState<'add' | 'edit'>('add');
+  const [tagRenameOpen, setTagRenameOpen] = useState(false);
+  const [tagRenameRepo, setTagRenameRepo] = useState<ListItem | null>(null);
+  const [tagRenameValue, setTagRenameValue] = useState<string | null>(null);
 
   const handleAddTag = useCallback((repo: ListItem) => {
     setTagModalRepo(repo);
@@ -30,6 +33,50 @@ export function useTags(params: {
       }
     },
     [messageApi, reloadRepos],
+  );
+
+  const handleRenameTag = useCallback((repo: ListItem, tag: string) => {
+    setTagRenameRepo(repo);
+    setTagRenameValue(tag);
+    setTagRenameOpen(true);
+  }, []);
+
+  const handleSaveTagRename = useCallback(
+    async (nextTag: string) => {
+      if (!tagRenameRepo || !tagRenameValue) {
+        return;
+      }
+
+      const normalizedNext = normalizeTagValue(nextTag);
+
+      if (!normalizedNext || normalizedNext === tagRenameValue) {
+        setTagRenameOpen(false);
+        setTagRenameRepo(null);
+        setTagRenameValue(null);
+
+        return;
+      }
+
+      try {
+        const existing = new Set([
+          ...tagRenameRepo.record.autoTags,
+          ...tagRenameRepo.record.manualTags,
+        ]);
+        const add = existing.has(normalizedNext) ? [] : [normalizedNext];
+        await updateTags(tagRenameRepo.record.fullPath, {
+          remove: [tagRenameValue],
+          add,
+        });
+        messageApi.success('标签已重命名');
+        setTagRenameOpen(false);
+        setTagRenameRepo(null);
+        setTagRenameValue(null);
+        await reloadRepos();
+      } catch (error) {
+        messageApi.error(`重命名标签失败：${(error as Error).message}`);
+      }
+    },
+    [tagRenameRepo, tagRenameValue, messageApi, reloadRepos],
   );
 
   const handleSaveTags = useCallback(
@@ -82,8 +129,14 @@ export function useTags(params: {
     tagModalRepo,
     tagModalMode,
     setTagModalOpen,
+    tagRenameOpen,
+    tagRenameRepo,
+    tagRenameValue,
+    setTagRenameOpen,
     handleAddTag,
     handleRemoveTag,
+    handleRenameTag,
+    handleSaveTagRename,
     handleSaveTags,
   };
 }
