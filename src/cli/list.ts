@@ -186,7 +186,7 @@ function filterListRepos(
 
     if (query) {
       const haystack =
-        `${repoDisplayName(repo)} ${repo.fullPath} ${repoCodePlatform(repo)} ${recordTags(repo).join(' ')}`.toLowerCase();
+        `${repoDisplayName(repo)} ${repo.relativePath} ${repo.repoKey} ${repo.fullPath} ${repoCodePlatform(repo)} ${recordTags(repo).join(' ')}`.toLowerCase();
 
       if (!haystack.includes(query)) {
         return false;
