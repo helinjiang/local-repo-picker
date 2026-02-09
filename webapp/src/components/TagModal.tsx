@@ -19,12 +19,24 @@ export default function TagModal({ open, repo, mode, tagOptions, onCancel, onSav
   const [values, setValues] = useState<string[]>([]);
   const selectRef = useRef<BaseSelectRef | null>(null);
   const selectOptions = useMemo(
-    () =>
-      tagOptions.map((option) => ({
-        label: option.label,
-        value: formatTagLabel(option.value),
-      })),
-    [tagOptions],
+    () => {
+      const existing =
+        mode === 'add' && repo
+          ? new Set(
+              [...repo.record.autoTags, ...repo.record.manualTags]
+                .map((tag) => formatTagLabel(tag))
+                .filter(Boolean),
+            )
+          : new Set<string>();
+
+      return tagOptions
+        .map((option) => ({
+          label: option.label,
+          value: formatTagLabel(option.value),
+        }))
+        .filter((option) => !existing.has(option.value));
+    },
+    [tagOptions, mode, repo],
   );
 
   useEffect(() => {
