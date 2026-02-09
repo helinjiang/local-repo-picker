@@ -91,7 +91,7 @@ export async function runListCommand(options: CliOptions, args: string[]): Promi
     for (const repo of repos) {
       const name = repoDisplayName(repo);
       const tags = recordTags(repo).join('');
-      console.log(`${name}\t${repo.fullPath}\t${tags}`);
+      console.log(`${name}\t${repo.repoKey}\t${repo.fullPath}\t${tags}`);
     }
 
     return;
@@ -101,7 +101,7 @@ export async function runListCommand(options: CliOptions, args: string[]): Promi
     const name = repoDisplayName(repo);
     const tags = recordTags(repo).join('');
     const label = tags ? `${name} ${tags}` : name;
-    console.log(`${label}  ${repo.fullPath}`);
+    console.log(`${label}  ${repo.repoKey}  ${repo.fullPath}`);
   }
 }
 
@@ -110,7 +110,7 @@ export async function runInternalList(options: CliOptions, args: string[]): Prom
   const rows = await getListRows(options, filterTag);
 
   for (const row of rows) {
-    console.log(`${row.display}\t${row.path}\t${row.rawTags}`);
+    console.log(`${row.display}\t${row.repoKey}\t${row.rawTags}\t${row.path}`);
   }
 }
 
@@ -224,7 +224,7 @@ async function sortListRepos(
 async function getListRows(
   options: CliOptions,
   filterTag?: string,
-): Promise<Array<{ display: string; path: string; rawTags: string }>> {
+): Promise<Array<{ display: string; repoKey: string; path: string; rawTags: string }>> {
   const cached = await loadCache(options);
   const resolved = cached ?? (await buildCache(options));
   const normalizedFilter = normalizeTagFilterValue(filterTag ?? '');
@@ -240,20 +240,24 @@ async function getListRows(
 
   return rows.map((repo) => ({
     display: buildListDisplay(repo),
+    repoKey: repo.repoKey,
     path: repo.fullPath,
-    rawTags: recordTags(repo).join(''),
+    rawTags: buildListTags(repo),
   }));
 }
 
 function buildListDisplay(repo: RepositoryRecord): string {
-  const name = repoDisplayName(repo);
+  return repoDisplayName(repo);
+}
+
+function buildListTags(repo: RepositoryRecord): string {
   const rawTags = recordTags(repo).join('');
 
   if (!rawTags) {
-    return name;
+    return '';
   }
 
-  return `${name} ${applyAnsiTag(rawTags)}`;
+  return applyAnsiTag(rawTags);
 }
 
 function applyAnsiTag(input: string): string {
@@ -302,10 +306,6 @@ function recordTags(repo: RepositoryRecord): string[] {
 }
 
 function repoDisplayName(repo: RepositoryRecord): string {
-  if (repo.git?.fullName) {
-    return repo.git.fullName;
-  }
-
   if (repo.relativePath) {
     return repo.relativePath;
   }

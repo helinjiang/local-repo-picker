@@ -46,11 +46,11 @@ export async function runFzfPicker(
   const args = [
     '--ansi',
     '--delimiter=\t',
-    '--with-nth=1',
+    '--with-nth=1,2,3',
     '--header',
     header,
     '--preview',
-    `${self.shellPrefix} __preview --path {2}`,
+    `${self.shellPrefix} __preview --path {4}`,
     '--preview-window=right:60%:wrap',
     '--bind',
     binds,
@@ -74,7 +74,7 @@ export async function runFzfPicker(
 
   const parts = line.split('\t');
 
-  return parts[1]?.trim() || null;
+  return parts[3]?.trim() || null;
 }
 
 export async function runFzfActionPicker(options: CliOptions): Promise<Action | null> {
