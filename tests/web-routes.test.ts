@@ -195,7 +195,7 @@ describe('web routes', () => {
     });
     expect(reposByLru.items.every((item: any) => item.record.isDirty)).toBe(true);
     const tagOptions = await handlers['GET /api/tag-options']();
-    expect(tagOptions).toContain('[x]');
+    expect(tagOptions).toContainEqual({ tag: '[x]', count: 1 });
   });
 
   it('preview/action/cache/tags 接口', async () => {

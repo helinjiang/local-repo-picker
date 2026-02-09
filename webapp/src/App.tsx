@@ -28,6 +28,9 @@ export default function App() {
   const [messageApi, contextHolder] = message.useMessage();
   const createId = useCallback(() => `${Date.now()}-${Math.random().toString(16).slice(2)}`, []);
   const [tagOptions, setTagOptions] = useState<Array<{ label: string; value: string }>>([]);
+  const [tagModalOptions, setTagModalOptions] = useState<
+    Array<{ label: string; value: string }>
+  >([]);
   const {
     repos,
     selectedPath,
@@ -77,10 +80,30 @@ export default function App() {
   const reloadTagOptions = useCallback(async () => {
     try {
       const tags = await fetchTagOptions();
-      const options = tags
-        .map((item) => ({ label: formatTagLabel(item), value: item }))
-        .sort((a, b) => a.label.localeCompare(b.label));
-      setTagOptions(options);
+      const normalized = tags.map((item) => ({
+        tag: item.tag,
+        count: item.count,
+        label: formatTagLabel(item.tag),
+      }));
+      const sorted = normalized.slice().sort((a, b) => {
+        if (b.count !== a.count) {
+          return b.count - a.count;
+        }
+
+        return a.label.localeCompare(b.label);
+      });
+      setTagOptions(
+        sorted.map((item) => ({
+          label: `${item.label} (${item.count} used)`,
+          value: item.tag,
+        })),
+      );
+      setTagModalOptions(
+        sorted.map((item) => ({
+          label: `${item.label} (${item.count} used)`,
+          value: item.tag,
+        })),
+      );
     } catch (error) {
       messageApi.error(`获取标签选项失败：${(error as Error).message}`);
     }
@@ -245,7 +268,7 @@ export default function App() {
     <AntApp>
       {contextHolder}
       <div className="app-shell">
-        <Toolbar
+          <Toolbar
           query={query}
           onQueryChange={setQuery}
           tag={tag}
@@ -296,7 +319,7 @@ export default function App() {
           open={tagModalOpen}
           repo={tagModalRepo}
           mode={tagModalMode}
-          tagOptions={tagOptions}
+          tagOptions={tagModalOptions}
           onCancel={() => setTagModalOpen(false)}
           onSave={handleSaveTags}
         />

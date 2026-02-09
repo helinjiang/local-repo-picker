@@ -228,12 +228,17 @@ export async function registerRoutes(
   app.get('/api/tag-options', async () => {
     const cached = await loadCache(options);
     const resolved = cached ?? (await buildCache(options));
-    const tagSet = new Set<string>();
+    const tagCounts = new Map<string, number>();
     resolved.repos.forEach((repo) => {
-      recordTags(repo).forEach((tag) => tagSet.add(tag));
+      const uniqueTags = new Set(recordTags(repo));
+      uniqueTags.forEach((tag) => {
+        tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+      });
     });
 
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+    return Array.from(tagCounts.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => (b.count !== a.count ? b.count - a.count : a.tag.localeCompare(b.tag)));
   });
 
   app.get('/api/preview', async (request, reply) => {

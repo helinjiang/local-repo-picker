@@ -55,6 +55,11 @@ export type RepoPreviewResult = {
   error?: string;
 };
 
+export type TagOptionInfo = {
+  tag: string;
+  count: number;
+};
+
 export type FixedLink = {
   label: string;
   url: string;

@@ -6,6 +6,7 @@ import type {
   RepoListResult,
   RepoPreviewResult,
   SaveConfigResponse,
+  TagOptionInfo,
 } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -59,8 +60,8 @@ export async function fetchRepos(params: {
   return request<RepoListResult>(`/repos${suffix}`);
 }
 
-export async function fetchTagOptions(): Promise<string[]> {
-  return request<string[]>('/tag-options');
+export async function fetchTagOptions(): Promise<TagOptionInfo[]> {
+  return request<TagOptionInfo[]>('/tag-options');
 }
 
 export async function fetchPreview(path: string): Promise<RepoPreviewResult> {
