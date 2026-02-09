@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App as AntApp, message } from 'antd';
 import { fetchTagOptions, runAction } from './api';
 import ActionsBar from './components/ActionsBar';
+import GlobalLinksModal from './components/GlobalLinksModal';
 import PreviewPanel from './components/PreviewPanel';
 import QuickTagsModal from './components/QuickTagsModal';
 import RepoList from './components/RepoList';
@@ -25,6 +26,7 @@ export default function App() {
   const [quickTagsOpen, setQuickTagsOpen] = useState(false);
   const [quickTagsDraft, setQuickTagsDraft] = useState<string[]>([]);
   const [repoLinksOpen, setRepoLinksOpen] = useState(false);
+  const [globalLinksOpen, setGlobalLinksOpen] = useState(false);
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null);
   const { query, setQuery, tag, setTag, debouncedQuery } = useSearchFilter({
     query: urlState.query,
@@ -67,11 +69,13 @@ export default function App() {
     loadingConfig,
     savingConfig,
     savingRepoLinks,
+    savingGlobalLinks,
     configLoadedOnce,
     configEditorOpen,
     setConfigEditorOpen,
     quickTagsConfig,
     repoLinksConfig,
+    globalLinksConfig,
     repoLinksMap,
     savingQuickTags,
     currentRepoLinkKey,
@@ -84,11 +88,15 @@ export default function App() {
     handleRepoLinkUpdate,
     handleRepoLinkRemove,
     handleRepoLinkAdd,
+    handleGlobalLinkUpdate,
+    handleGlobalLinkRemove,
+    handleGlobalLinkAdd,
     ensureRepoLinksForKey,
     handleSaveConfig,
     handleSaveRepoLinks,
+    handleSaveGlobalLinks,
     handleSaveQuickTags,
-  } = useConfigManager({ settingsOpen, repoLinksOpen, messageApi, createId });
+  } = useConfigManager({ settingsOpen, repoLinksOpen, globalLinksOpen, messageApi, createId });
   const reloadTagOptions = useCallback(async () => {
     try {
       const tags = await fetchTagOptions();
@@ -157,6 +165,17 @@ export default function App() {
       setTag(value === tag ? undefined : value);
     },
     [tag, setTag],
+  );
+
+  const globalLinkOptions = useMemo(
+    () =>
+      globalLinksConfig
+        .map((link) => ({
+          label: link.label.trim(),
+          value: link.url.trim(),
+        }))
+        .filter((link) => link.label && link.value),
+    [globalLinksConfig],
   );
 
   useEffect(() => {
@@ -230,6 +249,14 @@ export default function App() {
     }
   };
 
+  const handleSaveGlobalLinksClick = async () => {
+    const ok = await handleSaveGlobalLinks();
+
+    if (ok) {
+      setGlobalLinksOpen(false);
+    }
+  };
+
   const handleRepoLinksGroupRepoChange = useCallback(
     (groupIndex: number, value: string) => {
       const next = repoLinksConfig.map((item, currentIndex) =>
@@ -281,17 +308,19 @@ export default function App() {
     <AntApp>
       {contextHolder}
       <div className="app-shell">
-          <Toolbar
+        <Toolbar
           query={query}
           onQueryChange={setQuery}
           tag={tag}
           onTagChange={setTag}
           tagOptions={tagOptions}
           quickTagOptions={quickTagOptions}
+          globalLinks={globalLinkOptions}
           onQuickTagClick={handleQuickTagClick}
           onManageQuickTags={() => setQuickTagsOpen(true)}
+          onOpenGlobalLinks={() => setGlobalLinksOpen(true)}
           refreshingCache={refreshingCache}
-            onRefresh={handleRefreshCacheClick}
+          onRefresh={handleRefreshCacheClick}
           onOpenSettings={() => setSettingsOpen(true)}
         />
         <div className="content-area">
@@ -383,6 +412,16 @@ export default function App() {
           onRepoLinkUpdate={handleRepoLinkUpdate}
           onRepoLinkRemove={handleRepoLinkRemove}
           onRepoLinkAdd={handleRepoLinkAdd}
+        />
+        <GlobalLinksModal
+          open={globalLinksOpen}
+          onCancel={() => setGlobalLinksOpen(false)}
+          onSave={handleSaveGlobalLinksClick}
+          saving={savingGlobalLinks}
+          links={globalLinksConfig}
+          onLinkUpdate={handleGlobalLinkUpdate}
+          onLinkRemove={handleGlobalLinkRemove}
+          onLinkAdd={handleGlobalLinkAdd}
         />
       </div>
     </AntApp>

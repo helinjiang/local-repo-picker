@@ -1,5 +1,5 @@
-import { ReloadOutlined, SettingOutlined, TagOutlined } from '@ant-design/icons';
-import { Button, Input, Select, Space, Tag, Tooltip } from 'antd';
+import { LinkOutlined, ReloadOutlined, SettingOutlined, TagOutlined } from '@ant-design/icons';
+import { Button, Input, Popover, Select, Space, Tag, Tooltip } from 'antd';
 
 type TagOption = { label: string; value: string };
 
@@ -10,8 +10,10 @@ type Props = {
   onTagChange: (value?: string) => void;
   tagOptions: TagOption[];
   quickTagOptions: TagOption[];
+  globalLinks: TagOption[];
   onQuickTagClick: (value: string) => void;
   onManageQuickTags: () => void;
+  onOpenGlobalLinks: () => void;
   refreshingCache: boolean;
   onRefresh: () => void;
   onOpenSettings: () => void;
@@ -24,12 +26,27 @@ export default function Toolbar({
   onTagChange,
   tagOptions,
   quickTagOptions,
+  globalLinks,
   onQuickTagClick,
   onManageQuickTags,
+  onOpenGlobalLinks,
   refreshingCache,
   onRefresh,
   onOpenSettings,
 }: Props) {
+  const popoverContent =
+    globalLinks.length > 0 ? (
+      <Space direction="vertical">
+        {globalLinks.map((item) => (
+          <a key={item.value} href={item.value} target="_blank" rel="noreferrer">
+            {item.label}
+          </a>
+        ))}
+      </Space>
+    ) : (
+      <span className="toolbar-placeholder">暂无自定义链接</span>
+    );
+
   return (
     <div className="toolbar">
       <div className="toolbar-row">
@@ -47,6 +64,11 @@ export default function Toolbar({
             <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={refreshingCache}>
               刷新缓存
             </Button>
+            <Popover content={popoverContent} trigger="hover">
+              <Button icon={<LinkOutlined />} onClick={onOpenGlobalLinks}>
+                自定义链接
+              </Button>
+            </Popover>
             <Button icon={<SettingOutlined />} onClick={onOpenSettings}>
               配置
             </Button>

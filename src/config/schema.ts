@@ -7,5 +7,6 @@ export type AppConfig = {
   fzfTagFilters?: Record<string, string>;
   webQuickTags?: string[];
   webRepoLinks?: Record<string, { label: string; url: string }[]>;
+  webGlobalLinks?: { label: string; url: string }[];
   remoteHostProviders?: Record<string, string>;
 };

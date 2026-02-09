@@ -125,6 +125,16 @@ function normalizeConfig(raw: unknown): AppConfig {
             ]),
         )
       : {};
+  const webGlobalLinks = Array.isArray(value.webGlobalLinks)
+    ? value.webGlobalLinks
+        .filter((link) => typeof link === 'object' && link !== null)
+        .map((link) => link as Record<string, unknown>)
+        .map((link) => ({
+          label: typeof link.label === 'string' ? link.label : '',
+          url: typeof link.url === 'string' ? link.url : '',
+        }))
+        .filter((link) => link.label && link.url)
+    : defaultConfig.webGlobalLinks;
   const remoteHostProviders =
     typeof value.remoteHostProviders === 'object' && value.remoteHostProviders !== null
       ? (Object.fromEntries(
@@ -151,6 +161,7 @@ function normalizeConfig(raw: unknown): AppConfig {
     followSymlinks,
     webQuickTags,
     webRepoLinks,
+    webGlobalLinks,
     remoteHostProviders: normalizedRemoteHostProviders,
     fzfTagFilters,
   };

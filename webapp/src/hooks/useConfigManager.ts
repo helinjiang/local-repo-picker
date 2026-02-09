@@ -13,20 +13,25 @@ export type RepoLinksGroup = {
 export function useConfigManager(params: {
   settingsOpen: boolean;
   repoLinksOpen: boolean;
+  globalLinksOpen: boolean;
   messageApi: ReturnType<typeof message.useMessage>[0];
   createId: () => string;
 }) {
-  const { settingsOpen, repoLinksOpen, messageApi, createId } = params;
+  const { settingsOpen, repoLinksOpen, globalLinksOpen, messageApi, createId } = params;
   const [configPaths, setConfigPaths] = useState<ConfigPaths | null>(null);
   const [configText, setConfigText] = useState('');
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [savingRepoLinks, setSavingRepoLinks] = useState(false);
+  const [savingGlobalLinks, setSavingGlobalLinks] = useState(false);
   const [savingQuickTags, setSavingQuickTags] = useState(false);
   const [configLoadedOnce, setConfigLoadedOnce] = useState(false);
   const [configEditorOpen, setConfigEditorOpen] = useState(false);
   const [quickTagsConfig, setQuickTagsConfig] = useState<string[]>([]);
   const [repoLinksConfig, setRepoLinksConfig] = useState<RepoLinksGroup[]>([]);
+  const [globalLinksConfig, setGlobalLinksConfig] = useState<
+    { id: string; label: string; url: string }[]
+  >([]);
   const [pendingRepoLinkKey, setPendingRepoLinkKey] = useState<string | null>(null);
   const [currentRepoLinkKey, setCurrentRepoLinkKey] = useState<string | null>(null);
   const configTextRef = useRef(configText);
@@ -154,6 +159,48 @@ export function useConfigManager(params: {
     [repoLinksConfig, handleRepoLinksUpdate, createId],
   );
 
+  const handleGlobalLinksChange = useCallback(
+    (next: { id: string; label: string; url: string }[]) => {
+      setGlobalLinksConfig(next);
+
+      try {
+        const parsed = JSON.parse(configTextRef.current) as AppConfig;
+        const updated = {
+          ...parsed,
+          webGlobalLinks: next
+            .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+            .filter((link) => link.label && link.url),
+        };
+        setConfigText(JSON.stringify(updated, null, 2));
+      } catch {
+        setConfigText((prev) => prev);
+      }
+    },
+    [setConfigText],
+  );
+
+  const handleGlobalLinkUpdate = useCallback(
+    (index: number, patch: Partial<FixedLink>) => {
+      const next = globalLinksConfig.map((link, current) =>
+        current === index ? { ...link, ...patch } : link,
+      );
+      handleGlobalLinksChange(next);
+    },
+    [globalLinksConfig, handleGlobalLinksChange],
+  );
+
+  const handleGlobalLinkRemove = useCallback(
+    (index: number) => {
+      const next = globalLinksConfig.filter((_, current) => current !== index);
+      handleGlobalLinksChange(next);
+    },
+    [globalLinksConfig, handleGlobalLinksChange],
+  );
+
+  const handleGlobalLinkAdd = useCallback(() => {
+    handleGlobalLinksChange([...globalLinksConfig, { id: createId(), label: '', url: '' }]);
+  }, [globalLinksConfig, handleGlobalLinksChange, createId]);
+
   const handleQuickTagsChange = useCallback(
     (values: string[]) => {
       const next = values.map(stripTagBrackets).filter(Boolean);
@@ -232,6 +279,10 @@ export function useConfigManager(params: {
         setConfigPaths(data.paths);
         setConfigText(JSON.stringify(data.config, null, 2));
         setQuickTagsConfig(data.config.webQuickTags ?? []);
+        const globalLinks = data.config.webGlobalLinks ?? [];
+        setGlobalLinksConfig(
+          globalLinks.map((link) => ({ id: createId(), label: link.label, url: link.url })),
+        );
         const repoLinks = data.config.webRepoLinks ?? {};
         setRepoLinksConfig(
           Object.entries(repoLinks).map(([repo, links]) => ({
@@ -252,7 +303,7 @@ export function useConfigManager(params: {
       }
     }
 
-    if (settingsOpen || repoLinksOpen || !configLoadedOnce) {
+    if (settingsOpen || repoLinksOpen || globalLinksOpen || !configLoadedOnce) {
       void loadConfig();
     }
 
@@ -290,12 +341,19 @@ export function useConfigManager(params: {
         .filter((group) => group.repo && group.links.length > 0)
         .map((group) => [group.repo, group.links]),
     );
+    parsed.webGlobalLinks = globalLinksConfig
+      .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+      .filter((link) => link.label && link.url);
     setSavingConfig(true);
 
     try {
       const result = await saveConfig(parsed);
       setConfigText(JSON.stringify(result.config, null, 2));
       setQuickTagsConfig(result.config.webQuickTags ?? []);
+      const globalLinks = result.config.webGlobalLinks ?? [];
+      setGlobalLinksConfig(
+        globalLinks.map((link) => ({ id: createId(), label: link.label, url: link.url })),
+      );
       const repoLinks = result.config.webRepoLinks ?? {};
       setRepoLinksConfig(
         Object.entries(repoLinks).map(([repo, links]) => ({
@@ -338,11 +396,18 @@ export function useConfigManager(params: {
         .filter((group) => group.repo && group.links.length > 0)
         .map((group) => [group.repo, group.links]),
     );
+    parsed.webGlobalLinks = globalLinksConfig
+      .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+      .filter((link) => link.label && link.url);
     setSavingRepoLinks(true);
 
     try {
       const result = await saveConfig(parsed);
       setConfigText(JSON.stringify(result.config, null, 2));
+      const globalLinks = result.config.webGlobalLinks ?? [];
+      setGlobalLinksConfig(
+        globalLinks.map((link) => ({ id: createId(), label: link.label, url: link.url })),
+      );
       const repoLinks = result.config.webRepoLinks ?? {};
       setRepoLinksConfig(
         Object.entries(repoLinks).map(([repo, links]) => ({
@@ -383,6 +448,10 @@ export function useConfigManager(params: {
         const result = await saveConfig(parsed);
         setConfigText(JSON.stringify(result.config, null, 2));
         setQuickTagsConfig(result.config.webQuickTags ?? []);
+        const globalLinks = result.config.webGlobalLinks ?? [];
+        setGlobalLinksConfig(
+          globalLinks.map((link) => ({ id: createId(), label: link.label, url: link.url })),
+        );
         const repoLinks = result.config.webRepoLinks ?? {};
         setRepoLinksConfig(
           Object.entries(repoLinks).map(([repo, links]) => ({
@@ -405,6 +474,41 @@ export function useConfigManager(params: {
     [quickTagsConfig, messageApi, createId],
   );
 
+  const handleSaveGlobalLinks = useCallback(async (): Promise<boolean> => {
+    let parsed: AppConfig;
+
+    try {
+      parsed = JSON.parse(configText) as AppConfig;
+    } catch (error) {
+      messageApi.error(`配置 JSON 无效：${(error as Error).message}`);
+
+      return false;
+    }
+
+    parsed.webGlobalLinks = globalLinksConfig
+      .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+      .filter((link) => link.label && link.url);
+    setSavingGlobalLinks(true);
+
+    try {
+      const result = await saveConfig(parsed);
+      setConfigText(JSON.stringify(result.config, null, 2));
+      const globalLinks = result.config.webGlobalLinks ?? [];
+      setGlobalLinksConfig(
+        globalLinks.map((link) => ({ id: createId(), label: link.label, url: link.url })),
+      );
+      messageApi.success('全局链接已更新');
+
+      return true;
+    } catch (error) {
+      messageApi.error(`更新全局链接失败：${(error as Error).message}`);
+
+      return false;
+    } finally {
+      setSavingGlobalLinks(false);
+    }
+  }, [configText, globalLinksConfig, messageApi, createId]);
+
   return {
     configPaths,
     configText,
@@ -412,11 +516,13 @@ export function useConfigManager(params: {
     loadingConfig,
     savingConfig,
     savingRepoLinks,
+    savingGlobalLinks,
     savingQuickTags,
     configLoadedOnce,
     configEditorOpen,
     setConfigEditorOpen,
     quickTagsConfig,
+    globalLinksConfig,
     repoLinksConfig,
     repoLinksMap,
     currentRepoLinkKey,
@@ -430,10 +536,15 @@ export function useConfigManager(params: {
     handleRepoLinkUpdate,
     handleRepoLinkRemove,
     handleRepoLinkAdd,
+    handleGlobalLinksChange,
+    handleGlobalLinkUpdate,
+    handleGlobalLinkRemove,
+    handleGlobalLinkAdd,
     handleQuickTagsChange,
     ensureRepoLinksForKey,
     handleSaveConfig,
     handleSaveRepoLinks,
+    handleSaveGlobalLinks,
     handleSaveQuickTags,
   };
 }
