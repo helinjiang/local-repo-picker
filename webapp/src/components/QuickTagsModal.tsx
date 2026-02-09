@@ -1,6 +1,8 @@
-import { Modal, Select } from 'antd';
+import { MenuOutlined } from '@ant-design/icons';
+import { Modal, Select, Typography } from 'antd';
 import type { BaseSelectRef } from 'rc-select';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { formatTagLabel } from '../utils/tagUtils';
 
 type TagOption = { label: string; value: string };
 
@@ -24,6 +26,7 @@ export default function QuickTagsModal({
   onQuickTagsChange,
 }: Props) {
   const selectRef = useRef<BaseSelectRef | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const selectOptions = useMemo(
     () =>
       tagOptions.map((option) => ({
@@ -69,6 +72,36 @@ export default function QuickTagsModal({
         }}
         options={selectOptions}
       />
+      {uniqueValues.length > 1 ? (
+        <div className="quick-tags-sort">
+          <Typography.Text type="secondary">拖拽排序</Typography.Text>
+          <div className="quick-tags-sort-list">
+            {uniqueValues.map((item, index) => (
+              <div
+                key={`${item}-${index}`}
+                className="quick-tags-sort-item"
+                draggable
+                onDragStart={() => setDraggingIndex(index)}
+                onDragOver={(event) => event.preventDefault()}
+                onDragEnd={() => setDraggingIndex(null)}
+                onDrop={() => {
+                  if (draggingIndex === null || draggingIndex === index) {
+                    return;
+                  }
+                  const next = [...uniqueValues];
+                  const [moved] = next.splice(draggingIndex, 1);
+                  next.splice(index, 0, moved);
+                  onQuickTagsChange(next);
+                  setDraggingIndex(null);
+                }}
+              >
+                <MenuOutlined className="quick-tags-sort-handle" />
+                <span>{formatTagLabel(item)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </Modal>
   );
 }
