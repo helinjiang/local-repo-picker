@@ -83,6 +83,13 @@ function buildCoreActions(): Action[] {
       },
     },
     {
+      id: 'builtin.open-trae',
+      label: 'open in TRAE',
+      run: async (repo) => {
+        await execa('open', ['-a', 'TRAE CN', repo.fullPath], { reject: false });
+      },
+    },
+    {
       id: 'builtin.open-iterm',
       label: 'open in iTerm',
       run: async (repo) => {
