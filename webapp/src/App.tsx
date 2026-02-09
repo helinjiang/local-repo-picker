@@ -18,13 +18,40 @@ import { useSearchFilter } from './hooks/useSearchFilter';
 import { useTags } from './hooks/useTags';
 import { formatTagLabel, normalizeTagValue } from './utils/tagUtils';
 
+function readUrlState(): {
+  query: string;
+  tag?: string;
+  page?: number;
+  pageSize?: number;
+  pick?: string;
+} {
+  const params = new URLSearchParams(window.location.search);
+  const query = params.get('q') ?? '';
+  const tag = params.get('tag') ?? undefined;
+  const page = Number(params.get('page'));
+  const pageSize = Number(params.get('pageSize'));
+  const pick = params.get('pick') ?? undefined;
+
+  return {
+    query,
+    tag,
+    page: Number.isFinite(page) && page > 0 ? page : undefined,
+    pageSize: Number.isFinite(pageSize) && pageSize > 0 ? pageSize : undefined,
+    pick,
+  };
+}
+
 export default function App() {
+  const urlState = useMemo(() => readUrlState(), []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [quickTagsOpen, setQuickTagsOpen] = useState(false);
   const [quickTagsDraft, setQuickTagsDraft] = useState<string[]>([]);
   const [repoLinksOpen, setRepoLinksOpen] = useState(false);
   const [hoveredConfigKey, setHoveredConfigKey] = useState<string | null>(null);
-  const { query, setQuery, tag, setTag, debouncedQuery } = useSearchFilter();
+  const { query, setQuery, tag, setTag, debouncedQuery } = useSearchFilter({
+    query: urlState.query,
+    tag: urlState.tag,
+  });
   const [messageApi, contextHolder] = message.useMessage();
   const createId = useCallback(() => `${Date.now()}-${Math.random().toString(16).slice(2)}`, []);
   const [tagOptions, setTagOptions] = useState<Array<{ label: string; value: string }>>([]);
@@ -45,7 +72,14 @@ export default function App() {
     setPageSize,
     reloadRepos,
     handleRefreshCache,
-  } = useRepos({ debouncedQuery, tag, messageApi });
+  } = useRepos({
+    debouncedQuery,
+    tag,
+    messageApi,
+    initialPage: urlState.page,
+    initialPageSize: urlState.pageSize,
+    initialSelectedPath: urlState.pick ?? null,
+  });
   const { preview, loadingPreview } = usePreview(selectedPath, messageApi);
   const { actions } = useActions(messageApi);
   const {
@@ -127,6 +161,34 @@ export default function App() {
   useEffect(() => {
     void reloadTagOptions();
   }, [reloadTagOptions]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (query) {
+      params.set('q', query);
+    }
+
+    if (tag) {
+      params.set('tag', tag);
+    }
+
+    if (page) {
+      params.set('page', String(page));
+    }
+
+    if (pageSize) {
+      params.set('pageSize', String(pageSize));
+    }
+
+    if (selectedPath) {
+      params.set('pick', selectedPath);
+    }
+
+    const next = params.toString();
+    const nextUrl = next ? `${window.location.pathname}?${next}` : window.location.pathname;
+    window.history.replaceState(null, '', nextUrl);
+  }, [query, tag, page, pageSize, selectedPath]);
 
   const quickTagOptions = useMemo(
     () =>

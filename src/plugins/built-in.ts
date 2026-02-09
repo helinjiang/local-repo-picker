@@ -5,6 +5,8 @@ import type { Action, PluginModule, PreviewPlugin, TagPlugin } from '../core/typ
 import { registerPlugins } from '../core/plugins';
 import { refreshCache } from '../core/cache';
 import { parseOriginToSiteUrl, readOriginValue } from '../core/origin';
+import type { UiState } from '../web/state';
+import { isProcessAlive, readUiState } from '../web/state';
 
 // Node 项目相关的 tag 扩展
 const nodeTagPlugin: TagPlugin = {
@@ -128,6 +130,28 @@ function buildCliActions(options: BuiltInActionOptions): Action[] {
         await refreshCache(options);
       },
     },
+    {
+      id: 'builtin.open-web',
+      label: 'open web ui',
+      scopes: ['cli'],
+      run: async (repo) => {
+        const self = getSelfCli();
+        let state = await readUiState();
+
+        if (!state || !isProcessAlive(state.pid)) {
+          await execa(self.file, [...self.argsPrefix, 'ui', '--no-open'], { reject: false });
+          state = await waitForUiState(8000);
+        }
+
+        if (!state) {
+          throw new Error('启动 Web UI 失败');
+        }
+
+        const url = new URL(state.url);
+        url.searchParams.set('pick', repo.fullPath);
+        await execa('open', [url.toString()], { reject: false });
+      },
+    },
   ];
 }
 
@@ -166,4 +190,28 @@ async function readPackageJson(repoPath: string): Promise<Record<string, unknown
   } catch {
     return null;
   }
+}
+
+function getSelfCli(): { file: string; argsPrefix: string[] } {
+  const file = process.execPath;
+  const entry = process.argv[1] ?? '';
+  const argsPrefix = entry ? [entry] : [];
+
+  return { file, argsPrefix };
+}
+
+async function waitForUiState(timeoutMs: number): Promise<UiState | null> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const state = await readUiState();
+
+    if (state && isProcessAlive(state.pid)) {
+      return state;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  return null;
 }

@@ -7,16 +7,21 @@ export function useRepos(params: {
   debouncedQuery: string;
   tag?: string;
   messageApi: ReturnType<typeof message.useMessage>[0];
+  initialPage?: number;
+  initialPageSize?: number;
+  initialSelectedPath?: string | null;
 }) {
-  const { debouncedQuery, tag, messageApi } = params;
+  const { debouncedQuery, tag, messageApi, initialPage, initialPageSize, initialSelectedPath } =
+    params;
   const [repos, setRepos] = useState<ListItem[]>([]);
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(initialSelectedPath ?? null);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [refreshingCache, setRefreshingCache] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(200);
+  const [page, setPage] = useState(initialPage ?? 1);
+  const [pageSize, setPageSize] = useState(initialPageSize ?? 200);
   const [total, setTotal] = useState(0);
   const requestIdRef = useRef(0);
+  const resetPageOnceRef = useRef(false);
 
   const loadRepos = useCallback(
     async (options?: { page?: number; pageSize?: number }) => {
@@ -66,6 +71,11 @@ export function useRepos(params: {
   );
 
   useEffect(() => {
+    if (!resetPageOnceRef.current) {
+      resetPageOnceRef.current = true;
+      return;
+    }
+
     setPage(1);
   }, [debouncedQuery, tag]);
 
