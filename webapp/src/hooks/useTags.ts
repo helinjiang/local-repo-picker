@@ -15,6 +15,7 @@ export function useTags(params: {
   const [tagRenameOpen, setTagRenameOpen] = useState(false);
   const [tagRenameRepo, setTagRenameRepo] = useState<ListItem | null>(null);
   const [tagRenameValue, setTagRenameValue] = useState<string | null>(null);
+  const [tagRenameSaving, setTagRenameSaving] = useState(false);
 
   const handleAddTag = useCallback((repo: ListItem) => {
     setTagModalRepo(repo);
@@ -58,6 +59,7 @@ export function useTags(params: {
       }
 
       try {
+        setTagRenameSaving(true);
         const existing = new Set([
           ...tagRenameRepo.record.autoTags,
           ...tagRenameRepo.record.manualTags,
@@ -74,6 +76,8 @@ export function useTags(params: {
         await reloadRepos();
       } catch (error) {
         messageApi.error(`重命名标签失败：${(error as Error).message}`);
+      } finally {
+        setTagRenameSaving(false);
       }
     },
     [tagRenameRepo, tagRenameValue, messageApi, reloadRepos],
@@ -132,6 +136,7 @@ export function useTags(params: {
     tagRenameOpen,
     tagRenameRepo,
     tagRenameValue,
+    tagRenameSaving,
     setTagRenameOpen,
     handleAddTag,
     handleRemoveTag,

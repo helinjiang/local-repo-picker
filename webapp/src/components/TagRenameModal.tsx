@@ -6,6 +6,7 @@ import { formatTagLabel } from '../utils/tagUtils';
 type Props = {
   open: boolean;
   currentTag: string | null;
+  saving: boolean;
   onCancel: () => void;
   onSave: (value: string) => void;
 };
@@ -13,6 +14,7 @@ type Props = {
 export default function TagRenameModal({
   open,
   currentTag,
+  saving,
   onCancel,
   onSave,
 }: Props) {
@@ -37,6 +39,7 @@ export default function TagRenameModal({
       title="重命名标签"
       okText="保存"
       cancelText="取消"
+      confirmLoading={saving}
       onCancel={onCancel}
       onOk={() => onSave(value)}
     >

@@ -80,6 +80,7 @@ export default function App() {
     setTagModalOpen,
     tagRenameOpen,
     tagRenameValue,
+    tagRenameSaving,
     setTagRenameOpen,
     handleAddTag,
     handleRemoveTag,
@@ -292,6 +293,7 @@ export default function App() {
         <TagRenameModal
           open={tagRenameOpen}
           currentTag={tagRenameValue}
+          saving={tagRenameSaving}
           onCancel={() => setTagRenameOpen(false)}
           onSave={handleSaveTagRename}
         />
