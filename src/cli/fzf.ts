@@ -27,7 +27,8 @@ export async function runFzfPicker(
   options: CliOptions,
   filters: Record<string, string>,
 ): Promise<string | null> {
-  const listResult = await execa('repo', ['__list', '--all'], {
+  const self = getSelfCli();
+  const listResult = await execa(self.file, [...self.argsPrefix, '__list', '--all'], {
     stdout: 'pipe',
     stderr: 'inherit',
     reject: false,
@@ -40,13 +41,16 @@ export async function runFzfPicker(
   }
 
   const input = listResult.stdout.trimEnd();
-  const binds = buildFzfBinds(filters);
+  const binds = buildFzfBinds(filters, self.shellPrefix);
+  const header = buildFzfHeader(filters);
   const args = [
     '--ansi',
     '--delimiter=\t',
     '--with-nth=1',
+    '--header',
+    header,
     '--preview',
-    'repo __preview --path {2}',
+    `${self.shellPrefix} __preview --path {2}`,
     '--preview-window=right:60%:wrap',
     '--bind',
     binds,
@@ -112,30 +116,54 @@ function isActionAllowed(action: Action, scope: 'cli' | 'web'): boolean {
   return action.scopes.includes(scope);
 }
 
-function buildFzfBinds(filters: Record<string, string>): string {
+function buildFzfBinds(filters: Record<string, string>, shellPrefix: string): string {
   const entries = Object.entries(filters);
 
   if (entries.length === 0) {
-    return 'ctrl-a:reload(repo __list --all)';
+    return `ctrl-a:reload(${shellPrefix} __list --all)`;
   }
 
   const binds = entries.map(([key, tag]) => {
     if (tag === 'all') {
-      return `${key}:reload(repo __list --all)`;
+      return `${key}:reload(${shellPrefix} __list --all)`;
     }
 
-    return `${key}:reload(repo __list --filter-tag ${escapeShellArg(tag)})`;
+    return `${key}:reload(${shellPrefix} __list --filter-tag ${escapeShellArg(tag)})`;
   });
 
   if (!filters['ctrl-a']) {
-    binds.push('ctrl-a:reload(repo __list --all)');
+    binds.push(`ctrl-a:reload(${shellPrefix} __list --all)`);
   }
 
   return binds.join(',');
+}
+
+function buildFzfHeader(filters: Record<string, string>): string {
+  const entries = Object.entries(filters);
+  const headerParts = entries.map(([key, tag]) => `${key}=${tag}`);
+
+  if (!filters['ctrl-a']) {
+    headerParts.push('ctrl-a=all');
+  }
+
+  if (headerParts.length === 0) {
+    return '快捷搜索: ctrl-a=all';
+  }
+
+  return `快捷搜索: ${headerParts.join(' · ')}`;
 }
 
 function escapeShellArg(input: string): string {
   const safe = input.replace(/'/g, "'\"'\"'");
 
   return `'${safe}'`;
+}
+
+function getSelfCli(): { file: string; argsPrefix: string[]; shellPrefix: string } {
+  const file = process.execPath;
+  const entry = process.argv[1] ?? '';
+  const argsPrefix = entry ? [entry] : [];
+  const shellPrefix = entry ? `${escapeShellArg(file)} ${escapeShellArg(entry)}` : escapeShellArg(file);
+
+  return { file, argsPrefix, shellPrefix };
 }
