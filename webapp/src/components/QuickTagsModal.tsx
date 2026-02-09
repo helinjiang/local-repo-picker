@@ -31,7 +31,7 @@ export default function QuickTagsModal({
     () =>
       tagOptions.map((option) => ({
         label: option.label,
-        value: option.label,
+        value: option.value,
       })),
     [tagOptions],
   );
