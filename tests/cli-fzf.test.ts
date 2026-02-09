@@ -28,13 +28,15 @@ describe('cli fzf', () => {
   });
 
   it('runFzfPicker 解析选中路径', async () => {
+    const originalArgv = process.argv;
+    process.argv = [...process.argv.slice(0, 1), '/tmp/cli.js', ...process.argv.slice(2)];
     (execaMocks.execa as any).mockImplementation(async (command: any, args: any) => {
-      if (command === 'repo') {
-        return { exitCode: 0, stdout: 'a\t/path\t[tag]' };
+      if (command === process.execPath && args?.includes('__list')) {
+        return { exitCode: 0, stdout: 'a\tlocal:a\t[tag]\t/path' };
       }
 
       if (command === 'fzf') {
-        return { exitCode: 0, stdout: 'a\t/selected\t[tag]' };
+        return { exitCode: 0, stdout: 'a\tlocal:a\t[tag]\t/selected' };
       }
 
       return { exitCode: 1, stdout: '' };
@@ -44,22 +46,29 @@ describe('cli fzf', () => {
       { 'ctrl-a': 'all' },
     );
     expect(selected).toBe('/selected');
+    process.argv = originalArgv;
   });
 
   it('runFzfPicker 处理失败与空选项', async () => {
+    const originalArgv = process.argv;
+    process.argv = [...process.argv.slice(0, 1), '/tmp/cli.js', ...process.argv.slice(2)];
     (execaMocks.execa as any).mockResolvedValueOnce({ exitCode: 1, stdout: '' });
     const failed = await runFzfPicker(
       { scanRoots: ['/'], cacheFile: '', manualTagsFile: '', lruFile: '' },
       { 'ctrl-a': 'all' },
     );
     expect(failed).toBeNull();
-    (execaMocks.execa as any).mockResolvedValueOnce({ exitCode: 0, stdout: 'a\t/path\t[tag]' });
+    (execaMocks.execa as any).mockResolvedValueOnce({
+      exitCode: 0,
+      stdout: 'a\tlocal:a\t[tag]\t/path',
+    });
     (execaMocks.execa as any).mockResolvedValueOnce({ exitCode: 0, stdout: '' });
     const empty = await runFzfPicker(
       { scanRoots: ['/'], cacheFile: '', manualTagsFile: '', lruFile: '' },
       {},
     );
     expect(empty).toBeNull();
+    process.argv = originalArgv;
   });
 
   it('runFzfActionPicker 根据选择返回 action', async () => {

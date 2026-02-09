@@ -114,11 +114,18 @@ brew install fzf
 - `repo __list --filter-tag <tag>`
 - `repo __preview --path <absolute-path>`
 
+`repo __list` 输出列顺序：
+
+1. relativePath
+2. repoKey
+3. tags
+4. fullPath（绝对路径）
+
 ## fzf 预览
 
 右侧预览通过 `repo __preview --path <abs>` 输出，包含 PATH / ORIGIN / BRANCH / STATUS / SYNC / RECENT COMMITS / README（最多 200 行）。
 
-## fzf 快捷键
+## fzf 快捷搜索
 
 默认快捷键由配置项 `fzfTagFilters` 控制：
 
@@ -172,7 +179,7 @@ DEBUG=1 repo
 
 ## Web 快速标签筛选
 
-配置项 `webQuickTags` 决定 Web 顶部的快捷筛选标签（支持 codePlatform / tag / dirty）：
+配置项 `webQuickTags` 决定 Web 顶部的快捷筛选标签（支持 codePlatform / tag / dirty，顺序可在 UI 中拖拽调整）：
 
 ```json
 {

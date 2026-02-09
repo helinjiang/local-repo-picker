@@ -1,5 +1,25 @@
 # 更新日志
 
+## [0.4.1] - 2026-02-09
+
+### 新增
+
+- Web 标签支持重命名（仅手动标签）
+- Web 快速标签管理支持拖拽排序
+- CLI 交互头部展示快捷搜索绑定
+
+### 变更
+
+- Web 搜索覆盖 relativePath 与 repoKey
+- CLI 搜索覆盖 relativePath 与 repoKey
+- CLI 列表默认显示 relativePath
+- CLI 列表新增 repoKey 列，并调整 fzf 交互列顺序
+- fzf 交互调用 CLI 自身，避免依赖全局 repo 命令
+
+### 修复
+
+- fzf 预览在新增列后路径列错位
+
 ## [0.4.0] - 2026-02-07
 
 ### 新增
