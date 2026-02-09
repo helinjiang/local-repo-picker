@@ -1,14 +1,11 @@
-import { Modal, Select, Typography } from 'antd';
-import type { BaseSelectRef } from 'rc-select';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Input, Modal, Typography } from 'antd';
+import type { InputRef } from 'antd';
+import { useEffect, useRef, useState } from 'react';
 import { formatTagLabel } from '../utils/tagUtils';
-
-type TagOption = { label: string; value: string };
 
 type Props = {
   open: boolean;
   currentTag: string | null;
-  tagOptions: TagOption[];
   onCancel: () => void;
   onSave: (value: string) => void;
 };
@@ -16,20 +13,11 @@ type Props = {
 export default function TagRenameModal({
   open,
   currentTag,
-  tagOptions,
   onCancel,
   onSave,
 }: Props) {
   const [value, setValue] = useState('');
-  const selectRef = useRef<BaseSelectRef | null>(null);
-  const selectOptions = useMemo(
-    () =>
-      tagOptions.map((option) => ({
-        label: option.label,
-        value: formatTagLabel(option.value),
-      })),
-    [tagOptions],
-  );
+  const inputRef = useRef<InputRef | null>(null);
 
   useEffect(() => {
     setValue(currentTag ? formatTagLabel(currentTag) : '');
@@ -38,7 +26,7 @@ export default function TagRenameModal({
   useEffect(() => {
     if (open) {
       setTimeout(() => {
-        selectRef.current?.focus();
+        inputRef.current?.focus({ cursor: 'end' });
       }, 0);
     }
   }, [open]);
@@ -52,19 +40,12 @@ export default function TagRenameModal({
       onCancel={onCancel}
       onOk={() => onSave(value)}
     >
-      <Typography.Paragraph type="secondary">支持选择或输入新标签</Typography.Paragraph>
-      <Select
-        ref={selectRef}
-        mode="tags"
-        style={{ width: '100%' }}
+      <Typography.Paragraph type="secondary">直接输入新的标签名称</Typography.Paragraph>
+      <Input
+        ref={inputRef}
         placeholder="输入新标签"
-        options={selectOptions}
-        value={value ? [value] : []}
-        maxCount={1}
-        onChange={(nextValues) => {
-          const next = nextValues[0] ?? '';
-          setValue(next ? formatTagLabel(next) : '');
-        }}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
       />
     </Modal>
   );

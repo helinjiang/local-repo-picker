@@ -292,7 +292,6 @@ export default function App() {
         <TagRenameModal
           open={tagRenameOpen}
           currentTag={tagRenameValue}
-          tagOptions={tagOptions}
           onCancel={() => setTagRenameOpen(false)}
           onSave={handleSaveTagRename}
         />
