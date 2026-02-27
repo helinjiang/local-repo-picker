@@ -1,7 +1,4 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../src/core/logger', () => ({
   isDebugEnabled: vi.fn(),
@@ -48,18 +45,8 @@ describe('cli utils/errors/help', () => {
     spy.mockRestore();
   });
 
-  it('readPackageVersion 读取当前目录版本', async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'lrp-help-'));
-    const prev = process.cwd();
-    await fs.writeFile(
-      path.join(root, 'package.json'),
-      JSON.stringify({ version: '9.9.9' }),
-      'utf8',
-    );
-    process.chdir(root);
+  it('readPackageVersion 读取 CLI 所在目录的 package.json 版本', async () => {
     const version = await readPackageVersion();
-    process.chdir(prev);
-    expect(version).toBe('9.9.9');
-    await fs.rm(root, { recursive: true, force: true });
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });

@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { UiState } from './state';
 import { clearUiState, writeUiState } from './state';
 import { registerRoutes } from './routes';
@@ -65,7 +66,8 @@ export async function startWebServer(
   const startedAt = Date.now();
   const state: UiState = { pid: process.pid, port: 0, url: '', startedAt };
   await registerRoutes(app, options, state);
-  const distRoot = path.resolve(process.cwd(), 'webapp', 'dist');
+  const webDir = path.dirname(fileURLToPath(import.meta.url));
+  const distRoot = path.resolve(webDir, '..', '..', 'webapp', 'dist');
   const distExists = await fs
     .stat(distRoot)
     .then(() => true)

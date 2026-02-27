@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function printHelp(): void {
   const lines = [
@@ -33,14 +34,22 @@ export function printHelp(): void {
 }
 
 export async function readPackageVersion(): Promise<string> {
-  const packageFile = path.resolve(process.cwd(), 'package.json');
+  const cliDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(cliDir, '..', 'package.json'),
+    path.resolve(cliDir, '..', '..', 'package.json'),
+  ];
 
-  try {
-    const content = await fs.readFile(packageFile, 'utf8');
-    const data = JSON.parse(content) as { version?: string };
+  for (const packageFile of candidates) {
+    try {
+      const content = await fs.readFile(packageFile, 'utf8');
+      const data = JSON.parse(content) as { version?: string };
 
-    return typeof data.version === 'string' ? data.version : '';
-  } catch {
-    return '';
+      if (typeof data.version === 'string') {
+        return data.version;
+      }
+    } catch {}
   }
+
+  return '';
 }
