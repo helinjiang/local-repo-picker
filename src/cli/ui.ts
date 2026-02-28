@@ -16,11 +16,16 @@ export type UiFlags = { port?: number; noOpen: boolean; dev: boolean };
 
 export async function runStatus(args: string[]): Promise<void> {
   const useJson = args.includes('--json');
+  const outputWebUIUrl = args.includes('--output-webui-url');
   const paths = getConfigPaths();
   const fzfAvailable = await checkFzfAvailable();
   const state = await readUiState();
 
   if (!state) {
+    if (outputWebUIUrl) {
+      return;
+    }
+
     if (useJson) {
       console.log(
         JSON.stringify({
@@ -43,6 +48,10 @@ export async function runStatus(args: string[]): Promise<void> {
   if (!isProcessAlive(state.pid)) {
     await clearUiState();
 
+    if (outputWebUIUrl) {
+      return;
+    }
+
     if (useJson) {
       console.log(
         JSON.stringify({
@@ -62,6 +71,12 @@ export async function runStatus(args: string[]): Promise<void> {
     }
 
     process.exitCode = 1;
+
+    return;
+  }
+
+  if (outputWebUIUrl) {
+    console.log(state.url);
 
     return;
   }

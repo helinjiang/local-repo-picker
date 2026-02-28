@@ -21,6 +21,7 @@ export function printHelp(): void {
     '  --dev              使用前端 dev server',
     '  --config           创建默认配置并输出路径',
     '  --json             输出 JSON（用于 repo list/status）',
+    '  --output-webui-url 仅输出 Web UI 地址（用于 repo status）',
     '  --tsv              输出 TSV（用于 repo list）',
     '  --q <text>         关键词过滤（用于 repo list）',
     '  --tag <tag>        tag 过滤（用于 repo list）',
@@ -48,7 +49,9 @@ export async function readPackageVersion(): Promise<string> {
       if (typeof data.version === 'string') {
         return data.version;
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 
   return '';
