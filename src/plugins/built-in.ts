@@ -90,6 +90,13 @@ function buildCoreActions(): Action[] {
       },
     },
     {
+      id: 'builtin.open-sublime',
+      label: 'open in Sublime Text',
+      run: async (repo) => {
+        await execa('open', ['-a', 'Sublime Text', repo.fullPath], { reject: false });
+      },
+    },
+    {
       id: 'builtin.open-iterm',
       label: 'open in iTerm',
       run: async (repo) => {
