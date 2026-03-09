@@ -18,26 +18,23 @@ type Props = {
 export default function TagModal({ open, repo, mode, tagOptions, onCancel, onSave }: Props) {
   const [values, setValues] = useState<string[]>([]);
   const selectRef = useRef<BaseSelectRef | null>(null);
-  const selectOptions = useMemo(
-    () => {
-      const existing =
-        mode === 'add' && repo
-          ? new Set(
-              [...repo.record.autoTags, ...repo.record.manualTags]
-                .map((tag) => formatTagLabel(tag))
-                .filter(Boolean),
-            )
-          : new Set<string>();
+  const selectOptions = useMemo(() => {
+    const existing =
+      mode === 'add' && repo
+        ? new Set(
+            [...repo.record.autoTags, ...repo.record.manualTags]
+              .map((tag) => formatTagLabel(tag))
+              .filter(Boolean),
+          )
+        : new Set<string>();
 
-      return tagOptions
-        .map((option) => ({
-          label: option.label,
-          value: formatTagLabel(option.value),
-        }))
-        .filter((option) => !existing.has(option.value));
-    },
-    [tagOptions, mode, repo],
-  );
+    return tagOptions
+      .map((option) => ({
+        label: option.label,
+        value: formatTagLabel(option.value),
+      }))
+      .filter((option) => !existing.has(option.value));
+  }, [tagOptions, mode, repo]);
 
   useEffect(() => {
     if (!repo) {
@@ -81,9 +78,7 @@ export default function TagModal({ open, repo, mode, tagOptions, onCancel, onSav
           options={selectOptions}
           value={values}
           onChange={(nextValues) => {
-            const normalized = nextValues
-              .map((item) => formatTagLabel(item))
-              .filter(Boolean);
+            const normalized = nextValues.map((item) => formatTagLabel(item)).filter(Boolean);
             const unique = Array.from(new Set(normalized));
             setValues(unique);
           }}

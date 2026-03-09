@@ -110,7 +110,7 @@ describe('cli main', () => {
       savedAt: Date.now(),
       ttlMs: 1000,
       metadata: {
-        cacheVersion: 1,
+        cacheVersion: 2,
         scanStartedAt: 0,
         scanFinishedAt: 0,
         scanDurationMs: 0,

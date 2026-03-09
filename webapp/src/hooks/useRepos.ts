@@ -73,6 +73,7 @@ export function useRepos(params: {
   useEffect(() => {
     if (!resetPageOnceRef.current) {
       resetPageOnceRef.current = true;
+
       return;
     }
 

@@ -88,6 +88,7 @@ export default function QuickTagsModal({
                   if (draggingIndex === null || draggingIndex === index) {
                     return;
                   }
+
                   const next = [...uniqueValues];
                   const [moved] = next.splice(draggingIndex, 1);
                   next.splice(index, 0, moved);

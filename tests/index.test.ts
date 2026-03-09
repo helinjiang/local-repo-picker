@@ -16,7 +16,7 @@ describe('index pickRepo', () => {
       savedAt: 1,
       ttlMs: 1,
       metadata: {
-        cacheVersion: 1,
+        cacheVersion: 2,
         scanStartedAt: 0,
         scanFinishedAt: 0,
         scanDurationMs: 0,
@@ -48,7 +48,7 @@ describe('index pickRepo', () => {
       savedAt: 1,
       ttlMs: 1,
       metadata: {
-        cacheVersion: 1,
+        cacheVersion: 2,
         scanStartedAt: 0,
         scanFinishedAt: 0,
         scanDurationMs: 0,
@@ -78,7 +78,7 @@ describe('index pickRepo', () => {
       savedAt: 1,
       ttlMs: 1,
       metadata: {
-        cacheVersion: 1,
+        cacheVersion: 2,
         scanStartedAt: 0,
         scanFinishedAt: 0,
         scanDurationMs: 0,

@@ -35,9 +35,9 @@ export default function App() {
   const [messageApi, contextHolder] = message.useMessage();
   const createId = useCallback(() => `${Date.now()}-${Math.random().toString(16).slice(2)}`, []);
   const [tagOptions, setTagOptions] = useState<Array<{ label: string; value: string }>>([]);
-  const [tagModalOptions, setTagModalOptions] = useState<
-    Array<{ label: string; value: string }>
-  >([]);
+  const [tagModalOptions, setTagModalOptions] = useState<Array<{ label: string; value: string }>>(
+    [],
+  );
   const {
     repos,
     selectedPath,

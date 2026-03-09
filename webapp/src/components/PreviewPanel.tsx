@@ -15,6 +15,7 @@ import {
 import { useEffect, useState } from 'react';
 import { fetchRecord } from '../api';
 import type { FixedLink, ListItem, RepoPreviewResult, RepositoryRecord } from '../types';
+import { formatBytes } from '../utils/format-bytes';
 
 type Props = {
   loading: boolean;
@@ -126,6 +127,12 @@ export default function PreviewPanel({ loading, preview, repo, repoLinks }: Prop
       >
         <Descriptions bordered size="small" column={1} className="preview-meta">
           <Descriptions.Item label="路径">{repo.record.fullPath}</Descriptions.Item>
+          <Descriptions.Item label="目录大小">
+            {formatBytes(repo.record.folderSizeBytes)}
+          </Descriptions.Item>
+          <Descriptions.Item label="node_modules 大小">
+            {formatBytes(repo.record.nodeModulesSizeBytes)}
+          </Descriptions.Item>
           <Descriptions.Item label="repoKey">
             {preview?.data.record.repoKey ?? '-'}
           </Descriptions.Item>

@@ -11,6 +11,7 @@ import { getConfigPaths } from '../config/config';
 import { logger } from './logger';
 import { resolveTagExtensions } from './plugins';
 import { normalizeRepoKey } from './path-utils';
+import { measureRepoSizes } from './dir-size';
 import {
   buildGitRepository,
   buildRecordId,
@@ -20,6 +21,7 @@ import {
 } from './domain';
 
 const defaultTtlMs = 12 * 60 * 60 * 1000;
+const cacheVersion = 2;
 
 export async function buildCache(
   options: ScanOptions,
@@ -54,6 +56,7 @@ export async function buildCache(
       const git = buildGitRepository(originUrl, undefined, normalized.remoteHostProviders);
       const manual = manualEdits.get(normalizeRepoKey(repo.path));
       const dirty = await isDirty(repo.path);
+      const sizes = await measureRepoSizes(repo.path);
       const baseTags = buildTags({
         autoTag: repo.autoTag,
         manualTags: manual?.add,
@@ -85,6 +88,8 @@ export async function buildCache(
         isDirty: dirty,
         manualTags,
         autoTags,
+        folderSizeBytes: sizes.folderSizeBytes,
+        nodeModulesSizeBytes: sizes.nodeModulesSizeBytes,
         lastScannedAt: Date.now(),
       });
     }),
@@ -93,7 +98,7 @@ export async function buildCache(
   const sorted = await applyLruIfNeeded(repos, normalized.lruFile);
   const buildFinishedAt = Date.now();
   const metadata: CacheMetadata = {
-    cacheVersion: 1,
+    cacheVersion,
     scanStartedAt,
     scanFinishedAt,
     scanDurationMs,
@@ -136,6 +141,12 @@ export async function loadCache(options: ScanOptions): Promise<CacheData | null>
       return null;
     }
 
+    if ((data.metadata?.cacheVersion ?? 1) !== cacheVersion) {
+      logger.debug('cache version mismatch, rebuilding');
+
+      return null;
+    }
+
     const ttlMs = data.ttlMs ?? normalized.cacheTtlMs;
     const savedAt = data.savedAt ?? 0;
 
@@ -162,6 +173,7 @@ export async function loadCache(options: ScanOptions): Promise<CacheData | null>
         metadata.prunedAt = Date.now();
         metadata.prunedRepoCount = existing.prunedCount;
       }
+
       await persistCache(normalized.cacheFile, {
         savedAt,
         ttlMs,

@@ -11,13 +11,7 @@ type Props = {
   onSave: (value: string) => void;
 };
 
-export default function TagRenameModal({
-  open,
-  currentTag,
-  saving,
-  onCancel,
-  onSave,
-}: Props) {
+export default function TagRenameModal({ open, currentTag, saving, onCancel, onSave }: Props) {
   const [value, setValue] = useState('');
   const inputRef = useRef<InputRef | null>(null);
 

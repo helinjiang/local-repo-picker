@@ -67,6 +67,8 @@ export function buildRepositoryRecord(input: {
   isDirty: boolean;
   manualTags?: string[];
   autoTags?: string[];
+  folderSizeBytes?: number;
+  nodeModulesSizeBytes?: number;
   lastScannedAt: number;
 }): RepositoryRecord {
   const relativePath = input.relativePath ?? deriveRelativePath(input.fullPath, input.scanRoot);
@@ -82,6 +84,8 @@ export function buildRepositoryRecord(input: {
     isDirty: input.isDirty,
     manualTags: input.manualTags ?? [],
     autoTags: input.autoTags ?? [],
+    folderSizeBytes: input.folderSizeBytes,
+    nodeModulesSizeBytes: input.nodeModulesSizeBytes,
     lastScannedAt: input.lastScannedAt,
   };
 }

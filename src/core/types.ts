@@ -37,6 +37,8 @@ export type RepositoryRecord = {
   isDirty: boolean;
   manualTags: string[];
   autoTags: string[];
+  folderSizeBytes?: number;
+  nodeModulesSizeBytes?: number;
   lastScannedAt: number;
 };
 

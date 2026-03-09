@@ -163,7 +163,9 @@ function getSelfCli(): { file: string; argsPrefix: string[]; shellPrefix: string
   const file = process.execPath;
   const entry = process.argv[1] ?? '';
   const argsPrefix = entry ? [entry] : [];
-  const shellPrefix = entry ? `${escapeShellArg(file)} ${escapeShellArg(entry)}` : escapeShellArg(file);
+  const shellPrefix = entry
+    ? `${escapeShellArg(file)} ${escapeShellArg(entry)}`
+    : escapeShellArg(file);
 
   return { file, argsPrefix, shellPrefix };
 }

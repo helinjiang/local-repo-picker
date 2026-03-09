@@ -80,6 +80,8 @@ export async function runListCommand(options: CliOptions, args: string[]): Promi
       repoKey: repo.repoKey,
       tags: recordTags(repo),
       originUrl: repo.git?.originUrl ?? null,
+      folderSizeBytes: repo.folderSizeBytes ?? null,
+      nodeModulesSizeBytes: repo.nodeModulesSizeBytes ?? null,
       lastScannedAt: repo.lastScannedAt,
     }));
     console.log(JSON.stringify(payload, null, 2));

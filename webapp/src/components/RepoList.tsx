@@ -3,6 +3,7 @@ import { Button, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd
 import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
 import type { ListItem } from '../types';
+import { formatBytes } from '../utils/format-bytes';
 
 type Props = {
   repos: ListItem[];
@@ -41,15 +42,38 @@ export default function RepoList({
         <div>
           <Space size="small" wrap>
             <Typography.Text strong>{repo.displayName}</Typography.Text>
-            {repo.record.git?.provider ? (
-              <Tag color="blue">{repo.record.git.provider}</Tag>
-            ) : null}
+            {repo.record.git?.provider ? <Tag color="blue">{repo.record.git.provider}</Tag> : null}
             <Tag color={repo.record.isDirty ? 'red' : 'green'}>
               {repo.record.isDirty ? 'dirty' : 'clean'}
             </Tag>
           </Space>
           <div style={{ color: '#8c8c8c', fontSize: 12 }}>{repo.record.repoKey}</div>
         </div>
+      ),
+    },
+    {
+      title: '大小',
+      dataIndex: 'record',
+      width: 110,
+      align: 'right',
+      sorter: (a, b) => (a.record.folderSizeBytes ?? -1) - (b.record.folderSizeBytes ?? -1),
+      render: (_, repo) => (
+        <Typography.Text type="secondary">
+          {formatBytes(repo.record.folderSizeBytes)}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: 'node_modules',
+      dataIndex: 'record',
+      width: 140,
+      align: 'right',
+      sorter: (a, b) =>
+        (a.record.nodeModulesSizeBytes ?? -1) - (b.record.nodeModulesSizeBytes ?? -1),
+      render: (_, repo) => (
+        <Typography.Text type="secondary">
+          {formatBytes(repo.record.nodeModulesSizeBytes)}
+        </Typography.Text>
       ),
     },
     {
