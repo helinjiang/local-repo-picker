@@ -1,12 +1,13 @@
 import {
   CodeOutlined,
   DesktopOutlined,
+  DeleteOutlined,
   FolderOpenOutlined,
   GlobalOutlined,
   LinkOutlined,
   QuestionCircleOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Space } from 'antd';
+import { Button, Card, Popconfirm, Space } from 'antd';
 import type { ActionInfo, ListItem } from '../types';
 
 type Props = {
@@ -28,16 +29,30 @@ export default function ActionsBar({ repo, disabled, actions, onRunAction }: Pro
   return (
     <Card size="small" title="Actions" className="actions-card">
       <Space wrap>
-        {actions.map((action) => (
-          <Button
-            key={action.id}
-            icon={getActionIcon(action.id)}
-            disabled={disabled}
-            onClick={() => handleAction(action.id)}
-          >
-            {action.label}
-          </Button>
-        ))}
+        {actions.map((action) =>
+          action.id === 'builtin.clear-node-modules' ? (
+            <Popconfirm
+              key={action.id}
+              title="确认清理该仓库下的所有 node_modules？"
+              okText="清理"
+              cancelText="取消"
+              onConfirm={() => handleAction(action.id)}
+            >
+              <Button icon={getActionIcon(action.id)} disabled={disabled}>
+                {action.label}
+              </Button>
+            </Popconfirm>
+          ) : (
+            <Button
+              key={action.id}
+              icon={getActionIcon(action.id)}
+              disabled={disabled}
+              onClick={() => handleAction(action.id)}
+            >
+              {action.label}
+            </Button>
+          ),
+        )}
       </Space>
     </Card>
   );
@@ -62,6 +77,10 @@ function getActionIcon(actionId: string) {
 
   if (actionId === 'web.edit-repo-links') {
     return <LinkOutlined />;
+  }
+
+  if (actionId === 'builtin.clear-node-modules') {
+    return <DeleteOutlined />;
   }
 
   return <QuestionCircleOutlined />;

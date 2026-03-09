@@ -299,6 +299,11 @@ export default function App() {
 
     try {
       await runAction(actionId, repoPath);
+
+      if (actionId === 'builtin.clear-node-modules') {
+        messageApi.success('node_modules 已清理');
+        await reloadRepos();
+      }
     } catch (error) {
       messageApi.error(`执行操作失败：${(error as Error).message}`);
     }

@@ -194,6 +194,75 @@ export async function refreshCache(options: ScanOptions): Promise<CacheData> {
   return buildCache(options, { reason: 'refresh' });
 }
 
+export async function updateRepoSizesInCache(
+  options: ScanOptions,
+  repoPath: string,
+  sizes: { folderSizeBytes: number; nodeModulesSizeBytes: number },
+): Promise<boolean> {
+  const normalized = normalizeOptions(options);
+
+  try {
+    const content = await fs.readFile(normalized.cacheFile, 'utf8');
+    const data = JSON.parse(content) as Partial<CacheData>;
+
+    if (!data || !Array.isArray(data.repos)) {
+      return false;
+    }
+
+    if ((data.metadata?.cacheVersion ?? 1) !== cacheVersion) {
+      return false;
+    }
+
+    const ttlMs = data.ttlMs ?? normalized.cacheTtlMs;
+    const savedAt = data.savedAt ?? 0;
+
+    if (Date.now() - savedAt > ttlMs) {
+      return false;
+    }
+
+    const targetKey = normalizeRepoKey(path.resolve(repoPath));
+    const repos = normalizeCacheRepos(
+      data.repos as Array<RepositoryRecord | Record<string, unknown>>,
+    );
+    const index = repos.findIndex((repo) => normalizeRepoKey(repo.fullPath) === targetKey);
+
+    if (index < 0) {
+      return false;
+    }
+
+    const current = repos[index];
+
+    if (!current) {
+      return false;
+    }
+
+    repos[index] = {
+      ...current,
+      folderSizeBytes: sizes.folderSizeBytes,
+      nodeModulesSizeBytes: sizes.nodeModulesSizeBytes,
+      lastScannedAt: Date.now(),
+    };
+    const metadata = buildCacheMetadataFromCache(
+      { ...data, repos } as CacheData,
+      normalized.scanRoots,
+      repos.length,
+    );
+    const next: CacheData = {
+      savedAt: Date.now(),
+      ttlMs,
+      metadata,
+      repos,
+    };
+    await persistCache(normalized.cacheFile, next);
+
+    return true;
+  } catch (error) {
+    logger.debug('update cache sizes failed', error);
+
+    return false;
+  }
+}
+
 async function applyLruIfNeeded(
   repos: RepositoryRecord[],
   lruFile?: string,

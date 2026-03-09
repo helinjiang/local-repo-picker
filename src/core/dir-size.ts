@@ -2,6 +2,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { runCommand } from './command';
 import { logger } from './logger';
+import { findNodeModulesDirs } from './node-modules';
 
 export async function measureRepoSizes(repoPath: string): Promise<{
   folderSizeBytes: number;
@@ -53,49 +54,6 @@ async function duBytes(targetPath: string): Promise<number> {
   }
 
   return kiloBytes * 1024;
-}
-
-async function findNodeModulesDirs(root: string): Promise<string[]> {
-  const dirs: string[] = [];
-  const stack: string[] = [root];
-
-  while (stack.length) {
-    const dirPath = stack.pop();
-
-    if (!dirPath) {
-      break;
-    }
-
-    let entries: Array<{
-      name: string;
-      isDirectory: () => boolean;
-      isSymbolicLink: () => boolean;
-    }>;
-
-    try {
-      entries = await fs.readdir(dirPath, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (entry.isSymbolicLink() || !entry.isDirectory()) {
-        continue;
-      }
-
-      const entryPath = path.join(dirPath, entry.name);
-
-      if (entry.name === 'node_modules') {
-        dirs.push(entryPath);
-
-        continue;
-      }
-
-      stack.push(entryPath);
-    }
-  }
-
-  return dirs;
 }
 
 async function measureRepoSizesViaFs(repoPath: string): Promise<{

@@ -3,8 +3,10 @@ import path from 'node:path';
 import { execa } from 'execa';
 import type { Action, PluginModule, PreviewPlugin, TagPlugin } from '../core/types';
 import { registerPlugins } from '../core/plugins';
-import { refreshCache } from '../core/cache';
+import { refreshCache, updateRepoSizesInCache } from '../core/cache';
 import { parseOriginToSiteUrl, readOriginValue } from '../core/origin';
+import { measureRepoSizes } from '../core/dir-size';
+import { clearNodeModules } from '../core/node-modules';
 import type { UiState } from '../web/state';
 import { isProcessAlive, readUiState } from '../web/state';
 
@@ -56,7 +58,7 @@ type BuiltInActionOptions = {
 };
 
 // 与运行环境无关的通用 actions
-function buildCoreActions(): Action[] {
+function buildCoreActions(options?: BuiltInActionOptions): Action[] {
   return [
     {
       id: 'builtin.print-path',
@@ -125,6 +127,26 @@ function buildCoreActions(): Action[] {
       },
     },
     {
+      id: 'builtin.clear-node-modules',
+      label: 'clear node_modules',
+      run: async (repo) => {
+        const result = await clearNodeModules(repo.fullPath);
+
+        if (result.failed > 0) {
+          throw new Error(
+            `清理 node_modules 部分失败（已删除 ${result.removed}/${result.found}，失败 ${result.failed}）`,
+          );
+        }
+
+        if (!options) {
+          return;
+        }
+
+        const sizes = await measureRepoSizes(repo.fullPath);
+        await updateRepoSizesInCache(options, repo.fullPath, sizes);
+      },
+    },
+    {
       id: 'web.edit-repo-links',
       label: '编辑固定链接',
       scopes: ['web'],
@@ -172,7 +194,7 @@ function buildCliActions(options: BuiltInActionOptions): Action[] {
 // 组装内置插件模块
 function buildBuiltInPlugins(options?: BuiltInActionOptions): PluginModule[] {
   const actions = options
-    ? [...buildCoreActions(), ...buildCliActions(options)]
+    ? [...buildCoreActions(options), ...buildCliActions(options)]
     : buildCoreActions();
 
   return [
